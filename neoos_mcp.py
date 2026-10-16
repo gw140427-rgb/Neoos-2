@@ -27,13 +27,26 @@ def now_iso() -> str:
 
 
 def _read_tasks() -> list[dict[str, Any]]:
+    """Read task data without silently discarding malformed or unreadable state."""
     if not TASKS_FILE.exists():
         return []
     try:
         value = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
-        return value if isinstance(value, list) else []
-    except (OSError, json.JSONDecodeError):
-        return []
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"task file contains invalid JSON; refusing to overwrite it: {TASKS_FILE}"
+        ) from exc
+    except OSError as exc:
+        raise RuntimeError(f"task file could not be read: {TASKS_FILE}") from exc
+    if not isinstance(value, list):
+        raise ValueError(
+            f"task file must contain a JSON list; refusing to overwrite it: {TASKS_FILE}"
+        )
+    if any(not isinstance(task, dict) for task in value):
+        raise ValueError(
+            f"task file contains a non-object task; refusing to overwrite it: {TASKS_FILE}"
+        )
+    return value
 
 
 def _write_tasks(tasks: list[dict[str, Any]]) -> None:
