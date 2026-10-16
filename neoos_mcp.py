@@ -1,6 +1,7 @@
 """NeoOS rebuild MCP server: safe local task tracking only."""
 from __future__ import annotations
 
+import hmac
 import json
 import os
 import uuid
@@ -10,8 +11,12 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-mcp = FastMCP("neoos-rebuild")
 DATA_DIR = Path(os.environ.get("NEOOS_DATA_DIR", "data")).expanduser().resolve()
+mcp = FastMCP(
+    "neoos-rebuild",
+    host=os.environ.get("HOST", "127.0.0.1"),
+    port=int(os.environ.get("PORT", "8000")),
+)
 TASKS_FILE = DATA_DIR / "tasks.json"
 JOURNAL_FILE = DATA_DIR / "journal.jsonl"
 VALID_STATUSES = {"queued", "in_progress", "blocked", "done"}
@@ -123,12 +128,40 @@ def read_journal(limit: int = 20) -> list[dict[str, Any]]:
     return result
 
 
+class BearerTokenMiddleware:
+    """Require a shared bearer token for all HTTP MCP requests."""
+    def __init__(self, app: Any, token: str):
+        self.app = app
+        self.token = token
+
+    async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
+        if scope["type"] == "http":
+            headers = {key.lower(): value for key, value in scope.get("headers", [])}
+            authorization = headers.get(b"authorization", b"").decode("latin-1")
+            supplied = authorization.removeprefix("Bearer ").strip()
+            if not hmac.compare_digest(supplied, self.token):
+                body = b'{"error":"unauthorized"}'
+                await send({
+                    "type": "http.response.start",
+                    "status": 401,
+                    "headers": [(b"content-type", b"application/json"), (b"content-length", str(len(body)).encode())],
+                })
+                await send({"type": "http.response.body", "body": body})
+                return
+        await self.app(scope, receive, send)
+
+
 if __name__ == "__main__":
     transport = os.environ.get("NEOOS_MCP_TRANSPORT", "stdio").strip().lower()
     if transport == "streamable-http":
-        # Render injects PORT; MCP clients connect to the /mcp endpoint.
-        mcp.settings.host = os.environ.get("HOST", "0.0.0.0")
-        mcp.settings.port = int(os.environ.get("PORT", "8000"))
-    elif transport != "stdio":
+        token = os.environ.get("NEOOS_MCP_TOKEN", "").strip()
+        if len(token) < 32:
+            raise SystemExit("Set NEOOS_MCP_TOKEN to a secret of at least 32 characters for HTTP mode")
+        import uvicorn
+
+        app = BearerTokenMiddleware(mcp.streamable_http_app(), token)
+        uvicorn.run(app, host=os.environ.get("HOST", "0.0.0.0"), port=int(os.environ.get("PORT", "8000")))
+    elif transport == "stdio":
+        mcp.run(transport="stdio")
+    else:
         raise SystemExit("NEOOS_MCP_TRANSPORT must be 'stdio' or 'streamable-http'")
-    mcp.run(transport=transport)
