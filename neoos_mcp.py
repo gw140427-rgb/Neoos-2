@@ -124,4 +124,11 @@ def read_journal(limit: int = 20) -> list[dict[str, Any]]:
 
 
 if __name__ == "__main__":
-    mcp.run(transport="stdio")
+    transport = os.environ.get("NEOOS_MCP_TRANSPORT", "stdio").strip().lower()
+    if transport == "streamable-http":
+        # Render injects PORT; MCP clients connect to the /mcp endpoint.
+        mcp.settings.host = os.environ.get("HOST", "0.0.0.0")
+        mcp.settings.port = int(os.environ.get("PORT", "8000"))
+    elif transport != "stdio":
+        raise SystemExit("NEOOS_MCP_TRANSPORT must be 'stdio' or 'streamable-http'")
+    mcp.run(transport=transport)
