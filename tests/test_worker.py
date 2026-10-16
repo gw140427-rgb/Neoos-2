@@ -26,6 +26,24 @@ class WorkerTests(unittest.TestCase):
             journal = (data / "journal.jsonl").read_text(encoding="utf-8")
             self.assertIn("worker_heartbeat", journal)
 
+    def test_malformed_task_file_is_preserved_and_warns(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)
+            tasks_file = data / "tasks.json"
+            malformed = '{"id": "incomplete"'
+            tasks_file.write_text(malformed, encoding="utf-8")
+            env = dict(os.environ, NEOOS_DATA_DIR=temp)
+            root = Path(__file__).resolve().parents[1]
+            result = subprocess.run(
+                [sys.executable, str(root / "worker.py")],
+                env=env, capture_output=True, text=True, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("WARNING: task file could not be parsed", result.stdout)
+            self.assertEqual(tasks_file.read_text(encoding="utf-8"), malformed)
+            journal = (data / "journal.jsonl").read_text(encoding="utf-8")
+            self.assertIn("worker_heartbeat", journal)
+
 
 if __name__ == "__main__":
     unittest.main()
