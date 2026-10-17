@@ -1,0 +1,29 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "YangYang AI Buddy - Resource Pack",
+    "description": "Resources for YangYang AI Buddy.",
+    "uuid": "9d2b1c41-3a70-4c6e-8a12-7e51b7c9a303",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      20,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "9d2b1c41-3a70-4c6e-8a12-7e51b7c9a304",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}
