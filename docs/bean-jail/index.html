@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#14251f">
+<title>콩밥 먹기: 감옥 생존기</title>
+<style>
+:root{color-scheme:dark;--bg:#0e1714;--panel:#172620;--panel2:#20352c;--line:#355044;--text:#f2f5ee;--muted:#b8c6bb;--accent:#a7e0a4;--warning:#ffcc8b}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse at top,#263f32 0,#0e1714 58%);color:var(--text);font:16px/1.55 system-ui,-apple-system,"Noto Sans KR",sans-serif;min-height:100vh}
+main{max-width:960px;margin:auto;padding:20px 14px 42px}
+header{padding:18px 4px 8px}
+.kicker{color:var(--accent);font-size:.82rem;font-weight:800;letter-spacing:.1em}
+h1{font-size:clamp(1.65rem,6vw,2.5rem);line-height:1.2;margin:.3rem 0 .65rem}
+.subtitle{color:var(--muted);margin:0}
+.panel{background:rgba(23,38,32,.94);border:1px solid var(--line);border-radius:18px;padding:16px;margin:14px 0;box-shadow:0 10px 30px #0002}
+.topline{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;background:#2b4437;border:1px solid #466653;border-radius:999px;padding:5px 10px;font-size:.9rem}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.stat{background:#101b16;border:1px solid var(--line);padding:10px;border-radius:12px;min-width:0}
+.stat label{display:block;color:var(--muted);font-size:.84rem}
+.stat strong{display:block;font-size:1.14rem;font-variant-numeric:tabular-nums}
+.meter{height:6px;background:#304239;border-radius:99px;overflow:hidden;margin-top:6px}
+.meter span{display:block;height:100%;background:var(--accent);width:40%;transition:width .18s}
+.meter.hunger span{background:var(--warning)}
+.actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+button{font:inherit;color:var(--text);cursor:pointer;border:1px solid #496653;border-radius:12px;background:var(--panel2);padding:12px 11px;min-height:48px;text-align:left;touch-action:manipulation}
+button:hover:not(:disabled){filter:brightness(1.12);border-color:var(--accent)}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.45;cursor:not-allowed}
+button .small{display:block;font-size:.82rem;color:var(--muted);font-weight:400;margin-top:2px}
+.primary{background:#315e42;border-color:#61916a}
+.danger{background:#55362a;border-color:#916449}
+.secondary{background:#15221c}
+h2{font-size:1.15rem;margin:0 0 10px}
+p{margin:.4rem 0}
+.muted{color:var(--muted);font-size:.92rem}
+#notice{min-height:2em;color:var(--accent);font-weight:650}
+#log{padding-left:21px;margin:0}
+#log li{margin:7px 0;color:#dbe5dc}
+#eventCard{border-color:#8b7750;background:#2a281b}
+#eventCard h2{color:#ffdc9a}
+#eventChoices{display:grid;gap:8px;margin-top:12px}
+#shopCard[hidden],#eventCard[hidden],#ending[hidden]{display:none}
+.shoprow{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:10px 0}
+.shoprow button{flex:0 0 auto;min-width:100px;text-align:center}
+#inventory{color:var(--muted);font-size:.92rem}
+.footer-actions{display:flex;gap:8px;flex-wrap:wrap}
+.footer-actions button{flex:1}
+#ending{border-color:#8ebd8c}
+@media(min-width:650px){main{padding-left:22px;padding-right:22px}.stats{grid-template-columns:repeat(5,minmax(0,1fr))}.actions{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="kicker">YANGYANG MINI GAME · v1.0</div>
+<h1>🍚 콩밥 먹기: 감옥 생존기</h1>
+<p class="subtitle">15일 동안 건강과 돈을 관리하고, 죄수들과의 관계를 결정해 봐!</p>
+</header>
+
+<section class="panel" aria-label="현재 상태">
+<div class="topline">
+<strong id="dayLine">1일차</strong>
+<span class="pill" id="turnLine">오늘 행동 3회 남음</span>
+<span class="pill" id="moneyLine">💰 20 코인</span>
+</div>
+<div class="stats" style="margin-top:12px">
+<div class="stat"><label for="healthBar">체력</label><strong id="healthValue">80/100</strong><div class="meter"><span id="healthBar"></span></div></div>
+<div class="stat"><label for="staminaBar">기력</label><strong id="staminaValue">75/100</strong><div class="meter"><span id="staminaBar"></span></div></div>
+<div class="stat"><label for="hungerBar">배고픔</label><strong id="hungerValue">20/100</strong><div class="meter hunger"><span id="hungerBar"></span></div></div>
+<div class="stat"><label for="stressBar">스트레스</label><strong id="stressValue">25/100</strong><div class="meter"><span id="stressBar"></span></div></div>
+<div class="stat"><label for="respectBar">평판</label><strong id="respectValue">0</strong><div class="meter"><span id="respectBar"></span></div></div>
+</div>
+<p class="muted" id="relationshipLine">교도관 신뢰도 20 · 세력 관계 0 · 콩돌이 간식 0개</p>
+<p id="notice" role="status" aria-live="polite">첫날이 시작됐어. 하루에 행동은 3번!</p>
+</section>
+
+<section class="panel">
+<h2>오늘 할 일</h2>
+<div class="actions" id="actionButtons">
+<button type="button" data-action="eat">🍚 콩밥 먹기<span class="small">배고픔 감소, 체력 회복</span></button>
+<button type="button" data-action="work">🧹 작업장 일하기<span class="small">코인을 벌지만 기력이 줄어듦</span></button>
+<button type="button" data-action="exercise">💪 운동하기<span class="small">기력과 배고픔을 관리하며 평판 얻기</span></button>
+<button type="button" data-action="read">📚 독서하기<span class="small">스트레스 감소, 평판 상승</span></button>
+<button type="button" data-action="clean">🧽 감방 청소<span class="small">교도관 신뢰도 상승</span></button>
+<button type="button" data-action="talk">🗣️ 죄수들과 대화<span class="small">관계를 쌓고 소문을 듣기</span></button>
+<button type="button" data-action="rest">🛏️ 휴식하기<span class="small">기력과 스트레스 회복</span></button>
+<button type="button" data-action="shop" class="secondary">🛒 매점 열기<span class="small">코인으로 간식과 책 구매</span></button>
+</div>
+</section>
+
+<section class="panel" id="eventCard" hidden aria-labelledby="eventTitle">
+<h2 id="eventTitle">🚨 감옥 사건</h2>
+<p id="eventText"></p>
+<div id="eventChoices"></div>
+</section>
+
+<section class="panel" id="shopCard" hidden aria-labelledby="shopTitle">
+<div class="topline"><h2 id="shopTitle">🛒 감옥 매점</h2><span class="pill" id="shopMoney">20 코인</span></div>
+<p class="muted">물건을 구매하는 것은 행동 횟수를 소모하지 않아. 물건 사용은 행동 1회를 소모해.</p>
+<div class="shoprow"><div><strong>🥨 간식</strong><p class="muted">가격 8 · 사용하면 배고픔 -20</p></div><button type="button" data-buy="snack">구매 8</button></div>
+<div class="shoprow"><div><strong>📖 읽을 책</strong><p class="muted">가격 12 · 사용하면 스트레스 -12</p></div><button type="button" data-buy="book">구매 12</button></div>
+<div class="shoprow"><div><strong>🩹 구급 꾸러미</strong><p class="muted">가격 15 · 사용하면 체력 +25</p></div><button type="button" data-buy="kit">구매 15</button></div>
+<div class="shoprow"><div><strong>가진 물건</strong><p id="inventory">간식 0개 · 책 0권 · 구급 꾸러미 0개</p></div><div class="footer-actions"><button type="button" data-use="snack">간식 사용</button><button type="button" data-use="book">책 사용</button><button type="button" data-use="kit">구급 꾸러미 사용</button></div></div>
+<button type="button" id="closeShop" class="secondary">매점 닫기</button>
+</section>
+
+<section class="panel">
+<h2>📜 오늘의 기록</h2>
+<ul id="log" aria-live="polite"><li>감방에 도착했다. 15일을 버텨 보자.</li></ul>
+</section>
+
+<section class="panel" id="ending" hidden>
+<h2 id="endingTitle">🏁 출소 날</h2>
+<p id="endingText"></p>
+<div class="footer-actions"><button id="restart" class="primary">새 게임 시작</button><button id="exportSave" class="secondary">저장 데이터 내보내기</button></div>
+</section>
+
+<section class="panel">
+<h2>저장 및 설정</h2>
+<p class="muted">진행 상황은 이 브라우저의 기기에 자동 저장돼. 브라우저 데이터 삭제나 시크릿 모드에서는 저장이 사라질 수 있어.</p>
+<div class="footer-actions"><button type="button" id="saveNow">💾 지금 저장</button><button type="button" id="exportSave2">⬇️ 저장 파일 내보내기</button><button type="button" id="resetGame" class="danger">초기화</button></div>
+<p class="muted">이 게임은 가상 상황을 다룬 간단한 미니 게임이며, 실제 교정 제도나 법률 자문을 설명하지 않아.</p>
+</section>
+</main>
+<script>
+(function(){
+'use strict';
+const SAVE_KEY='yangyang.bean-jail.v1';
+const MAX=100;
+const $=id=>document.getElementById(id);
+const clamp=(n,min,max)=>Math.max(min,Math.min(max,Number.isFinite(Number(n))?Number(n):min));
+function freshState(){
+  return {version:1,day:1,actions:3,health:80,stamina:75,hunger:20,stress:25,respect:0,trust:20,gang:0,money:20,inventory:{snack:0,book:0,kit:0},log:['감방에 도착했다. 15일을 버텨 보자.'],pendingEvent:null,ended:false,shopOpen:false};
+}
+function validState(raw){
+  const d=freshState();
+  if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.version!==1)return d;
+  const n={...d,...raw};
+  n.day=Math.floor(clamp(n.day,1,15));n.actions=Math.floor(clamp(n.actions,0,3));
+  ['health','stamina','hunger','stress'].forEach(k=>n[k]=Math.round(clamp(n[k],0,MAX)));
+  ['respect','trust','gang'].forEach(k=>n[k]=Math.round(clamp(n[k],-30,100)));
+  n.money=Math.floor(clamp(n.money,0,999999));
+  n.inventory={snack:0,book:0,kit:0,...(raw.inventory&&typeof raw.inventory==='object'?raw.inventory:{})};
+  ['snack','book','kit'].forEach(k=>n.inventory[k]=Math.floor(clamp(n.inventory[k],0,99)));
+  n.log=Array.isArray(raw.log)?raw.log.filter(x=>typeof x==='string').slice(-30):d.log;
+  n.pendingEvent=(raw.pendingEvent&&typeof raw.pendingEvent.id==='string')?raw.pendingEvent:null;
+  n.ended=raw.ended===true;n.shopOpen=raw.shopOpen===true;
+  return n;
+}
+function loadState(){
+  try{const raw=localStorage.getItem(SAVE_KEY);return raw?validState(JSON.parse(raw)):freshState();}
+  catch(e){return freshState();}
+}
+let state=loadState();
+let busy=false;
+function save(){
+  try{localStorage.setItem(SAVE_KEY,JSON.stringify(state));return true;}
+  catch(e){setNotice('기기에 저장하지 못했어. 브라우저 저장 공간 설정을 확인해 줘.');return false;}
+}
+function note(text){
+  if(typeof text!=='string')return;
+  state.log.push(text);state.log=state.log.slice(-30);
+}
+function setNotice(text){$('notice').textContent=text;}
+function adjust(key,delta,min=0,max=100){state[key]=clamp(state[key]+delta,min,max);}
+function render(){
+  $('dayLine').textContent=state.ended?'게임 종료':'제'+state.day+'일차 / 15일';
+  $('turnLine').textContent=state.ended?'출소 결과 확인':('오늘 행동 '+state.actions+'회 남음');
+  $('moneyLine').textContent='💰 '+state.money+' 코인';
+  $('shopMoney').textContent=state.money+' 코인';
+  [['health','healthValue','healthBar'],['stamina','staminaValue','staminaBar'],['hunger','hungerValue','hungerBar'],['stress','stressValue','stressBar'],['respect','respectValue','respectBar']].forEach(([k,v,b])=>{
+    const value=state[k];$(v).textContent=value+(k==='respect'?'':'/100');$(b).style.width=clamp(value,0,100)+'%';
+  });
+  $('relationshipLine').textContent='교도관 신뢰도 '+state.trust+' · 세력 관계 '+state.gang+' · 간식 '+state.inventory.snack+'개 / 책 '+state.inventory.book+'권 / 구급 꾸러미 '+state.inventory.kit+'개';
+  $('inventory').textContent='간식 '+state.inventory.snack+'개 · 책 '+state.inventory.book+'권 · 구급 꾸러미 '+state.inventory.kit+'개';
+  $('log').replaceChildren(...state.log.slice().reverse().map(line=>{const li=document.createElement('li');li.textContent=line;return li;}));
+  $('shopCard').hidden=!state.shopOpen||state.ended;
+  $('eventCard').hidden=!state.pendingEvent||state.ended;
+  $('ending').hidden=!state.ended;
+  document.querySelectorAll('[data-action]').forEach(b=>b.disabled=state.ended||(b.dataset.action!=='shop'&&state.actions<=0)||!!state.pendingEvent||busy);
+  document.querySelectorAll('[data-buy]').forEach(b=>{const cost={snack:8,book:12,kit:15}[b.dataset.buy];b.disabled=state.ended||state.money<cost||state.inventory[b.dataset.buy]>=99||busy;});
+  document.querySelectorAll('[data-use]').forEach(b=>b.disabled=state.ended||state.actions<=0||!!state.pendingEvent||state.inventory[b.dataset.use]<=0||busy);
+  $('closeShop').disabled=busy;
+  $('saveNow').disabled=busy;
+  $('exportSave').disabled=!state.ended;
+  if(state.pendingEvent)renderEvent();
+  else $('eventChoices').replaceChildren();
+  if(state.ended)renderEnding();
+}
+function renderEvent(){
+  const e=state.pendingEvent;
+  const catalogue=events[e.id];
+  $('eventTitle').textContent=catalogue?catalogue.title:'📌 감옥 사건';
+  $('eventText').textContent=catalogue?catalogue.text:'예상치 못한 일이 생겼어.';
+  const choices=$('eventChoices');choices.replaceChildren();
+  if(!catalogue){const b=document.createElement('button');b.textContent='계속하기';b.addEventListener('click',()=>{state.pendingEvent=null;finishTurnIfNeeded();});choices.append(b);return;}
+  catalogue.choices.forEach(choice=>{
+    const b=document.createElement('button');b.textContent=choice.label;
+    b.disabled=!!(choice.condition&&!choice.condition());
+    b.addEventListener('click',()=>chooseEvent(choice));choices.append(b);
+  });
+}
+const events={
+  boss:{title:'👀 강철 대장의 제안',text:'강철 대장이 다가와 자기 편에 서 달라고 해. 어떻게 할까?',choices:[
+    {label:'예의를 지키며 평화롭게 지내자고 말한다',effect(){adjust('gang',2,-30,100);adjust('respect',2,-30,100);note('강철 대장과 큰 충돌 없이 대화를 마쳤다.');}},
+    {label:'정중히 거절하고 내 일에 집중한다',effect(){adjust('trust',3,-30,100);adjust('respect',1,-30,100);note('스스로 지킬 선을 정했다.');}},
+    {label:'동맹을 맺는다',effect(){adjust('gang',7,-30,100);adjust('trust',-2,-30,100);adjust('respect',-1,-30,100);note('갱단과 가까워졌지만 교도관의 눈길이 신경 쓰인다.');}}
+  ]},
+  rumor:{title:'⚠️ 감방의 말다툼',text:'죄수 둘이 말다툼을 시작했어. 상황을 악화시키지 않는 선택을 해 보자.',choices:[
+    {label:'차분하게 대화를 권한다',effect(){adjust('stress',-2);adjust('respect',2,-30,100);adjust('gang',1,-30,100);note('말다툼이 잦아들었다.');}},
+    {label:'교도관에게 상황을 알린다',effect(){adjust('trust',4,-30,100);adjust('gang',-2,-30,100);note('교도관이 상황을 정리했다.');}},
+    {label:'거리를 두고 내 할 일을 한다',effect(){adjust('stress',-1);adjust('respect',1,-30,100);note('불필요한 갈등에 휘말리지 않았다.');}}
+  ]},
+  inspection:{title:'🔍 갑작스러운 점검',text:'교도관이 감방 상태를 확인해. 차분하게 협조할까?',choices:[
+    {label:'협조하고 부족한 곳을 정리한다',effect(){adjust('trust',5,-30,100);adjust('stress',2);note('점검에 성실히 협조해 신뢰도가 올랐다.');}},
+    {label:'불평하며 시간을 끈다',effect(){adjust('trust',-5,-30,100);adjust('stress',5);note('불평 때문에 점검이 길어졌다.');}}
+  ]},
+  brawl:{title:'🗯️ 싸움 직전의 소동',text:'강철 대장의 부하 콩돌이와 두부가 서로 언성을 높이고 있어. 상황을 더 나쁘게 만들지 않는 선택을 해 보자.',choices:[
+    {label:'두 사람에게 진정하고 대화하자고 권한다',effect(){adjust('respect',3,-30,100);adjust('gang',1,-30,100);adjust('stress',-2);note('콩돌이와 두부가 진정하고 대화를 이어 갔다.');}},
+    {label:'교도관에게 안전을 위해 도움을 요청한다',effect(){adjust('trust',5,-30,100);adjust('gang',-3,-30,100);note('교도관이 소동을 정리해 모두 거리를 두었다.');}},
+    {label:'거리를 두고 다른 일을 한다',effect(){adjust('stress',-1);note('소동에 끼어들지 않고 안전한 거리를 유지했다.');}}
+  ]},
+  meal:{title:'🍲 늦어진 식사',text:'식사 배급이 조금 늦어졌어. 남은 간식이 있으면 쓸 수도 있어.',choices:[
+    {label:'침착하게 기다린다',effect(){adjust('stress',-2);adjust('respect',1,-30,100);note('기다리는 동안 마음을 가라앉혔다.');}},
+    {label:'매점에서 간식을 꺼내 먹는다 (간식 1개 필요)',condition(){return state.inventory.snack>0;},effect(){state.inventory.snack--;adjust('hunger',-20);adjust('health',3);note('간식으로 허기를 달랬다.');}},
+    {label:'교도관에게 상황을 정중히 물어본다',effect(){adjust('trust',1,-30,100);note('배급 상황을 확인했다.');}}
+  ]}
+};
+function triggerRandomEvent(){
+  if(state.pendingEvent||state.ended)return false;
+  if(Math.random()>=0.28)return false;
+  const ids=['boss','rumor','inspection','meal','brawl'];
+  let id=ids[Math.floor(Math.random()*ids.length)];
+  if(id==='boss'&&state.gang>20)id='rumor';
+  if(id==='inspection'&&state.trust>55)id='meal';
+  state.pendingEvent={id:id};note('새 사건: '+events[id].title.replace(/^[^ ]+ /,''));
+  return true;
+}
+function chooseEvent(choice){
+  if(busy||state.ended||!state.pendingEvent)return;
+  if(choice.condition&&!choice.condition())return;
+  busy=true;
+  try{choice.effect();state.pendingEvent=null;finishTurnIfNeeded();}finally{busy=false;save();render();}
+}
+function healAtClinic(){
+  if(state.health<=0){state.health=25;state.stress=clamp(state.stress+8,0,100);note('몸 상태가 나빠져 의무실에서 치료를 받았다. 다음 행동을 할 수 있도록 회복했다.');setNotice('의무실에서 치료를 받고 다시 시작해!');}
+}
+function action(key){
+  if(busy||state.ended||state.actions<=0||state.pendingEvent)return;
+  busy=true;
+  try{
+    state.actions--;
+    switch(key){
+      case'eat':adjust('hunger',-28);adjust('health',8);adjust('stress',-2);note('콩밥을 먹었다. 생각보다 먹을 만하다.');setNotice('식사 완료!');break;
+      case'work':adjust('money',12,0,999999);adjust('stamina',-12);adjust('hunger',10);adjust('trust',2,-30,100);note('작업장에서 일해 코인 12개를 벌었다.');setNotice('코인 12개 획득!');break;
+      case'exercise':adjust('stamina',-14);adjust('hunger',8);adjust('stress',-6);adjust('respect',2,-30,100);adjust('health',3);note('가볍게 운동했다. 몸과 기분이 조금 나아졌다.');setNotice('운동 완료!');break;
+      case'read':adjust('stress',-9);adjust('respect',2,-30,100);adjust('trust',1,-30,100);note('책을 읽으며 마음을 진정시켰다.');setNotice('독서 완료!');break;
+      case'clean':adjust('trust',5,-30,100);adjust('stress',2);adjust('respect',1,-30,100);note('감방을 깨끗이 정리했다. 교도관이 좋게 봤다.');setNotice('청소 완료!');break;
+      case'talk':adjust('stress',-3);if(Math.random()<0.5){adjust('respect',2,-30,100);note('죄수들과 평화롭게 대화했다.');setNotice('괜찮은 대화를 나눴어.');}else{adjust('gang',2,-30,100);note('새 죄수와 인사를 나눠 조금 친해졌다.');setNotice('새 친구가 생길지도?');}break;
+      case'rest':adjust('stamina',18);adjust('stress',-8);adjust('hunger',3);note('잠깐 쉬면서 기력을 회복했다.');setNotice('휴식 완료!');break;
+      default:state.actions++;setNotice('알 수 없는 행동이라 취소했어.');return;
+    }
+    adjust('hunger',0);adjust('stress',0);healAtClinic();
+    const eventShown=triggerRandomEvent();
+    if(!eventShown)finishTurnIfNeeded();
+  }finally{busy=false;save();render();}
+}
+function useItem(key){
+  if(busy||state.ended||state.actions<=0||state.pendingEvent||state.inventory[key]<=0)return;
+  busy=true;
+  try{
+    state.actions--;state.inventory[key]--;
+    if(key==='snack'){adjust('hunger',-20);adjust('health',3);note('간식을 먹어 허기를 달랬다.');}
+    else if(key==='book'){adjust('stress',-12);adjust('respect',1,-30,100);note('책을 읽으며 스트레스를 줄였다.');}
+    else if(key==='kit'){adjust('health',25);note('구급 꾸러미를 사용해 치료했다.');}
+    healAtClinic();
+    const eventShown=triggerRandomEvent();
+    if(!eventShown)finishTurnIfNeeded();
+  }finally{busy=false;save();render();}
+}
+function buy(key){
+  if(busy||state.ended)return;
+  const costs={snack:8,book:12,kit:15};
+  if(!Object.hasOwn(costs,key)||state.money<costs[key]||state.inventory[key]>=99)return;
+  state.money-=costs[key];state.inventory[key]++;
+  note(({snack:'간식',book:'책',kit:'구급 꾸러미'})[key]+'을(를) 구매했다.');setNotice('구매 완료!');save();render();
+}
+function finishTurnIfNeeded(){
+  if(state.pendingEvent||state.actions>0||state.ended)return;
+  if(state.day>=15){state.ended=true;state.shopOpen=false;note('15일이 끝났다. 감옥 생활의 마지막 날이다.');setNotice('15일 생존 완료! 결과를 확인해 봐.');save();render();return;}
+  state.day++;state.actions=3;
+  adjust('hunger',8);adjust('stress',2);
+  if(state.hunger>=80){adjust('health',-5);note('배고픔이 심해 체력이 줄었다. 다음 날에는 식사를 챙기자.');}
+  if(state.stress>=80){adjust('respect',-1,-30,100);note('스트레스가 너무 높아 평판에 좋지 않은 영향을 줬다.');}
+  healAtClinic();note('새로운 하루가 시작됐다. 행동 기회 3회가 돌아왔다.');setNotice(state.day+'일차 시작!');save();render();
+}
+function renderEnding(){
+  let title='🏁 출소 날',body='15일을 버텼어. 이제까지의 선택이 너의 결과를 만들었어.';
+  if(state.trust>=35&&state.respect>=12&&state.gang<25){title='🌱 성실한 재출발 엔딩';body='꾸준히 일하고 규칙을 지키며 신뢰를 쌓았어. 앞으로의 계획을 세울 준비가 됐어.';}
+  else if(state.gang>=20){title='🤝 강철 대장과의 인연 엔딩';body='감옥 안에서 만든 인맥이 가장 큰 자산이 됐어. 다만 어떤 관계를 이어갈지는 신중하게 결정해야 해.';}
+  else if(state.health<=25||state.stress>=75){title='🩺 회복 우선 엔딩';body='힘든 날이 많았지만 끝까지 버텼어. 다음에는 식사와 휴식을 더 잘 챙겨 보자.';}
+  else {title='🚪 새로운 시작 엔딩';body='15일을 무사히 보냈어. 다음 도전에서는 더 나은 생활 습관과 인간관계를 만들어 보자.';}
+  $('endingTitle').textContent=title;$('endingText').textContent=body;
+}
+function exportSave(){
+  const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download='bean-jail-save.json';document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);setNotice('저장 파일을 내보냈어.');
+}
+document.querySelectorAll('[data-action]').forEach(b=>b.addEventListener('click',()=>{
+  const key=b.dataset.action;
+  if(key==='shop'){state.shopOpen=!state.shopOpen;save();render();if(state.shopOpen)$('shopCard').scrollIntoView({behavior:'smooth',block:'nearest'});return;}
+  action(key);
+}));
+document.querySelectorAll('[data-buy]').forEach(b=>b.addEventListener('click',()=>buy(b.dataset.buy)));
+document.querySelectorAll('[data-use]').forEach(b=>b.addEventListener('click',()=>useItem(b.dataset.use)));
+$('closeShop').addEventListener('click',()=>{state.shopOpen=false;save();render();});
+$('saveNow').addEventListener('click',()=>{save();setNotice('저장했어!');});
+$('exportSave2').addEventListener('click',exportSave);
+$('exportSave').addEventListener('click',exportSave);
+$('restart').addEventListener('click',()=>{
+  if(!confirm('새 게임을 시작할까? 현재 기기 저장 내용이 새 게임으로 바뀌어.'))return;
+  state=freshState();save();render();setNotice('새 게임이 시작됐어!');
+});
+$('resetGame').addEventListener('click',()=>{
+  if(!confirm('저장된 진행 상황을 초기화할까? 되돌릴 수 없어. 먼저 저장 파일을 내보낼 수 있어.'))return;
+  state=freshState();save();render();setNotice('게임을 초기화했어.');
+});
+save();render();
+})();
+</script>
+</body>
+</html>
