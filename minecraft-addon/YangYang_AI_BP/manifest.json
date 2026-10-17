@@ -1,0 +1,39 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "YangYang AI Buddy - Behavior Pack",
+    "description": "Adds a friendly YangYang buddy entity.",
+    "uuid": "9d2b1c41-3a70-4c6e-8a12-7e51b7c9a301",
+    "version": [
+      1,
+      0,
+      0
+    ],
+    "min_engine_version": [
+      1,
+      20,
+      0
+    ]
+  },
+  "modules": [
+    {
+      "type": "data",
+      "uuid": "9d2b1c41-3a70-4c6e-8a12-7e51b7c9a302",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ],
+  "dependencies": [
+    {
+      "uuid": "9d2b1c41-3a70-4c6e-8a12-7e51b7c9a303",
+      "version": [
+        1,
+        0,
+        0
+      ]
+    }
+  ]
+}
