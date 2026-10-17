@@ -55,6 +55,7 @@ def main():
     require(GAME.is_file(), "Game HTML file is missing.")
     require(HOME.is_file(), "Landing page is missing.")
     html = GAME.read_text(encoding="utf-8")
+    home_html = HOME.read_text(encoding="utf-8")
     parser = GameParser()
     parser.feed(html)
     parser.close()
@@ -72,7 +73,7 @@ def main():
             "Local save/load implementation is missing.")
     require("brawl:{title:" in html and "콩돌이와 두부" in html,
             "Gang-underlings event is missing.")
-    require('id="bean-jail-game-link"' in HOME and 'href="./bean-jail/"' in HOME,
+    require('id="bean-jail-game-link"' in home_html and 'href="./bean-jail/"' in home_html,
             "Landing page does not link to the game.")
     require(len(parser.scripts) == 1, f"Expected one inline game script; found {len(parser.scripts)}.")
     script = parser.scripts[0]
