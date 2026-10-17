@@ -1,62 +1,6 @@
 <!doctype html>
-<html lang="ko">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>양양이 마인크래프트 애드온 만들기</title>
-<style>
-body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.6}
-button{font-size:1rem;padding:12px 18px;border:0;border-radius:10px;background:#176b3a;color:white}
-button:disabled{opacity:.5} #status{white-space:pre-wrap}
-</style>
-</head>
-<body>
-<h1>양양이 마인크래프트 애드온</h1>
-<p>안드로이드용 Minecraft Bedrock 애드온 파일(<code>.mcaddon</code>)을 브라우저에서 생성합니다. 계정 로그인이나 결제는 필요하지 않습니다.</p>
-<p><strong>주의:</strong> 현재 소스가 게임 안에서 정상 작동하는지는 아직 테스트되지 않았습니다. 월드를 먼저 백업하세요.</p>
-<button id="build">.mcaddon 만들기</button>
-<p id="status">준비됨</p>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-<script>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>양양이 마인크래프트 애드온 만들기</title><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.6}button{font-size:1rem;padding:12px 18px;border:0;border-radius:10px;background:#176b3a;color:white}button:disabled{opacity:.5}#status{white-space:pre-wrap}</style></head><body><h1>양양이 마인크래프트 애드온</h1><p>안드로이드용 Minecraft Bedrock 애드온 파일(<code>.mcaddon</code>)을 브라우저에서 생성합니다. 로그인이나 결제는 필요하지 않습니다.</p><p><strong>주의:</strong> 게임 안에서의 동작은 아직 테스트되지 않았습니다. 기존 월드는 백업하세요.</p><button id="build">.mcaddon 만들기</button><p id="status">준비됨</p><script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script><script>
 const base='https://raw.githubusercontent.com/gw140427-rgb/Neoos-2/main/minecraft-addon/';
-const files=[
- ['YangYang_AI_BP/manifest.json','bp/manifest.json'],
- ['YangYang_AI_BP/entities/yangyang_buddy.json','bp/entities/yangyang_buddy.json'],
- ['YangYang_AI_RP/manifest.json','rp/manifest.json'],
- ['YangYang_AI_RP/entity/yangyang_buddy.entity.json','rp/entity/yangyang_buddy.entity.json'],
- ['YangYang_AI_RP/texts/ko_KR.lang','rp/texts/ko_KR.lang'],
- ['YangYang_AI_RP/texts/en_US.lang','rp/texts/en_US.lang']
-];
-const status=document.getElementById('status'), button=document.getElementById('build');
-button.addEventListener('click',async()=>{
- if(!window.JSZip){status.textContent='ZIP 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 시도하세요.';return}
- button.disabled=true; status.textContent='GitHub에서 애드온 파일을 가져오는 중...';
- try{
-  const fetched=await Promise.all(files.map(async ([path,dest])=>{
-   const r=await fetch(base+path); if(!r.ok) throw new Error(path+' 다운로드 실패 ('+r.status+')');
-   return [dest,await r.text()];
-  }));
-  const bp=new JSZip(),rp=new JSZip();
-  for(const [dest,content] of fetched){
-   if(dest.startsWith('bp/')) bp.file(dest.slice(3),content);
-   else rp.file(dest.slice(3),content);
-  }
-  status.textContent='팩 파일을 만드는 중...';
-  const [bpBlob,rpBlob]=await Promise.all([
-   bp.generateAsync({type:'blob'}),
-   rp.generateAsync({type:'blob'})
-  ]);
-  const outer=new JSZip();
-  outer.file('YangYang_AI_BP.mcpack',bpBlob);
-  outer.file('YangYang_AI_RP.mcpack',rpBlob);
-  const result=await outer.generateAsync({type:'blob'});
-  const url=URL.createObjectURL(result),a=document.createElement('a');
-  a.href=url;a.download='YangYang_AI.mcaddon';document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),30000);
-  status.textContent='완료! 다운로드된 YangYang_AI.mcaddon 파일을 눌러 Minecraft로 가져오세요. 가져오기가 실패하면 README를 확인하세요.';
- }catch(e){status.textContent='만들기에 실패했습니다: '+e.message+'\n잠시 후 다시 시도하거나 GitHub README를 확인하세요.'}
- finally{button.disabled=false}
-});
-</script>
-</body>
-</html>
+const files=[['YangYang_AI_BP/manifest.json','bp/manifest.json','text'],['YangYang_AI_BP/entities/yangyang_buddy.json','bp/entities/yangyang_buddy.json','text'],['YangYang_AI_RP/manifest.json','rp/manifest.json','text'],['YangYang_AI_RP/entity/yangyang_buddy.entity.json','rp/entity/yangyang_buddy.entity.json','text'],['YangYang_AI_RP/geometry/yangyang_buddy.geo.json','rp/geometry/yangyang_buddy.geo.json','text'],['YangYang_AI_RP/render_controllers/yangyang_buddy.render_controllers.json','rp/render_controllers/yangyang_buddy.render_controllers.json','text'],['YangYang_AI_RP/textures/entity/yangyang_buddy.png','rp/textures/entity/yangyang_buddy.png','blob'],['YangYang_AI_RP/texts/ko_KR.lang','rp/texts/ko_KR.lang','text'],['YangYang_AI_RP/texts/en_US.lang','rp/texts/en_US.lang','text']];
+const status=document.getElementById('status'),button=document.getElementById('build');button.addEventListener('click',async()=>{if(!window.JSZip){status.textContent='ZIP 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.';return}button.disabled=true;status.textContent='GitHub에서 파일을 가져오는 중...';try{const fetched=await Promise.all(files.map(async([path,dest,type])=>{const r=await fetch(base+path);if(!r.ok)throw Error(path+' 다운로드 실패 ('+r.status+')');return[dest,type==='blob'?await r.blob():await r.text()]}));const bp=new JSZip(),rp=new JSZip();for(const[dest,content]of fetched){if(dest.startsWith('bp/'))bp.file(dest.slice(3),content);else rp.file(dest.slice(3),content)}status.textContent='애드온을 묶는 중...';const[bpb,rpb]=await Promise.all([bp.generateAsync({type:'blob'}),rp.generateAsync({type:'blob'})]);const outer=new JSZip();outer.file('YangYang_AI_BP.mcpack',bpb);outer.file('YangYang_AI_RP.mcpack',rpb);const result=await outer.generateAsync({type:'blob'});const url=URL.createObjectURL(result),a=document.createElement('a');a.href=url;a.download='YangYang_AI.mcaddon';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='완료! 다운로드한 파일을 열어 Minecraft로 가져오세요.'}catch(e){status.textContent='실패: '+e.message+'\n잠시 후 다시 시도하세요.'}finally{button.disabled=false}});
+</script></body></html>

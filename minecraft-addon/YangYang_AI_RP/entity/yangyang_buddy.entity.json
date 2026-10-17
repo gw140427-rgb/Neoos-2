@@ -7,13 +7,13 @@
         "default": "entity_alphatest"
       },
       "textures": {
-        "default": "textures/entity/pig/pig"
+        "default": "textures/entity/yangyang_buddy"
       },
       "geometry": {
-        "default": "geometry.pig"
+        "default": "geometry.yangyang_buddy"
       },
       "render_controllers": [
-        "controller.render.default"
+        "controller.render.yangyang_buddy"
       ]
     }
   }
