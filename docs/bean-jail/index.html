@@ -181,7 +181,7 @@ function render(){
   $('shopCard').hidden=!state.shopOpen||state.ended;
   $('eventCard').hidden=!state.pendingEvent||state.ended;
   $('ending').hidden=!state.ended;
-  document.querySelectorAll('[data-action]').forEach(b=>b.disabled=state.ended||state.actions<=0||!!state.pendingEvent||busy);
+  document.querySelectorAll('[data-action]').forEach(b=>b.disabled=state.ended||(b.dataset.action!=='shop'&&state.actions<=0)||!!state.pendingEvent||busy);
   document.querySelectorAll('[data-buy]').forEach(b=>{const cost={snack:8,book:12,kit:15}[b.dataset.buy];b.disabled=state.ended||state.money<cost||state.inventory[b.dataset.buy]>=99||busy;});
   document.querySelectorAll('[data-use]').forEach(b=>b.disabled=state.ended||state.actions<=0||!!state.pendingEvent||state.inventory[b.dataset.use]<=0||busy);
   $('closeShop').disabled=busy;
@@ -200,6 +200,7 @@ function renderEvent(){
   if(!catalogue){const b=document.createElement('button');b.textContent='계속하기';b.addEventListener('click',()=>{state.pendingEvent=null;finishTurnIfNeeded();});choices.append(b);return;}
   catalogue.choices.forEach(choice=>{
     const b=document.createElement('button');b.textContent=choice.label;
+    b.disabled=!!(choice.condition&&!choice.condition());
     b.addEventListener('click',()=>chooseEvent(choice));choices.append(b);
   });
 }
@@ -218,6 +219,11 @@ const events={
     {label:'협조하고 부족한 곳을 정리한다',effect(){adjust('trust',5,-30,100);adjust('stress',2);note('점검에 성실히 협조해 신뢰도가 올랐다.');}},
     {label:'불평하며 시간을 끈다',effect(){adjust('trust',-5,-30,100);adjust('stress',5);note('불평 때문에 점검이 길어졌다.');}}
   ]},
+  brawl:{title:'🗯️ 싸움 직전의 소동',text:'강철 대장의 부하 콩돌이와 두부가 서로 언성을 높이고 있어. 상황을 더 나쁘게 만들지 않는 선택을 해 보자.',choices:[
+    {label:'두 사람에게 진정하고 대화하자고 권한다',effect(){adjust('respect',3,-30,100);adjust('gang',1,-30,100);adjust('stress',-2);note('콩돌이와 두부가 진정하고 대화를 이어 갔다.');}},
+    {label:'교도관에게 안전을 위해 도움을 요청한다',effect(){adjust('trust',5,-30,100);adjust('gang',-3,-30,100);note('교도관이 소동을 정리해 모두 거리를 두었다.');}},
+    {label:'거리를 두고 다른 일을 한다',effect(){adjust('stress',-1);note('소동에 끼어들지 않고 안전한 거리를 유지했다.');}}
+  ]},
   meal:{title:'🍲 늦어진 식사',text:'식사 배급이 조금 늦어졌어. 남은 간식이 있으면 쓸 수도 있어.',choices:[
     {label:'침착하게 기다린다',effect(){adjust('stress',-2);adjust('respect',1,-30,100);note('기다리는 동안 마음을 가라앉혔다.');}},
     {label:'매점에서 간식을 꺼내 먹는다 (간식 1개 필요)',condition(){return state.inventory.snack>0;},effect(){state.inventory.snack--;adjust('hunger',-20);adjust('health',3);note('간식으로 허기를 달랬다.');}},
@@ -227,7 +233,7 @@ const events={
 function triggerRandomEvent(){
   if(state.pendingEvent||state.ended)return false;
   if(Math.random()>=0.28)return false;
-  const ids=['boss','rumor','inspection','meal'];
+  const ids=['boss','rumor','inspection','meal','brawl'];
   let id=ids[Math.floor(Math.random()*ids.length)];
   if(id==='boss'&&state.gang>20)id='rumor';
   if(id==='inspection'&&state.trust>55)id='meal';
