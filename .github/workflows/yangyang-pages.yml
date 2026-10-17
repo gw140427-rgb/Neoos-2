@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'docs/index.html'
+      - 'docs/bean-jail/**'
       - '.github/workflows/yangyang-pages.yml'
       - 'minecraft-addon/**'
   workflow_dispatch:
