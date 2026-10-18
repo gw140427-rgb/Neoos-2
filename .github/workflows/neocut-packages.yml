@@ -68,3 +68,47 @@ jobs:
           name: neocut-android-debug-apk
           path: apps/neocut-android/android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+
+  publish-downloads:
+    name: Publish direct download links
+    runs-on: ubuntu-latest
+    needs: [desktop, android]
+    if: always()
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - name: Download whichever packages built successfully
+        uses: actions/download-artifact@v4
+        with:
+          pattern: neocut-*
+          path: release-files
+          merge-multiple: true
+          if-no-artifact-found: warn
+      - name: Give packages stable download names
+        shell: bash
+        run: |
+          mkdir -p stable
+          find release-files -type f -iname '*.exe' -print -quit | while read -r f; do cp "$f" stable/NeoCut-Windows-x64.exe; done
+          find release-files -type f -iname '*.AppImage' -print -quit | while read -r f; do cp "$f" stable/NeoCut-Linux-x86_64.AppImage; done
+          find release-files -type f -iname '*.deb' -print -quit | while read -r f; do cp "$f" stable/NeoCut-Linux-amd64.deb; done
+          find release-files -type f -iname '*.apk' -print -quit | while read -r f; do cp "$f" stable/NeoCut-Android.apk; done
+          echo "Published package candidates:"
+          ls -lh stable || true
+          test -n "$(find stable -maxdepth 1 -type f -print -quit)"
+      - name: Publish or update the stable download release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: neocut-latest
+          name: NeoCut — 최신 자동 다운로드
+          body: |
+            이 릴리스는 NeoCut 패키지 빌드가 끝날 때마다 자동 갱신됩니다.
+            빌드에 성공한 플랫폼의 파일만 포함됩니다. Android 파일은 테스트용 debug APK입니다.
+          target_commitish: feature/neocut-editor
+          prerelease: true
+          make_latest: false
+          overwrite_files: true
+          files: stable/*
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
