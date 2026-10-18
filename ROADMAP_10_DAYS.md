@@ -43,9 +43,9 @@ Improve the existing NeoOS Rebuild starter in small, reviewable steps. The curre
 - Day 1 started on 2026-10-16 (Asia/Seoul): confirmed the repository baseline and created an isolated working branch.
 - Day 2 completed on 2026-10-18: added tests for title/details boundaries, invalid status filters, invalid status updates, and unknown task IDs. Rejected inputs are checked for task-file and journal immutability.
 - CI hardening started on 2026-10-18: the workflow now checks the automation branch and pull requests; it uses read-only contents permissions and has no deployment step.
-- Day 3 completed on 2026-10-18: task writes use a unique same-directory temporary file, flush and fsync contents, then atomically replace the destination. Tests confirm replace/fsync failures preserve the previous file and clean up temporary files.
+- Day 3 completed on 2026-10-18: task writes use a unique same-directory temporary file, flush and fsync contents, then atomically replace the destination. Tests confirm replace/fsync failures preserve the previous file and clean up temporary files. The MCP server now refuses to overwrite unreadable, malformed, or non-array task data.
 - Day 4 completed on 2026-10-18: malformed journal lines are skipped without hiding valid neighbors, and unreadable journal files return an empty result safely.
 - Day 5 completed on 2026-10-18: bearer authentication accepts the scheme case-insensitively and rejects missing, malformed, or incorrect credentials. ASGI middleware tests cover these cases.
 - CI verification: GitHub Actions run `39122354001` passed compile checks, the full unittest suite, and the report-only worker for commit `5e5dda1cfdda3493883594c2279e171334e8c6af`.
 - Day 6 completed on 2026-10-18: the worker reports total, valid, malformed, and queued record counts without executing task contents. Tests verify malformed records are reported and the task file remains byte-for-byte unchanged.
-- CI verification: GitHub Actions run `39122459440` passed compilation, all 20 unit tests, and the report-only worker for commit `b3ef1a7934b1a90b8af3e524f49f21ffb1ae88e3`.
+- CI verification: GitHub Actions run `39122534668` passed compilation, all 22 unit tests, and the report-only worker for commit `0613bb702254c08b9f96824d0260a47d7c881ce3`.
