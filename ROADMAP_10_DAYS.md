@@ -31,9 +31,14 @@ Improve the existing NeoOS Rebuild starter in small, reviewable steps. The curre
 
 - MCP entry point: `neoos_mcp.py`
 - Report-only worker: `worker.py`
-- Existing worker regression test: `tests/test_worker.py`
+- Worker regression tests: `tests/test_worker.py`
+- MCP input validation tests: `tests/test_mcp_validation.py`
+- Task persistence tests: `tests/test_persistence.py`
 - CI workflow: `.github/workflows/neoos-heartbeat.yml`
 
 ## Progress log
 
 - Day 1 started on 2026-10-16 (Asia/Seoul): confirmed the repository baseline and created an isolated working branch.
+- Day 2 completed on 2026-10-18: added tests for title/details boundaries, invalid status filters, invalid status updates, and unknown task IDs. Rejected inputs are checked for task-file and journal immutability.
+- CI hardening started on 2026-10-18: the workflow now checks the automation branch and pull requests; the first run for commit `ed460a05a2b3d59724d12ad8e2efa16023dd2d86` passed compile checks and the full then-current test suite.
+- Day 3 implementation in progress on 2026-10-18: task writes now use a unique same-directory temporary file, flush and fsync the contents, and atomically replace the destination. Failure-path tests cover replace and fsync errors; a fresh CI run is still required for these latest changes.
