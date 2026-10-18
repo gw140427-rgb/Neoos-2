@@ -21,10 +21,10 @@ Open `index.html` in a modern browser, or serve this folder with any static web 
 - Export is WebM, not MP4. Audio mixing and export need real-device testing.
 - The multi-clip timeline and sequential export are an early prototype and need real-device testing; transitions, filters, waveform, and AI subtitles are not implemented.
 - Project JSON saves clip names/order and trim settings but does not embed media or automatically relink files.
-- PWA installation is not the same as a native Android APK or a Windows/Linux installer; those packages are not built yet.
+- Native packaging scaffolds and a GitHub Actions workflow now exist for an Android debug APK and Windows/Linux desktop installers. They are not considered built until the workflow completes successfully; no signed release APK is provided.
 
 ## Roadmap
 1. Test PWA installation and export on Android and desktop browsers; fix browser-specific issues.
 2. Test and harden multi-clip export on Android and desktop browsers.
 3. Add transitions, filters, and project asset relinking.
-4. Package the shared editor as native Android and desktop apps after the web workflow stabilizes.
+4. Validate the Android and desktop CI builds, then test installers on real devices.
