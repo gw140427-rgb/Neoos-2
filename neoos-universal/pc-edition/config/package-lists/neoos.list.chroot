@@ -1,0 +1,14 @@
+# Minimal live environment; no desktop environment yet.
+live-boot
+systemd-sysv
+linux-image-amd64
+network-manager
+sudo
+bash-completion
+ca-certificates
+curl
+wget
+nano
+less
+iproute2
+iputils-ping
