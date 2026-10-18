@@ -47,8 +47,9 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: android-actions/setup-android@v3
-      - name: Install Android SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+        with:
+          accept-android-sdk-licenses: true
+          packages: "platform-tools,platforms;android-35,build-tools;35.0.0"
       - name: Install Capacitor dependencies and generate Android project
         working-directory: apps/neocut-android
         run: |
