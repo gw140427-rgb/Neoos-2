@@ -41,4 +41,7 @@ Improve the existing NeoOS Rebuild starter in small, reviewable steps. The curre
 - Day 1 started on 2026-10-16 (Asia/Seoul): confirmed the repository baseline and created an isolated working branch.
 - Day 2 completed on 2026-10-18: added tests for title/details boundaries, invalid status filters, invalid status updates, and unknown task IDs. Rejected inputs are checked for task-file and journal immutability.
 - CI hardening started on 2026-10-18: the workflow now checks the automation branch and pull requests; the first run for commit `ed460a05a2b3d59724d12ad8e2efa16023dd2d86` passed compile checks and the full then-current test suite.
-- Day 3 implementation in progress on 2026-10-18: task writes now use a unique same-directory temporary file, flush and fsync the contents, and atomically replace the destination. Failure-path tests cover replace and fsync errors; a fresh CI run is still required for these latest changes.
+- Day 3 completed on 2026-10-18: task writes use a unique same-directory temporary file, flush and fsync contents, then atomically replace the destination. Tests confirm replace/fsync failures preserve the previous file and clean up temporary files.
+- Day 4 completed on 2026-10-18: malformed journal lines are skipped without hiding valid neighbors, and unreadable journal files return an empty result safely.
+- Day 5 implemented on 2026-10-18: bearer authentication now accepts the scheme case-insensitively and rejects missing, malformed, or incorrect credentials. ASGI middleware tests cover these cases.
+- CI verification: GitHub Actions run `39122354001` passed compile checks, the full unittest suite, and the report-only worker for commit `5e5dda1cfdda3493883594c2279e171334e8c6af`.
