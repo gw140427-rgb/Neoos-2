@@ -1,0 +1,67 @@
+name: NeoCut app packages
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/neocut-editor
+    paths:
+      - "apps/neocut-web/**"
+      - "apps/neocut-desktop/**"
+      - "apps/neocut-android/**"
+      - ".github/workflows/neocut-packages.yml"
+jobs:
+  desktop:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: windows-installer
+          - os: ubuntu-latest
+            artifact: linux-packages
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: apps/neocut-desktop
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install
+      - run: npm run dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neocut-${{ matrix.artifact }}
+          path: apps/neocut-desktop/release/*
+          if-no-files-found: error
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - name: Install Capacitor dependencies and generate Android project
+        working-directory: apps/neocut-android
+        run: |
+          npm install
+          npx cap add android
+          npx cap sync android
+      - name: Build debug APK
+        working-directory: apps/neocut-android/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: neocut-android-debug-apk
+          path: apps/neocut-android/android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
