@@ -40,7 +40,7 @@ class BearerTokenMiddlewareTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(b"unauthorized", messages[1]["body"])
 
     async def test_malformed_authorization_is_unauthorized(self):
-        for value in (b"Basic abc", b"Bearer", b"Bearer ", b"Bearer\t" + TOKEN.encode()):
+        for value in (b"Basic abc", b"Bearer", b"Bearer ", b"Bearer\t" + TOKEN.encode(), b"Bearer \xff"):
             with self.subTest(value=value):
                 calls, messages = await self.run_request(value)
                 self.assertEqual(calls, [])
