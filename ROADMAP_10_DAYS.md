@@ -51,3 +51,8 @@ Improve the existing NeoOS Rebuild starter in small, reviewable steps. The curre
 - CI verification: GitHub Actions run `39122354001` passed compile checks, the full unittest suite, and the report-only worker for commit `5e5dda1cfdda3493883594c2279e171334e8c6af`.
 - Day 6 completed on 2026-10-18: the worker reports total, valid, malformed, and queued record counts without executing task contents. Tests verify malformed records are reported and the task file remains byte-for-byte unchanged.
 - CI verification: GitHub Actions run `39122534668` passed compilation, all 22 unit tests, and the report-only worker for commit `0613bb702254c08b9f96824d0260a47d7c881ce3`.
+- Day 7 completed on 2026-10-18: CI checks the automation branch and pull requests, uses read-only contents permission, compiles Python source, runs tests, and executes only the report-only worker.
+- Day 8 completed on 2026-10-18: an end-to-end test starts the MCP server over stdio with a temporary data directory and exercises create, update, and list task calls without production credentials or external services.
+- Day 9 completed on 2026-10-18: added `docs/OPERATIONS.md` covering data locations, backup/restore, HTTP authentication, security notes, and troubleshooting; linked it from the README.
+- Final CI verification: GitHub Actions run `39122754198` passed compilation, all 23 unit tests, and the report-only worker for commit `fdd0c31fa8f4deb24dff52392c22f397fb1af158`.
+- Day 10 review prepared on 2026-10-18: pull request #10 contains the code, regression tests, operations guide, and CI evidence. It remains open and unmerged for human review; no production deployment was performed.
