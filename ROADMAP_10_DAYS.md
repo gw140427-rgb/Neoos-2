@@ -47,4 +47,5 @@ Improve the existing NeoOS Rebuild starter in small, reviewable steps. The curre
 - Day 4 completed on 2026-10-18: malformed journal lines are skipped without hiding valid neighbors, and unreadable journal files return an empty result safely.
 - Day 5 completed on 2026-10-18: bearer authentication accepts the scheme case-insensitively and rejects missing, malformed, or incorrect credentials. ASGI middleware tests cover these cases.
 - CI verification: GitHub Actions run `39122354001` passed compile checks, the full unittest suite, and the report-only worker for commit `5e5dda1cfdda3493883594c2279e171334e8c6af`.
-- Day 6 implementation in progress on 2026-10-18: the worker now counts valid and malformed records while remaining report-only. New tests verify malformed records are reported and the task file is preserved; CI is pending for the latest changes.
+- Day 6 completed on 2026-10-18: the worker reports total, valid, malformed, and queued record counts without executing task contents. Tests verify malformed records are reported and the task file remains byte-for-byte unchanged.
+- CI verification: GitHub Actions run `39122459440` passed compilation, all 20 unit tests, and the report-only worker for commit `b3ef1a7934b1a90b8af3e524f49f21ffb1ae88e3`.
