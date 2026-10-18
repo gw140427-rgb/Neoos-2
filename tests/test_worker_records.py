@@ -41,7 +41,7 @@ class WorkerRecordTests(unittest.TestCase):
             self.assertIn("valid records: 2", result.stdout)
             self.assertIn("malformed records: 3", result.stdout)
             self.assertIn("queued: 1", result.stdout)
-            self.assertIn("no tasks executed", result.stdout)
+            self.assertIn("no shell commands or deployments executed", result.stdout)
             self.assertEqual(tasks_file.read_text(encoding="utf-8"), original_text)
             journal = (data / "journal.jsonl").read_text(encoding="utf-8")
             self.assertIn("malformed_records=3", journal)
