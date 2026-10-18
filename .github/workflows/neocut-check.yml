@@ -1,0 +1,28 @@
+name: NeoCut static checks
+on:
+  push:
+    paths:
+      - "apps/neocut-web/**"
+      - ".github/workflows/neocut-check.yml"
+  pull_request:
+    paths:
+      - "apps/neocut-web/**"
+      - ".github/workflows/neocut-check.yml"
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Check JavaScript syntax
+        run: |
+          node --check apps/neocut-web/app.js
+          node --check apps/neocut-web/pwa.js
+      - name: Check required PWA files
+        run: |
+          test -s apps/neocut-web/index.html
+          test -s apps/neocut-web/manifest.webmanifest
+          test -s apps/neocut-web/sw.js
+          test -s apps/neocut-web/icon.svg
