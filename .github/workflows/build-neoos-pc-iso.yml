@@ -1,0 +1,60 @@
+name: Build NeoOS PC Edition ISO
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'neoos-universal/pc-edition/**'
+      - '.github/workflows/build-neoos-pc-iso.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neoos-pc-iso-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Debian live-build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y live-build debootstrap squashfs-tools xorriso             grub-pc-bin grub-efi-amd64-bin mtools dosfstools
+
+      - name: Configure minimal NeoOS live system
+        working-directory: neoos-universal/pc-edition
+        run: |
+          sudo lb config             --distribution trixie             --architectures amd64             --binary-images iso-hybrid             --archive-areas "main"             --apt-recommends false             --bootappend-live "boot=live components hostname=neoos username=neoos"
+
+      - name: Build ISO
+        working-directory: neoos-universal/pc-edition
+        run: |
+          sudo lb build
+          sudo chown -R "$USER":"$USER" .
+
+      - name: Verify ISO exists and create checksum
+        working-directory: neoos-universal/pc-edition
+        run: |
+          ISO="$(find . -maxdepth 1 -type f -name '*.iso' -print -quit)"
+          test -n "$ISO"
+          test -s "$ISO"
+          sha256sum "$ISO" > SHA256SUMS
+          file "$ISO"
+          cat SHA256SUMS
+
+      - name: Upload bootable ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neoos-pc-edition-amd64-iso
+          path: |
+            neoos-universal/pc-edition/*.iso
+            neoos-universal/pc-edition/SHA256SUMS
+          if-no-files-found: error
+          retention-days: 14
