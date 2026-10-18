@@ -15,6 +15,7 @@ This is a new starter implementation, not a restoration of the deleted repositor
 python -m venv .venv
 # activate the environment, then:
 pip install -r requirements.txt
+python -m compileall -q neoos_mcp.py worker.py tests
 python -m unittest discover -s tests -v
 python worker.py
 ```
@@ -45,5 +46,7 @@ The workflow in `.github/workflows/neoos-heartbeat.yml` runs hourly on GitHub Ac
 
 - No API keys or secrets are required for the basic task tracker.
 - Task state persists only where the process can write its data directory. GitHub-hosted workflow runners are ephemeral, so their local state is not persistent between runs.
+- The MCP server refuses to overwrite unreadable, malformed, or non-array task data; back up the file before attempting manual repair.
 - Do not put passwords, tokens, or private personal information in task descriptions.
 - Add deployment secrets only after reviewing the deployment design.
+- See [docs/OPERATIONS.md](docs/OPERATIONS.md) for data backup/restore, HTTP authentication, and troubleshooting guidance.
