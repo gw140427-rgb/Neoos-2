@@ -32,6 +32,7 @@ Improve the existing NeoOS Rebuild starter in small, reviewable steps. The curre
 - MCP entry point: `neoos_mcp.py`
 - Report-only worker: `worker.py`
 - Worker regression tests: `tests/test_worker.py` and `tests/test_worker_records.py`
+- MCP protocol integration test: `tests/test_mcp_integration.py`
 - MCP input validation tests: `tests/test_mcp_validation.py`
 - Task persistence tests: `tests/test_persistence.py`
 - Journal reliability tests: `tests/test_journal.py`
