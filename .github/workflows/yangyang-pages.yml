@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/index.html'
       - 'docs/bean-jail/**'
+      - 'neoos-universal/**'
       - '.github/workflows/yangyang-pages.yml'
       - 'minecraft-addon/**'
   workflow_dispatch:
@@ -28,6 +29,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Prepare NeoOS Universal page
+        run: |
+          mkdir -p docs/universal
+          cp neoos-universal/index.html docs/universal/index.html
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
