@@ -27,14 +27,24 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+class TaskDataError(RuntimeError):
+    """Raised when task data cannot be read safely without risking data loss."""
+
+
 def _read_tasks() -> list[dict[str, Any]]:
     if not TASKS_FILE.exists():
         return []
     try:
-        value = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
-        return value if isinstance(value, list) else []
-    except (OSError, json.JSONDecodeError):
-        return []
+        raw = TASKS_FILE.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise TaskDataError("task file could not be read; refusing to modify task data") from exc
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise TaskDataError("task file contains invalid JSON; refusing to modify task data") from exc
+    if not isinstance(value, list):
+        raise TaskDataError("task file must contain a JSON array; refusing to modify task data")
+    return value
 
 
 def _write_tasks(tasks: list[dict[str, Any]]) -> None:
@@ -93,7 +103,10 @@ def list_tasks(status: str = "") -> list[dict[str, Any]]:
     if status and status not in VALID_STATUSES:
         raise ValueError(f"status must be one of: {', '.join(sorted(VALID_STATUSES))}")
     tasks = _read_tasks()
-    return [task for task in tasks if not status or task.get("status") == status]
+    return [
+        task for task in tasks
+        if isinstance(task, dict) and (not status or task.get("status") == status)
+    ]
 
 
 @mcp.tool()
@@ -126,7 +139,7 @@ def update_task_status(task_id: str, status: str) -> dict[str, Any]:
         raise ValueError(f"status must be one of: {', '.join(sorted(VALID_STATUSES))}")
     tasks = _read_tasks()
     for task in tasks:
-        if task.get("id") == task_id:
+        if isinstance(task, dict) and task.get("id") == task_id:
             task["status"] = status
             task["updated_at"] = now_iso()
             _write_tasks(tasks)
