@@ -141,7 +141,10 @@ def read_journal(limit: int = 20) -> list[dict[str, Any]]:
     limit = max(1, min(int(limit), 100))
     if not JOURNAL_FILE.exists():
         return []
-    lines = JOURNAL_FILE.read_text(encoding="utf-8").splitlines()[-limit:]
+    try:
+        lines = JOURNAL_FILE.read_text(encoding="utf-8").splitlines()[-limit:]
+    except OSError:
+        return []
     result = []
     for line in lines:
         try:
