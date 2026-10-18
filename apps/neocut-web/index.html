@@ -2,11 +2,11 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#10131b"><title>NeoCut — 무료 동영상 편집기</title>
+<meta name="theme-color" content="#10131b"><meta name="description" content="기기 안에서 편집하는 무료 동영상 편집기 NeoCut"><link rel="manifest" href="manifest.webmanifest"><title>NeoCut — 무료 동영상 편집기</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header><a class="brand" href="#">Neo<span>Cut</span></a><span class="tag">FREE VIDEO STUDIO</span><button id="projectLoadBtn">프로젝트 열기</button><button id="projectSaveBtn">프로젝트 저장</button><input id="projectInput" type="file" accept="application/json,.json" hidden><button id="importBtn" class="primary">＋ 영상 불러오기</button><input id="fileInput" type="file" accept="video/*" hidden></header>
+<header><a class="brand" href="#">Neo<span>Cut</span></a><span class="tag">FREE VIDEO STUDIO</span><button id="installBtn" hidden>앱 설치</button><button id="projectLoadBtn">프로젝트 열기</button><button id="projectSaveBtn">프로젝트 저장</button><input id="projectInput" type="file" accept="application/json,.json" hidden><button id="importBtn" class="primary">＋ 영상 불러오기</button><input id="fileInput" type="file" accept="video/*" hidden></header>
 <main>
 <section class="workspace">
 <div class="preview-wrap"><div class="preview-empty" id="empty">영상을 불러와 편집을 시작하세요</div><video id="video" playsinline controls hidden></video><div id="captionPreview" class="caption-preview"></div></div>
@@ -34,5 +34,5 @@
 </aside>
 </main>
 <footer>NeoCut · 무료로 시작하는 나만의 편집기 · 파일을 서버에 업로드하지 않습니다.</footer>
-<script src="app.js"></script>
+<script src="app.js"></script><script src="pwa.js"></script>
 </body></html>
