@@ -5,21 +5,24 @@ NeoCut is an independent, free-first video editor prototype in the NeoOS-2 repos
 ## Run
 Open `index.html` in a modern browser, or serve this folder with any static web host. No build step, account, API key, or server-side upload is required.
 
-## Implemented
+## Implemented in this prototype
 - Local video import and preview
-- Start/end range preview
+- Start/end range preview and experimental range export
 - Caption overlay with text, size, and color
 - Experimental browser export to WebM with caption overlay
+- Optional background music selection and volume control, mixed into supported WebM exports
+- Save/load project settings as JSON (media files are not embedded)
 
-## Current limitations
+## Known limitations
 - This is an early MVP, not a complete CapCut replacement.
-- Export depends on browser MediaRecorder/canvas support and may fail for some codecs or large videos.
-- Exported video is WebM, not MP4; source audio is not mixed into the canvas recording yet.
-- The trim range is used for preview/export but there is no multi-clip timeline, transitions, filters, project persistence, or AI subtitle generation yet.
-- Android APK, Windows installer, and Linux desktop packages are not built by this web-only folder yet.
+- Browser MediaRecorder, canvas, and Web Audio support vary. Large videos can be slow or fail.
+- Export is WebM, not MP4. Audio mixing and export need real-device testing.
+- The editor currently handles one video at a time; it has no multi-clip timeline, transitions, filters, waveform, or AI subtitles.
+- Project JSON saves editing settings only; the user must reselect the original video and music after opening a project.
+- Android APK, Windows installer, and Linux desktop packages are not built yet.
 
 ## Roadmap
-1. Add automated checks and safer export lifecycle handling.
-2. Implement clip timeline, audio capture/mixing, and project save/load.
-3. Package the shared editor for desktop and Android after the web workflow stabilizes.
-4. Preserve existing NeoOS functionality; keep NeoCut isolated under `apps/neocut-web/`.
+1. Test export on Android and desktop browsers; fix browser-specific issues.
+2. Add a real multi-clip timeline, transitions, and more precise editing.
+3. Add reliable media export and project asset relinking.
+4. Package the shared editor for desktop and Android after the web workflow stabilizes.
