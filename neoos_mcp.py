@@ -179,7 +179,7 @@ class BearerTokenMiddleware:
             authorization = headers.get(b"authorization", b"").decode("latin-1").strip()
             scheme, separator, credentials = authorization.partition(" ")
             supplied = credentials.strip() if separator and scheme.lower() == "bearer" else ""
-            if not hmac.compare_digest(supplied, self.token):
+            if not hmac.compare_digest(supplied.encode("utf-8"), self.token.encode("utf-8")):
                 body = b'{"error":"unauthorized"}'
                 await send({
                     "type": "http.response.start",
