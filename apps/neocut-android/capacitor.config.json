@@ -1,0 +1,9 @@
+{
+  "appId": "com.neoos.neocut",
+  "appName": "NeoCut",
+  "webDir": "../neocut-web",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": false
+  }
+}
