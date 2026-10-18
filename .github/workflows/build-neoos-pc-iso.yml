@@ -23,15 +23,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Debian live-build tools
+      - name: Install Debian live-build tools and archive keyring
         run: |
           sudo apt-get update
-          sudo apt-get install -y live-build debootstrap squashfs-tools xorriso             grub-pc-bin grub-efi-amd64-bin mtools dosfstools
+          sudo apt-get install -y live-build debootstrap debian-archive-keyring squashfs-tools xorriso grub-pc-bin grub-efi-amd64-bin mtools dosfstools
 
       - name: Configure minimal NeoOS live system
         working-directory: neoos-universal/pc-edition
         run: |
-          sudo lb config             --distribution trixie             --architectures amd64             --binary-images iso-hybrid             --archive-areas "main"             --apt-recommends false             --bootappend-live "boot=live components hostname=neoos username=neoos"
+          sudo lb config \
+            --distribution trixie \
+            --architectures amd64 \
+            --binary-images iso-hybrid \
+            --archive-areas "main" \
+            --mirror-bootstrap http://deb.debian.org/debian/ \
+            --mirror-chroot http://deb.debian.org/debian/ \
+            --mirror-binary http://deb.debian.org/debian/ \
+            --apt-recommends false \
+            --bootappend-live "boot=live components hostname=neoos username=neoos"
 
       - name: Build ISO
         working-directory: neoos-universal/pc-edition
