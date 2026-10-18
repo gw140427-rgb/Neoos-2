@@ -4,6 +4,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -37,10 +38,32 @@ def _read_tasks() -> list[dict[str, Any]]:
 
 
 def _write_tasks(tasks: list[dict[str, Any]]) -> None:
+    """Atomically replace task data using a unique temporary file in the same directory."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    temp = TASKS_FILE.with_suffix(".tmp")
-    temp.write_text(json.dumps(tasks, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    temp.replace(TASKS_FILE)
+    serialized = json.dumps(tasks, ensure_ascii=False, indent=2) + "\n"
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=DATA_DIR,
+            prefix=f".{TASKS_FILE.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temp_path = Path(stream.name)
+            stream.write(serialized)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp_path, TASKS_FILE)
+    except BaseException:
+        if temp_path is not None:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
 
 
 def _journal(event: str, details: str) -> None:
