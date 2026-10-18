@@ -92,5 +92,25 @@ class MCPValidationTests(unittest.TestCase):
         self.assertFalse(self.journal_file.exists())
 
 
+    def test_add_task_refuses_to_overwrite_malformed_task_file(self):
+        malformed = '{"broken": '
+        self.tasks_file.write_text(malformed, encoding="utf-8")
+
+        with self.assertRaisesRegex(neoos_mcp.TaskDataError, "invalid JSON"):
+            neoos_mcp.add_task("new task")
+
+        self.assertEqual(self.tasks_file.read_text(encoding="utf-8"), malformed)
+        self.assertFalse(self.journal_file.exists())
+
+    def test_add_task_refuses_to_overwrite_non_list_task_file(self):
+        original = '{"unexpected": "object"}'
+        self.tasks_file.write_text(original, encoding="utf-8")
+
+        with self.assertRaisesRegex(neoos_mcp.TaskDataError, "JSON array"):
+            neoos_mcp.add_task("new task")
+
+        self.assertEqual(self.tasks_file.read_text(encoding="utf-8"), original)
+        self.assertFalse(self.journal_file.exists())
+
 if __name__ == "__main__":
     unittest.main()
