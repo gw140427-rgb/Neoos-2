@@ -163,8 +163,9 @@ class BearerTokenMiddleware:
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope["type"] == "http":
             headers = {key.lower(): value for key, value in scope.get("headers", [])}
-            authorization = headers.get(b"authorization", b"").decode("latin-1")
-            supplied = authorization.removeprefix("Bearer ").strip()
+            authorization = headers.get(b"authorization", b"").decode("latin-1").strip()
+            scheme, separator, credentials = authorization.partition(" ")
+            supplied = credentials.strip() if separator and scheme.lower() == "bearer" else ""
             if not hmac.compare_digest(supplied, self.token):
                 body = b'{"error":"unauthorized"}'
                 await send({
