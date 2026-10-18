@@ -37,6 +37,7 @@ Improve the existing NeoOS Rebuild starter in small, reviewable steps. The curre
 - Task persistence tests: `tests/test_persistence.py`
 - Journal reliability tests: `tests/test_journal.py`
 - Authentication tests: `tests/test_auth.py`
+- Operations guide: `docs/OPERATIONS.md`
 - CI workflow: `.github/workflows/neoos-heartbeat.yml`
 
 ## Progress log
