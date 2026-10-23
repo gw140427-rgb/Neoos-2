@@ -46,6 +46,21 @@ class WorkerTests(unittest.TestCase):
             journal = (data / "journal.jsonl").read_text(encoding="utf-8")
             self.assertIn("worker_heartbeat", journal)
 
+    def test_non_array_task_json_is_reported_and_preserved(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)
+            tasks_file = data / "tasks.json"
+            non_array_content = '{"tasks": []}'
+            tasks_file.write_text(non_array_content, encoding="utf-8")
+
+            result = self.run_worker(temp)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("task file must contain a JSON array", result.stdout)
+            self.assertEqual(tasks_file.read_text(encoding="utf-8"), non_array_content)
+            journal = (data / "journal.jsonl").read_text(encoding="utf-8")
+            self.assertIn("worker_heartbeat", journal)
+
 
 if __name__ == "__main__":
     unittest.main()

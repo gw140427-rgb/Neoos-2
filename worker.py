@@ -16,13 +16,16 @@ def main() -> int:
     now = datetime.now(timezone.utc).isoformat()
     DATA_DIR.mkdir(parents=True, exist_ok=True)
     tasks = []
+    warning = ""
     if TASKS_FILE.exists():
         try:
             loaded = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
             if isinstance(loaded, list):
                 tasks = loaded
+            else:
+                warning = "WARNING: task file must contain a JSON array; no tasks were changed."
         except (OSError, json.JSONDecodeError):
-            print("WARNING: task file could not be parsed; no tasks were changed.")
+            warning = "WARNING: task file could not be parsed; no tasks were changed."
     valid_tasks = [
         task for task in tasks
         if isinstance(task, dict) and task.get("status") in VALID_STATUSES
@@ -41,6 +44,8 @@ def main() -> int:
     with JOURNAL_FILE.open("a", encoding="utf-8") as stream:
         stream.write(json.dumps(record, ensure_ascii=False) + "\n")
     print(f"NeoOS heartbeat: {now}")
+    if warning:
+        print(warning)
     print(
         f"Tasks total: {len(tasks)}; valid records: {len(valid_tasks)}; "
         f"malformed records: {malformed_count}; queued: {len(queued)}"
