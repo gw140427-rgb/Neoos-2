@@ -4,6 +4,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import tempfile
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -26,21 +27,53 @@ def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+class TaskDataError(RuntimeError):
+    """Raised when task data cannot be read safely without risking data loss."""
+
+
 def _read_tasks() -> list[dict[str, Any]]:
     if not TASKS_FILE.exists():
         return []
     try:
-        value = json.loads(TASKS_FILE.read_text(encoding="utf-8"))
-        return value if isinstance(value, list) else []
-    except (OSError, json.JSONDecodeError):
-        return []
+        raw = TASKS_FILE.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise TaskDataError("task file could not be read; refusing to modify task data") from exc
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise TaskDataError("task file contains invalid JSON; refusing to modify task data") from exc
+    if not isinstance(value, list):
+        raise TaskDataError("task file must contain a JSON array; refusing to modify task data")
+    return value
 
 
 def _write_tasks(tasks: list[dict[str, Any]]) -> None:
+    """Atomically replace task data using a unique temporary file in the same directory."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    temp = TASKS_FILE.with_suffix(".tmp")
-    temp.write_text(json.dumps(tasks, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    temp.replace(TASKS_FILE)
+    serialized = json.dumps(tasks, ensure_ascii=False, indent=2) + "\n"
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            dir=DATA_DIR,
+            prefix=f".{TASKS_FILE.name}.",
+            suffix=".tmp",
+            delete=False,
+        ) as stream:
+            temp_path = Path(stream.name)
+            stream.write(serialized)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp_path, TASKS_FILE)
+    except BaseException:
+        if temp_path is not None:
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        raise
 
 
 def _journal(event: str, details: str) -> None:
@@ -70,7 +103,10 @@ def list_tasks(status: str = "") -> list[dict[str, Any]]:
     if status and status not in VALID_STATUSES:
         raise ValueError(f"status must be one of: {', '.join(sorted(VALID_STATUSES))}")
     tasks = _read_tasks()
-    return [task for task in tasks if not status or task.get("status") == status]
+    return [
+        task for task in tasks
+        if isinstance(task, dict) and (not status or task.get("status") == status)
+    ]
 
 
 @mcp.tool()
@@ -103,7 +139,7 @@ def update_task_status(task_id: str, status: str) -> dict[str, Any]:
         raise ValueError(f"status must be one of: {', '.join(sorted(VALID_STATUSES))}")
     tasks = _read_tasks()
     for task in tasks:
-        if task.get("id") == task_id:
+        if isinstance(task, dict) and task.get("id") == task_id:
             task["status"] = status
             task["updated_at"] = now_iso()
             _write_tasks(tasks)
@@ -118,7 +154,10 @@ def read_journal(limit: int = 20) -> list[dict[str, Any]]:
     limit = max(1, min(int(limit), 100))
     if not JOURNAL_FILE.exists():
         return []
-    lines = JOURNAL_FILE.read_text(encoding="utf-8").splitlines()[-limit:]
+    try:
+        lines = JOURNAL_FILE.read_text(encoding="utf-8").splitlines()[-limit:]
+    except OSError:
+        return []
     result = []
     for line in lines:
         try:
@@ -137,9 +176,10 @@ class BearerTokenMiddleware:
     async def __call__(self, scope: dict[str, Any], receive: Any, send: Any) -> None:
         if scope["type"] == "http":
             headers = {key.lower(): value for key, value in scope.get("headers", [])}
-            authorization = headers.get(b"authorization", b"").decode("latin-1")
-            supplied = authorization.removeprefix("Bearer ").strip()
-            if not hmac.compare_digest(supplied, self.token):
+            authorization = headers.get(b"authorization", b"").decode("latin-1").strip()
+            scheme, separator, credentials = authorization.partition(" ")
+            supplied = credentials.strip() if separator and scheme.lower() == "bearer" else ""
+            if not hmac.compare_digest(supplied.encode("utf-8"), self.token.encode("utf-8")):
                 body = b'{"error":"unauthorized"}'
                 await send({
                     "type": "http.response.start",
