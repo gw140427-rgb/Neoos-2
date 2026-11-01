@@ -189,7 +189,7 @@ function log(msg) {
 
 async function fetchStatus() {
   try {
-    const res = await fetch(API_URL + '/', { mode: 'cors' });
+    const res = await fetch(API_URL + '/', { mode: 'cors', headers: { 'X-Pinggy-No-Screen': 'true' } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     
@@ -234,10 +234,7 @@ async function createTrialVPS() {
   log('체험판 VPS 인스턴스 생성 요청 전송 중...');
 
   try {
-    const res = await fetch(API_URL + '/', {
-      method: 'POST',
-      mode: 'cors'
-    });
+    const res = await fetch(API_URL + '/', { method: 'POST', mode: 'cors', headers: { 'X-Pinggy-No-Screen': 'true' } });
     const data = await res.json();
     log('🎉 성공! 새 컨테이너 ID [' + data.container_id + '] 가 갤럭시 A16 노드에 배포되었습니다.');
     setTimeout(fetchStatus, 1500);
