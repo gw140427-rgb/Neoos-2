@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Neoos Cloud VPS — Galaxy A16 Node</title>
+<meta name="author" content="조건우(@gw140427-rgb)">
+<style>
+:root{
+  --bg:#070b14;
+  --panel:#0d1527;
+  --panel-card:#131f38;
+  --border:#1e2d4a;
+  --primary:#38bdf8;
+  --green:#34d399;
+  --amber:#fbbf24;
+  --purple:#a855f7;
+  --text:#f1f5f9;
+  --muted:#94a3b8;
+  --mono:'JetBrains Mono',monospace,Consolas;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:system-ui,-apple-system,sans-serif;
+  min-height:100vh;
+  padding:24px 16px;
+  background-image:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(56,189,248,.15),transparent);
+}
+.wrap{max-width:960px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand h1{font-size:1.4rem;font-weight:800;letter-spacing:-0.5px}
+.badge-node{display:inline-flex;align-items:center;gap:6px;background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);padding:4px 10px;border-radius:20px;font-size:0.8rem;font-family:var(--mono)}
+.pulse{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green)}
+
+.banner{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:32px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:16px}
+.stat{text-align:center}
+.stat .k{font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.stat .v{font-size:1.25rem;font-weight:700;margin-top:4px;font-family:var(--mono);color:var(--primary)}
+
+h2.sec{font-size:1.2rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:36px}
+.p-card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px;display:flex;flex-direction:column;position:relative}
+.p-card.featured{border-color:var(--primary);box-shadow:0 0 20px rgba(56,189,248,.15)}
+.p-tag{position:absolute;top:16px;right:16px;font-size:0.75rem;padding:3px 8px;border-radius:12px;background:rgba(56,189,248,.2);color:var(--primary)}
+.p-name{font-size:1.2rem;font-weight:700}
+.p-price{font-size:1.8rem;font-weight:800;margin:12px 0 16px;color:var(--text)}
+.p-price span{font-size:0.9rem;font-weight:400;color:var(--muted)}
+.p-features{list-style:none;margin-bottom:24px;flex-grow:1}
+.p-features li{font-size:0.88rem;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.p-features li::before{content:"✓";color:var(--primary);font-weight:bold}
+.btn{width:100%;padding:12px;border:none;border-radius:12px;font-weight:700;font-size:0.95rem;cursor:pointer;transition:.2s}
+.btn-primary{background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff}
+.btn-primary:hover{opacity:0.9}
+.btn-primary:disabled{opacity:0.5;cursor:not-allowed}
+.btn-secondary{background:var(--panel-card);color:var(--text);border:1px solid var(--border)}
+
+.vps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:36px}
+.v-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;font-family:var(--mono)}
+.v-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.v-name{font-size:0.9rem;font-weight:700;color:var(--text)}
+.v-status{font-size:0.75rem;color:var(--green)}
+.v-sub{font-size:0.75rem;color:var(--muted)}
+
+.console{background:#000;border:1px solid var(--border);border-radius:16px;padding:18px;font-family:var(--mono);font-size:0.85rem;color:#a3e635;overflow-x:auto;margin-bottom:30px}
+footer{text-align:center;color:var(--muted);font-size:0.8rem;margin-top:40px}
+footer a{color:var(--primary);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <span style="font-size:1.8rem">🚀</span>
+      <div>
+        <h1>Neoos Cloud Platform</h1>
+        <p style="font-size:0.8rem;color:var(--muted)">스마트폰 하드웨어 기반 분산 클라우드 VPS</p>
+      </div>
+    </div>
+    <div class="badge-node">
+      <span class="pulse"></span>
+      <span id="node-name">Galaxy A16 Node Online</span>
+    </div>
+  </header>
+
+  <div class="banner">
+    <div class="stat">
+      <div class="k">Host Cluster</div>
+      <div class="v">Galaxy A16</div>
+    </div>
+    <div class="stat">
+      <div class="k">Active Containers</div>
+      <div class="v" id="vps-count">0 / 10</div>
+    </div>
+    <div class="stat">
+      <div class="k">Guest OS</div>
+      <div class="v">Alpine Linux 3.24</div>
+    </div>
+    <div class="stat">
+      <div class="k">Engine</div>
+      <div class="v">Podroid Docker</div>
+    </div>
+  </div>
+
+  <h2 class="sec">💎 Neoos VPS 요금제 플랜</h2>
+  <div class="pricing">
+
+    <!-- 체험판 -->
+    <div class="p-card featured">
+      <span class="p-tag">추천 · 인기</span>
+      <div class="p-name">체험판 (Free Trial)</div>
+      <div class="p-price">0원 <span>/ 1시간 무료</span></div>
+      <ul class="p-features">
+        <li>1 Virtual Core (ARM64)</li>
+        <li>RAM 64MB 초경량 할당</li>
+        <li>Alpine Linux 순정 셸</li>
+        <li>원클릭 1초 인스턴스 배포</li>
+        <li>최대 10노드 동시 제한</li>
+      </ul>
+      <button class="btn btn-primary" id="btn-create-trial" onclick="createTrialVPS()">무료 체험판 VPS 만들기 →</button>
+    </div>
+
+    <!-- 플러스 -->
+    <div class="p-card">
+      <div class="p-name">플러스 (Plus)</div>
+      <div class="p-price">1,000P <span>/ 월</span></div>
+      <ul class="p-features">
+        <li>1 Virtual Core</li>
+        <li>RAM 256MB 확장</li>
+        <li>전용 포트 포워딩 지원</li>
+        <li>웹서버(Nginx/Python) 구동</li>
+        <li>24시간 연속 가동 보장</li>
+      </ul>
+      <button class="btn btn-secondary" onclick="alert('플러스 플랜은 현재 사전 예약 준비 중입니다!')">플러스 플랜 신청</button>
+    </div>
+
+    <!-- 프로 -->
+    <div class="p-card">
+      <div class="p-name">프로 (Pro)</div>
+      <div class="p-price">3,000P <span>/ 월</span></div>
+      <ul class="p-features">
+        <li>2 Virtual Cores</li>
+        <li>RAM 512MB 대용량</li>
+        <li>영구 스토리지 볼륨 (5GB)</li>
+        <li>데이터베이스(Redis, SQLite)</li>
+        <li>고정 SSH 도메인 터널</li>
+      </ul>
+      <button class="btn btn-secondary" onclick="alert('프로 플랜은 현재 사전 예약 준비 중입니다!')">프로 플랜 신청</button>
+    </div>
+
+  </div>
+
+  <h2 class="sec">🖥️ 현재 가동 중인 VPS 인스턴스</h2>
+  <div class="vps-grid" id="instance-grid">
+    <div class="v-card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">
+      실시간 인스턴스 목록을 불러오는 중...
+    </div>
+  </div>
+
+  <h2 class="sec">📟 실시간 배포 로그 콘솔</h2>
+  <div class="console" id="log-console">
+[Neoos-Control-Plane] 초기화 완료. 갤럭시 A16 노드와 연결 대기 중...
+  </div>
+
+  <footer>
+    <p>© 2026 Neoos Cloud · Hosted on Samsung Galaxy A16 via Podroid Docker</p>
+    <p style="margin-top:6px">
+      <a href="../">Neoos Home</a> · 
+      <a href="https://github.com/gw140427-rgb/Neoos-2">GitHub @gw140427-rgb</a>
+    </p>
+  </footer>
+
+</div>
+
+<script>
+// Pinggy URL or fallback local
+let API_URL = 'https://refbr-61-254-75-100.free.pinggy.net';
+
+function log(msg) {
+  const c = document.getElementById('log-console');
+  const d = new Date().toLocaleTimeString();
+  c.innerText += '\n[' + d + '] ' + msg;
+  c.scrollTop = c.scrollHeight;
+}
+
+async function fetchStatus() {
+  try {
+    const res = await fetch(API_URL + '/', { mode: 'cors' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    
+    document.getElementById('node-name').innerText = data.node + ' Node Online';
+    document.getElementById('vps-count').innerText = data.running_vps + ' / 10';
+
+    const grid = document.getElementById('instance-grid');
+    grid.innerHTML = '';
+    
+    if (data.list.length === 0) {
+      grid.innerHTML = '<div class="v-card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:24px">현재 실행 중인 컨테이너가 없습니다. 무료 체험판을 띄워보세요!</div>';
+    } else {
+      data.list.forEach((name, idx) => {
+        const card = document.createElement('div');
+        card.className = 'v-card';
+        card.innerHTML = `
+          <div class="v-top">
+            <span class="v-name">${name}</span>
+            <span class="v-status">● Running</span>
+          </div>
+          <div class="v-sub">Node: Galaxy A16</div>
+          <div class="v-sub">Alpine 3.24 · RAM 64MB</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    if (data.running_vps >= 10) {
+      const btn = document.getElementById('btn-create-trial');
+      btn.disabled = true;
+      btn.innerText = '⚠️ 10개 노드 풀가동 (만석)';
+    }
+  } catch (err) {
+    log('상태 동기화 대기 중... (' + err.message + ')');
+  }
+}
+
+async function createTrialVPS() {
+  const btn = document.getElementById('btn-create-trial');
+  btn.disabled = true;
+  btn.innerText = '⏳ VPS 생성 중 (약 3~5초)...';
+  log('체험판 VPS 인스턴스 생성 요청 전송 중...');
+
+  try {
+    const res = await fetch(API_URL + '/', {
+      method: 'POST',
+      mode: 'cors'
+    });
+    const data = await res.json();
+    log('🎉 성공! 새 컨테이너 ID [' + data.container_id + '] 가 갤럭시 A16 노드에 배포되었습니다.');
+    setTimeout(fetchStatus, 1500);
+  } catch (err) {
+    log('배포 요청 에러: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '무료 체험판 VPS 만들기 →';
+  }
+}
+
+fetchStatus();
+setInterval(fetchStatus, 5000);
+</script>
+</body>
+</html>
