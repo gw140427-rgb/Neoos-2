@@ -81,7 +81,7 @@ async function checkMainStatus() {
       btn.innerText = '⚠️ 10노드 만석';
     }
   } catch(e) {
-    document.getElementById('main-vps-log').innerText = '[노드 상태] ' + e.message;
+    document.getElementById('main-vps-log').innerHTML = '⚠️ [노드 연결 대기] 핑기 무료 보안 화면 승인이 필요합니다.\n👉 <a href="' + MAIN_API + '" target="_blank" style="color:#38bdf8;text-decoration:underline;font-weight:bold">여기를 눌러 [Enter site] 승인하기</a> 후 새로고침하세요!';
   }
 }
 
