@@ -14,7 +14,7 @@ async function syncMainStatus() {
     return;
   }
   try {
-    const response = await fetch(mainApi.replace(/\\/$/, '') + '/', { cache: 'no-store' });
+    const response = await fetch(mainApi.replace(/\/$/, '') + '/', { cache: 'no-store' });
     if (!response.ok) throw new Error('HTTP ' + response.status);
     const data = await response.json();
     if (!Array.isArray(data.list) || typeof data.running_vps !== 'number') throw new Error('잘못된 상태 응답');
