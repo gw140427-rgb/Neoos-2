@@ -66,7 +66,8 @@ const status=document.getElementById('status'),button=document.getElementById('b
 </section>
 
 <script>
-const MAIN_API = 'https://refbr-61-254-75-100.free.pinggy.net';
+// 핑기 없이 내 폰 로컬(localhost:8080) 직통 우선 모드!
+let MAIN_API = localStorage.getItem('neoos_vps_api') || 'http://localhost:8080';
 
 async function checkMainStatus() {
   try {
