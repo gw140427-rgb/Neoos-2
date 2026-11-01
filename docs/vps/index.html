@@ -182,14 +182,15 @@ let localContainers = JSON.parse(localStorage.getItem('neoos_vps_list') || '["ne
 
 function log(msg) {
   const c = document.getElementById('log-console');
+  if (!c) return;
   const d = new Date().toLocaleTimeString();
-  c.innerText += '
-[' + d + '] ' + msg;
+  c.innerText += "\n[" + d + "] " + msg;
   c.scrollTop = c.scrollHeight;
 }
 
 function renderInstances(list) {
   const grid = document.getElementById('instance-grid');
+  if (!grid) return;
   grid.innerHTML = '';
   document.getElementById('vps-count').innerText = list.length + ' / 10';
   document.getElementById('node-name').innerText = 'Galaxy A16 Node Online';
@@ -197,28 +198,23 @@ function renderInstances(list) {
   if (list.length === 0) {
     grid.innerHTML = '<div class="v-card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:24px">현재 실행 중인 컨테이너가 없습니다. 무료 체험판을 띄워보세요!</div>';
   } else {
-    list.forEach((name) => {
+    list.forEach(function(name) {
       const card = document.createElement('div');
       card.className = 'v-card';
-      card.innerHTML = `
-        <div class="v-top">
-          <span class="v-name">${name}</span>
-          <span class="v-status">● Running</span>
-        </div>
-        <div class="v-sub">Node: Galaxy A16</div>
-        <div class="v-sub">Alpine 3.24 · RAM 64MB</div>
-      `;
+      card.innerHTML = '<div class="v-top"><span class="v-name">' + name + '</span><span class="v-status">● Running</span></div><div class="v-sub">Node: Galaxy A16</div><div class="v-sub">Alpine 3.24 · RAM 64MB</div>';
       grid.appendChild(card);
     });
   }
 
   const btn = document.getElementById('btn-create-trial');
-  if (list.length >= 10) {
-    btn.disabled = true;
-    btn.innerText = '⚠️ 10개 노드 풀가동 (만석)';
-  } else {
-    btn.disabled = false;
-    btn.innerText = '무료 체험판 VPS 만들기 →';
+  if (btn) {
+    if (list.length >= 10) {
+      btn.disabled = true;
+      btn.innerText = '⚠️ 10개 노드 풀가동 (만석)';
+    } else {
+      btn.disabled = false;
+      btn.innerText = '무료 체험판 VPS 만들기 →';
+    }
   }
 }
 
@@ -236,30 +232,38 @@ async function fetchStatus() {
   renderInstances(localContainers);
 }
 
-async function createTrialVPS() {
+function createTrialVPS() {
   const btn = document.getElementById('btn-create-trial');
-  btn.disabled = true;
-  btn.innerText = '⏳ VPS 생성 중 (약 1.5초)...';
-  log('체험판 VPS 인스턴스 생성 요청 전송 중...');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ VPS 생성 중 (약 1초)...';
+  }
+  log('체험판 VPS 인스턴스 생성 요청 처리 중...');
 
   if (localContainers.length >= 10) {
     log('⚠️ [만석] 갤럭시 A16 노드 용량이 가득 찼습니다 (최대 10/10).');
-    btn.disabled = true;
+    if (btn) btn.disabled = true;
     return;
   }
 
-  setTimeout(() => {
+  setTimeout(function() {
     const cid = Math.random().toString(36).substring(2, 8);
     const cname = 'neoos-vps-' + cid;
     localContainers.push(cname);
     localStorage.setItem('neoos_vps_list', JSON.stringify(localContainers));
     log('🎉 성공! 새 컨테이너 ID [' + cid + '] 가 갤럭시 A16 노드에 배포되었습니다.');
     renderInstances(localContainers);
-  }, 1200);
+  }, 1000);
 }
 
-log('갤럭시 A16 클라우드 제어판 활성화 완료. (Alpine Linux 3.24 / Podroid Docker)');
-fetchStatus();
+window.addEventListener('DOMContentLoaded', function() {
+  log('갤럭시 A16 클라우드 제어판 활성화 완료. (Alpine Linux 3.24 / Podroid Docker)');
+  fetchStatus();
+});
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  log('갤럭시 A16 클라우드 제어판 활성화 완료. (Alpine Linux 3.24 / Podroid Docker)');
+  fetchStatus();
+}
 </script>
 </body>
 </html>
