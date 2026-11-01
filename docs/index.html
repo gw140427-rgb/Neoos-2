@@ -1,5 +1,82 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>양양이 마인크래프트 애드온 만들기</title><meta name="generator" content="YangYang Add-on v1.0.1"><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.6}button{font-size:1rem;padding:12px 18px;border:0;border-radius:10px;background:#176b3a;color:white}button:disabled{opacity:.5}#status{white-space:pre-wrap}</style></head><body><h1>양양이 마인크래프트 애드온</h1><p>안드로이드용 Minecraft Bedrock 애드온 파일(<code>.mcaddon</code>)을 브라우저에서 생성합니다. 로그인이나 결제는 필요하지 않습니다.</p><p><strong>주의:</strong> 게임 안에서의 동작은 아직 테스트되지 않았습니다. 기존 월드는 백업하세요.</p><button id="build">.mcaddon 만들기</button><p id="status">준비됨</p><script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script><script>
+const TASK_QUEUE = 'https://ntfy.sh/neoos-gw140427-vps-tasks';
+const STATUS_QUEUE = 'https://ntfy.sh/neoos-gw140427-vps-status';
+let fallbackList = JSON.parse(localStorage.getItem('neoos_vps_list') || '["neoos-trial-alpha"]');
+
+function updateMainUI(nodeName, count, list) {
+  const s = document.getElementById('main-node-status');
+  if (s) s.innerText = nodeName + ' (' + count + '/10)';
+  const a = document.getElementById('main-vps-active');
+  if (a) a.innerText = '현재 가동 중인 컨테이너: ' + count + ' / 10개 (' + list.join(', ') + ')';
+  const btn = document.getElementById('main-btn-trial');
+  if (btn) {
+    if (count >= 10) {
+      btn.disabled = true;
+      btn.innerText = '⚠️ 10노드 만석 (풀가동)';
+    } else {
+      btn.disabled = false;
+      btn.innerText = '무료 체험판 생성 →';
+    }
+  }
+}
+
+async function syncMainStatus() {
+  try {
+    const res = await fetch(STATUS_QUEUE + '/json?poll=1');
+    if (res.ok) {
+      const raw = await res.text();
+      const lines = raw.trim().split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        if (!lines[i]) continue;
+        const ev = JSON.parse(lines[i]);
+        if (ev.event === 'message') {
+          const data = JSON.parse(ev.message);
+          updateMainUI(data.node, data.running_vps, data.list);
+          const log = document.getElementById('main-vps-log');
+          if (log) log.innerText = '[실시간 폰 동기화] ' + data.node + ' 가동 중 (컨테이너 ' + data.running_vps + '개)';
+          return;
+        }
+      }
+    }
+  } catch(e) {}
+  updateMainUI('Galaxy A16 Node Online', fallbackList.length, fallbackList);
+}
+
+async function createMainVPS() {
+  const btn = document.getElementById('main-btn-trial');
+  const log = document.getElementById('main-vps-log');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ 폰 노드로 명령 전송 중...';
+  }
+  if (log) log.innerText = '[작업 큐] 갤럭시 A16 폰으로 도커 컨테이너 생성 명령 발송 중...';
+
+  try {
+    await fetch(TASK_QUEUE, { method: 'POST', body: 'create_trial_vps' });
+    if (log) log.innerText = '📡 작업 발송 완료! 폰의 워커가 도커 컨테이너를 생성하는 중...';
+    setTimeout(async function() {
+      await syncMainStatus();
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = '무료 체험판 생성 →';
+      }
+    }, 2000);
+  } catch(e) {
+    if (log) log.innerText = '❌ 에러: ' + e.message;
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '무료 체험판 생성 →';
+    }
+  }
+}
+
+window.addEventListener('DOMContentLoaded', syncMainStatus);
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  syncMainStatus();
+}
+setInterval(syncMainStatus, 4000);
+</script><script>
 let MAIN_API = localStorage.getItem('neoos_vps_api') || '';
 let localContainers = JSON.parse(localStorage.getItem('neoos_vps_list') || '["neoos-trial-alpha"]');
 
