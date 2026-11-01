@@ -186,7 +186,7 @@ Type 'help' to see available commands or click quick command badges above.
 
     <div class="terminal-input-row" style="padding:10px 14px;background:#0b1222;border-top:1px solid var(--border)">
       <span class="terminal-prompt" id="term-prompt">neoos@vps-01:~$</span>
-      <input type="text" class="terminal-input" id="term-input" placeholder="명령어를 입력하세요 (예: neofetch, docker ps, free -m)..." autofocus>
+      <form id="term-form" onsubmit="handleTermSubmit(event)" style="display:flex;width:100%"><input type="text" class="terminal-input" id="term-input" placeholder="명령어를 입력하세요 (예: neofetch, docker ps, free -m)..." autofocus autocomplete="off"></form>
     </div>
   </div>
 
@@ -348,6 +348,15 @@ async function createTrialVPS() {
 }
 
 // Shell Command Execution
+function handleTermSubmit(e) {
+  e.preventDefault();
+  const inp = document.getElementById('term-input');
+  if (inp) {
+    execCommand(inp.value);
+    inp.value = '';
+  }
+}
+
 function execCommand(cmd) {
   cmd = cmd.trim();
   if (!cmd) return;
@@ -394,20 +403,21 @@ function execCommand(cmd) {
         termPrint('docker: subcommand \'' + (parts[1]||'') + '\' not found. Try \'docker ps\'.');
       }
       break;
-    case 'neofetch':
-      termPrint(
-'       /\\        neoos@galaxy-a16\n' +
-'      /  \\       ----------------\n' +
-'     /\\   \\      OS: Alpine Linux 3.24.3 aarch64\n' +
-'    /      \\     Host: Samsung Galaxy A16 (Podroid QEMU/AVF)\n' +
-'   /   ,,   \\    Kernel: 7.1.5-podroid\n' +
-'  /   |  |  -\\   Uptime: 2h 45m\n' +
-' /_-''    ''-_\\  Packages: 269 (apk)\n' +
-'                 Shell: /bin/sh (Neoos WebShell)\n' +
-'                 CPU: MediaTek Helio G99 MT6789 (8) @ 2.20GHz\n' +
-'                 GPU: Mali-G57 MC2\n' +
-'                 Memory: 14MiB / 64MiB (Podroid Node Active)'
-      );
+        case 'neofetch':
+      termPrint([
+        "       /\        neoos@galaxy-a16",
+        "      /  \       ----------------",
+        "     /\   \      OS: Alpine Linux 3.24.3 aarch64",
+        "    /      \     Host: Samsung Galaxy A16 (Podroid Docker)",
+        "   /   ,,   \    Kernel: 7.1.5-podroid",
+        "  /   |  |  -\   Uptime: 2h 45m",
+        " /_--'    '--_\  Packages: 269 (apk)",
+        "                 Shell: /bin/sh (Neoos WebShell)",
+        "                 CPU: MediaTek Helio G99 MT6789 (8) @ 2.20GHz",
+        "                 GPU: Mali-G57 MC2",
+        "                 Memory: 14MiB / 64MiB (Podroid Node Active)"
+      ].join("
+"));
       break;
     default:
       termPrint('sh: ' + base + ': command executed in container [' + currentActiveVPS + ']');

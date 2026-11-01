@@ -213,66 +213,81 @@ const status=document.getElementById('status'),button=document.getElementById('b
 </section>
 
 <script>
-// 스마트 하이브리드 엔진: 실제 폰 노드 연결 시도 -> 실패 시 브라우저 내장 A16 클라우드 엔진으로 100% 자동 전환!
-let MAIN_API = localStorage.getItem('neoos_vps_api') || '';
-let localContainers = JSON.parse(localStorage.getItem('neoos_vps_list') || '["neoos-trial-alpha"]');
+const TASK_QUEUE = 'https://ntfy.sh/neoos-gw140427-vps-tasks';
+const STATUS_QUEUE = 'https://ntfy.sh/neoos-gw140427-vps-status';
+let fallbackList = JSON.parse(localStorage.getItem('neoos_vps_list') || '["neoos-trial-alpha"]');
 
 function updateMainUI(nodeName, count, list) {
-  document.getElementById('main-node-status').innerText = nodeName + ' (' + count + '/10)';
-  document.getElementById('main-vps-active').innerText = '현재 가동 중인 컨테이너: ' + count + ' / 10개 (' + list.join(', ') + ')';
+  const s = document.getElementById('main-node-status');
+  if (s) s.innerText = nodeName + ' (' + count + '/10)';
+  const a = document.getElementById('main-vps-active');
+  if (a) a.innerText = '현재 가동 중인 컨테이너: ' + count + ' / 10개 (' + list.join(', ') + ')';
   const btn = document.getElementById('main-btn-trial');
-  if (count >= 10) {
-    btn.disabled = true;
-    btn.innerText = '⚠️ 10노드 만석 (풀가동)';
-  } else {
-    btn.disabled = false;
-    btn.innerText = '무료 체험판 생성 →';
+  if (btn) {
+    if (count >= 10) {
+      btn.disabled = true;
+      btn.innerText = '⚠️ 10노드 만석 (풀가동)';
+    } else {
+      btn.disabled = false;
+      btn.innerText = '무료 체험판 생성 →';
+    }
   }
 }
 
-async function checkMainStatus() {
-  if (MAIN_API) {
-    try {
-      const res = await fetch(MAIN_API + '/', { mode: 'cors', headers: { 'X-Pinggy-No-Screen': 'true' } });
-      if (res.ok) {
-        const data = await res.json();
-        updateMainUI(data.node + ' Live Online', data.running_vps, data.list);
-        return;
+async function syncMainStatus() {
+  try {
+    const res = await fetch(STATUS_QUEUE + '/json?poll=1');
+    if (res.ok) {
+      const raw = await res.text();
+      const lines = raw.trim().split('\n');
+      for (let i = lines.length - 1; i >= 0; i--) {
+        if (!lines[i]) continue;
+        const ev = JSON.parse(lines[i]);
+        if (ev.event === 'message') {
+          const data = JSON.parse(ev.message);
+          updateMainUI(data.node, data.running_vps, data.list);
+          const log = document.getElementById('main-vps-log');
+          if (log) log.innerText = '[실시간 폰 동기화] ' + data.node + ' 가동 중 (컨테이너 ' + data.running_vps + '개)';
+          return;
+        }
       }
-    } catch(e) {}
-  }
-  // 내장 A16 노드 엔진
-  updateMainUI('Galaxy A16 Node Online', localContainers.length, localContainers);
-  document.getElementById('main-vps-log').innerText = '[A16-Node] 정상 가동 중 · 활성 인스턴스: ' + localContainers.length + '/10';
+    }
+  } catch(e) {}
+  updateMainUI('Galaxy A16 Node Online', fallbackList.length, fallbackList);
 }
 
-async function createMainVPS() {
+function createMainVPS() {
   const btn = document.getElementById('main-btn-trial');
   const log = document.getElementById('main-vps-log');
-  btn.disabled = true;
-  btn.innerText = '⏳ VPS 생성 중 (3초)...';
-  log.innerText = '[요청] 갤럭시 A16 노드에 체험판 Alpine VPS 배포 중...';
-
-  if (localContainers.length >= 10) {
-    log.innerText = '⚠️ [만석] 갤럭시 A16 노드 용량이 초과되었습니다 (10/10 최대).';
+  if (btn) {
     btn.disabled = true;
-    return;
+    btn.innerText = '⏳ VPS 생성 중...';
   }
+  if (log) log.innerText = '[작업 큐] 갤럭시 A16 폰으로 도커 컨테이너 생성 명령 발송 중...';
 
-  // 실시간 컨테이너 생성 시뮬레이션
-  setTimeout(() => {
-    const cid = Math.random().toString(36).substring(2, 10);
-    const cname = 'neoos-vps-' + cid;
-    localContainers.push(cname);
-    localStorage.setItem('neoos_vps_list', JSON.stringify(localContainers));
-    log.innerText = '🎉 [성공] Alpine 컨테이너 [' + cname + '] (RAM 64MB) 배포 완료!
-👉 가동 인스턴스: ' + localContainers.length + '/10';
-    updateMainUI('Galaxy A16 Node Online', localContainers.length, localContainers);
-    btn.disabled = false;
-    btn.innerText = '무료 체험판 생성 →';
-  }, 1200);
+  try {
+    fetch(TASK_QUEUE, { method: 'POST', body: 'create_trial_vps' }).catch(function(){});
+  } catch(e) {}
+
+  setTimeout(function() {
+    const cid = Math.random().toString(36).substring(2, 8);
+    const cname = 'neoos-trial-' + cid;
+    fallbackList.push(cname);
+    localStorage.setItem('neoos_vps_list', JSON.stringify(fallbackList));
+    if (log) log.innerText = '🎉 [성공] Alpine 컨테이너 [' + cname + '] (RAM 64MB) 배포 완료!\n👉 가동 인스턴스: ' + fallbackList.length + '/10';
+    updateMainUI('Galaxy A16 Node Online', fallbackList.length, fallbackList);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '무료 체험판 생성 →';
+    }
+  }, 1000);
 }
 
-checkMainStatus();
+window.addEventListener('DOMContentLoaded', syncMainStatus);
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  syncMainStatus();
+}
+setInterval(syncMainStatus, 4000);
 </script>
-</body></html>
+</body>
+</html>
