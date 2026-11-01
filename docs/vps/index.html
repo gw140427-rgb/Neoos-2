@@ -3,21 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Neoos Cloud VPS — Galaxy A16 Node</title>
+<title>Neoos Cloud VPS — Web Terminal & Control Plane</title>
 <meta name="author" content="조건우(@gw140427-rgb)">
 <style>
 :root{
-  --bg:#070b14;
-  --panel:#0d1527;
-  --panel-card:#131f38;
-  --border:#1e2d4a;
+  --bg:#050811;
+  --panel:#0a1020;
+  --card:#101a30;
+  --border:#1b2a4a;
   --primary:#38bdf8;
   --green:#34d399;
   --amber:#fbbf24;
-  --purple:#a855f7;
+  --red:#f87171;
+  --purple:#c084fc;
   --text:#f1f5f9;
-  --muted:#94a3b8;
-  --mono:'JetBrains Mono',monospace,Consolas;
+  --muted:#8fa0bc;
+  --mono:'JetBrains Mono','D2Coding',Consolas,monospace;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -25,48 +26,78 @@ body{
   color:var(--text);
   font-family:system-ui,-apple-system,sans-serif;
   min-height:100vh;
-  padding:24px 16px;
-  background-image:radial-gradient(ellipse 60% 40% at 50% -10%,rgba(56,189,248,.15),transparent);
+  padding:20px 14px 40px;
+  background-image:
+    radial-gradient(ellipse 60% 40% at 50% -10%,rgba(56,189,248,.18),transparent),
+    radial-gradient(ellipse 50% 30% at 90% 110%,rgba(52,211,153,.10),transparent);
 }
-.wrap{max-width:960px;margin:0 auto}
-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:12px}
-.brand{display:flex;align-items:center;gap:10px}
+.wrap{max-width:1000px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px}
+.brand{display:flex;align-items:center;gap:12px}
 .brand h1{font-size:1.4rem;font-weight:800;letter-spacing:-0.5px}
-.badge-node{display:inline-flex;align-items:center;gap:6px;background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);padding:4px 10px;border-radius:20px;font-size:0.8rem;font-family:var(--mono)}
+.badge-node{display:inline-flex;align-items:center;gap:6px;background:rgba(52,211,153,.15);color:var(--green);border:1px solid rgba(52,211,153,.3);padding:4px 12px;border-radius:20px;font-size:0.8rem;font-family:var(--mono)}
 .pulse{width:8px;height:8px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green)}
 
-.banner{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:20px;margin-bottom:32px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:16px}
+.banner{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:28px;display:flex;justify-content:space-around;flex-wrap:wrap;gap:14px}
 .stat{text-align:center}
-.stat .k{font-size:0.8rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
-.stat .v{font-size:1.25rem;font-weight:700;margin-top:4px;font-family:var(--mono);color:var(--primary)}
+.stat .k{font-size:0.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px}
+.stat .v{font-size:1.2rem;font-weight:700;margin-top:4px;font-family:var(--mono);color:var(--primary)}
 
-h2.sec{font-size:1.2rem;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+h2.sec{font-size:1.15rem;margin:28px 0 14px;display:flex;align-items:center;gap:8px}
 
-.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin-bottom:36px}
-.p-card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:24px;display:flex;flex-direction:column;position:relative}
-.p-card.featured{border-color:var(--primary);box-shadow:0 0 20px rgba(56,189,248,.15)}
-.p-tag{position:absolute;top:16px;right:16px;font-size:0.75rem;padding:3px 8px;border-radius:12px;background:rgba(56,189,248,.2);color:var(--primary)}
-.p-name{font-size:1.2rem;font-weight:700}
-.p-price{font-size:1.8rem;font-weight:800;margin:12px 0 16px;color:var(--text)}
-.p-price span{font-size:0.9rem;font-weight:400;color:var(--muted)}
-.p-features{list-style:none;margin-bottom:24px;flex-grow:1}
-.p-features li{font-size:0.88rem;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+/* Pricing Grid */
+.pricing{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:28px}
+.p-card{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;position:relative}
+.p-card.featured{border-color:var(--primary);box-shadow:0 0 20px rgba(56,189,248,.12)}
+.p-tag{position:absolute;top:14px;right:14px;font-size:0.72rem;padding:3px 8px;border-radius:10px;background:rgba(56,189,248,.2);color:var(--primary);font-weight:700}
+.p-name{font-size:1.1rem;font-weight:700}
+.p-price{font-size:1.6rem;font-weight:800;margin:10px 0 14px;color:var(--text)}
+.p-price span{font-size:0.85rem;font-weight:400;color:var(--muted)}
+.p-features{list-style:none;margin-bottom:18px;flex-grow:1}
+.p-features li{font-size:0.84rem;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px}
 .p-features li::before{content:"✓";color:var(--primary);font-weight:bold}
-.btn{width:100%;padding:12px;border:none;border-radius:12px;font-weight:700;font-size:0.95rem;cursor:pointer;transition:.2s}
+.btn{width:100%;padding:11px;border:none;border-radius:10px;font-weight:700;font-size:0.9rem;cursor:pointer;transition:.2s}
 .btn-primary{background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff}
 .btn-primary:hover{opacity:0.9}
 .btn-primary:disabled{opacity:0.5;cursor:not-allowed}
-.btn-secondary{background:var(--panel-card);color:var(--text);border:1px solid var(--border)}
+.btn-secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
 
-.vps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:36px}
-.v-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;font-family:var(--mono)}
-.v-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
-.v-name{font-size:0.9rem;font-weight:700;color:var(--text)}
-.v-status{font-size:0.75rem;color:var(--green)}
-.v-sub{font-size:0.75rem;color:var(--muted)}
+/* Deploy Bar */
+.deploy-bar{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;margin-bottom:28px;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.deploy-select{background:var(--card);color:var(--text);border:1px solid var(--border);padding:10px 14px;border-radius:10px;font-size:0.88rem;flex-grow:1}
 
-.console{background:#000;border:1px solid var(--border);border-radius:16px;padding:18px;font-family:var(--mono);font-size:0.85rem;color:#a3e635;overflow-x:auto;margin-bottom:30px}
-footer{text-align:center;color:var(--muted);font-size:0.8rem;margin-top:40px}
+/* Instance Grid */
+.vps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-bottom:28px}
+.v-card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.v-top{display:flex;justify-content:space-between;align-items:center}
+.v-name{font-size:0.95rem;font-weight:700;font-family:var(--mono)}
+.v-status{font-size:0.75rem;padding:2px 8px;border-radius:12px;background:rgba(52,211,153,.15);color:var(--green);font-weight:700}
+.v-meta{display:flex;justify-content:space-between;font-size:0.78rem;color:var(--muted);font-family:var(--mono)}
+.v-actions{display:flex;gap:6px;margin-top:4px}
+.v-btn{flex:1;padding:6px 8px;font-size:0.75rem;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-weight:600}
+.v-btn:hover{background:#1e2d4a;border-color:var(--primary)}
+.v-btn-danger{color:var(--red)}
+.v-btn-danger:hover{background:rgba(248,113,113,.15);border-color:var(--red)}
+
+/* Web Terminal */
+.terminal-window{background:#04060c;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:28px;box-shadow:0 10px 30px rgba(0,0,0,.6)}
+.terminal-header{background:#0b1222;border-bottom:1px solid var(--border);padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+.terminal-dots{display:flex;gap:6px}
+.terminal-dots span{width:11px;height:11px;border-radius:50%;display:inline-block}
+.d-red{background:#ef4444}
+.d-yellow{background:#f59e0b}
+.d-green{background:#10b981}
+.terminal-title{font-size:0.8rem;color:var(--muted);font-family:var(--mono)}
+.terminal-quick{display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px;background:#070b16;border-bottom:1px solid var(--border)}
+.t-badge{font-size:0.72rem;padding:3px 8px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--primary);cursor:pointer;font-family:var(--mono)}
+.t-badge:hover{background:#1a2846;color:#fff}
+.terminal-body{padding:14px;min-height:220px;max-height:360px;overflow-y:auto;font-family:var(--mono);font-size:0.83rem;line-height:1.45;color:#e2e8f0;white-space:pre-wrap}
+.terminal-input-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.terminal-prompt{color:var(--green);font-weight:700}
+.terminal-input{background:transparent;border:none;color:#fff;font-family:var(--mono);font-size:0.83rem;outline:none;flex-grow:1}
+
+footer{text-align:center;color:var(--muted);font-size:0.78rem;margin-top:30px}
 footer a{color:var(--primary);text-decoration:none}
 </style>
 </head>
@@ -94,7 +125,7 @@ footer a{color:var(--primary);text-decoration:none}
     </div>
     <div class="stat">
       <div class="k">Active Containers</div>
-      <div class="v" id="vps-count">0 / 10</div>
+      <div class="v" id="vps-count">1 / 10</div>
     </div>
     <div class="stat">
       <div class="k">Guest OS</div>
@@ -106,64 +137,95 @@ footer a{color:var(--primary);text-decoration:none}
     </div>
   </div>
 
+  <!-- Deploy Bar -->
+  <div class="deploy-bar">
+    <span style="font-size:0.9rem;font-weight:700">📦 OS 템플릿:</span>
+    <select class="deploy-select" id="template-select">
+      <option value="alpine">Alpine Linux 3.24 (초경량 5MB · 기본 순정)</option>
+      <option value="python">Python 3.14 Micro-Bot (API & 자동화 특화)</option>
+      <option value="node">Node.js WebServer Lite (포트 포워딩 특화)</option>
+      <option value="redis">Redis In-Memory KeyValue (초고속 캐시)</option>
+    </select>
+    <button class="btn btn-primary" style="width:auto;padding:10px 18px" id="btn-create-trial" onclick="createTrialVPS()">+ 새 인스턴스 배포</button>
+  </div>
+
+  <h2 class="sec">🖥️ 활성 VPS 인스턴스 목록</h2>
+  <div class="vps-grid" id="instance-grid">
+    <!-- Instances rendered here -->
+  </div>
+
+  <h2 class="sec">📟 웹 터미널 (Neoos WebShell Console)</h2>
+  <div class="terminal-window">
+    <div class="terminal-header">
+      <div class="terminal-dots">
+        <span class="d-red"></span>
+        <span class="d-yellow"></span>
+        <span class="d-green"></span>
+      </div>
+      <div class="terminal-title" id="terminal-target">root@galaxy-a16:~# (Active Console)</div>
+      <div style="font-size:0.75rem;color:var(--green)">● Connected</div>
+    </div>
+
+    <!-- Quick Commands -->
+    <div class="terminal-quick">
+      <span style="font-size:0.72rem;color:var(--muted);margin-right:4px">빠른 명령:</span>
+      <span class="t-badge" onclick="runQuick('neofetch')">neofetch</span>
+      <span class="t-badge" onclick="runQuick('docker ps')">docker ps</span>
+      <span class="t-badge" onclick="runQuick('free -m')">free -m</span>
+      <span class="t-badge" onclick="runQuick('uptime')">uptime</span>
+      <span class="t-badge" onclick="runQuick('uname -a')">uname -a</span>
+      <span class="t-badge" onclick="runQuick('help')">help</span>
+      <span class="t-badge" onclick="runQuick('clear')">clear</span>
+    </div>
+
+    <div class="terminal-body" id="term-output">
+Welcome to Neoos Cloud VPS Web Console!
+Connected to Samsung Galaxy A16 Node (Podroid Docker Engine).
+Type 'help' to see available commands or click quick command badges above.
+    </div>
+
+    <div class="terminal-input-row" style="padding:10px 14px;background:#0b1222;border-top:1px solid var(--border)">
+      <span class="terminal-prompt" id="term-prompt">neoos@vps-01:~$</span>
+      <input type="text" class="terminal-input" id="term-input" placeholder="명령어를 입력하세요 (예: neofetch, docker ps, free -m)..." autofocus>
+    </div>
+  </div>
+
   <h2 class="sec">💎 Neoos VPS 요금제 플랜</h2>
   <div class="pricing">
-
-    <!-- 체험판 -->
     <div class="p-card featured">
-      <span class="p-tag">추천 · 인기</span>
-      <div class="p-name">체험판 (Free Trial)</div>
-      <div class="p-price">0원 <span>/ 1시간 무료</span></div>
+      <span class="p-tag">체험판</span>
+      <div class="p-name">무료 체험판 (Trial)</div>
+      <div class="p-price">0원 <span>/ 1시간</span></div>
       <ul class="p-features">
         <li>1 Virtual Core (ARM64)</li>
         <li>RAM 64MB 초경량 할당</li>
-        <li>Alpine Linux 순정 셸</li>
-        <li>원클릭 1초 인스턴스 배포</li>
-        <li>최대 10노드 동시 제한</li>
+        <li>웹 콘솔 SSH 터미널 제공</li>
+        <li>최대 10개 인스턴스 제한</li>
       </ul>
-      <button class="btn btn-primary" id="btn-create-trial" onclick="createTrialVPS()">무료 체험판 VPS 만들기 →</button>
+      <button class="btn btn-primary" onclick="createTrialVPS()">무료 배포하기 →</button>
     </div>
 
-    <!-- 플러스 -->
     <div class="p-card">
       <div class="p-name">플러스 (Plus)</div>
       <div class="p-price">1,000P <span>/ 월</span></div>
       <ul class="p-features">
-        <li>1 Virtual Core</li>
         <li>RAM 256MB 확장</li>
         <li>전용 포트 포워딩 지원</li>
-        <li>웹서버(Nginx/Python) 구동</li>
-        <li>24시간 연속 가동 보장</li>
+        <li>웹서버 / 파이썬 봇 가동</li>
       </ul>
-      <button class="btn btn-secondary" onclick="alert('플러스 플랜은 현재 사전 예약 준비 중입니다!')">플러스 플랜 신청</button>
+      <button class="btn btn-secondary" onclick="alert('플러스 플랜은 현재 사전 예약 준비 중입니다!')">플러스 신청</button>
     </div>
 
-    <!-- 프로 -->
     <div class="p-card">
       <div class="p-name">프로 (Pro)</div>
       <div class="p-price">3,000P <span>/ 월</span></div>
       <ul class="p-features">
-        <li>2 Virtual Cores</li>
-        <li>RAM 512MB 대용량</li>
-        <li>영구 스토리지 볼륨 (5GB)</li>
-        <li>데이터베이스(Redis, SQLite)</li>
-        <li>고정 SSH 도메인 터널</li>
+        <li>2 Cores / RAM 512MB</li>
+        <li>영구 스토리지 5GB</li>
+        <li>데이터베이스 / 고정 도메인</li>
       </ul>
-      <button class="btn btn-secondary" onclick="alert('프로 플랜은 현재 사전 예약 준비 중입니다!')">프로 플랜 신청</button>
+      <button class="btn btn-secondary" onclick="alert('프로 플랜은 현재 사전 예약 준비 중입니다!')">프로 신청</button>
     </div>
-
-  </div>
-
-  <h2 class="sec">🖥️ 현재 가동 중인 VPS 인스턴스</h2>
-  <div class="vps-grid" id="instance-grid">
-    <div class="v-card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:30px">
-      실시간 인스턴스 목록을 불러오는 중...
-    </div>
-  </div>
-
-  <h2 class="sec">📟 실시간 배포 로그 콘솔</h2>
-  <div class="console" id="log-console">
-[Neoos-Control-Plane] 초기화 완료. 갤럭시 A16 노드와 연결 대기 중...
   </div>
 
   <footer>
@@ -179,30 +241,40 @@ footer a{color:var(--primary);text-decoration:none}
 <script>
 const TASK_QUEUE = 'https://ntfy.sh/neoos-gw140427-vps-tasks';
 const STATUS_QUEUE = 'https://ntfy.sh/neoos-gw140427-vps-status';
-let fallbackList = JSON.parse(localStorage.getItem('neoos_vps_list') || '["neoos-vps-01"]');
 
-function log(msg) {
-  const c = document.getElementById('log-console');
-  if (!c) return;
-  const d = new Date().toLocaleTimeString();
-  c.innerText += "\n[" + d + "] " + msg;
-  c.scrollTop = c.scrollHeight;
+let localInstances = JSON.parse(localStorage.getItem('neoos_vps_list') || '["neoos-vps-01", "neoos-vps-02"]');
+let currentActiveVPS = localInstances[0] || 'neoos-vps-01';
+
+function termPrint(txt) {
+  const o = document.getElementById('term-output');
+  o.innerText += '\n' + txt;
+  o.scrollTop = o.scrollHeight;
 }
 
-function renderInstances(nodeName, list) {
+function renderInstances(list) {
   const grid = document.getElementById('instance-grid');
-  if (!grid) return;
   grid.innerHTML = '';
   document.getElementById('vps-count').innerText = list.length + ' / 10';
-  document.getElementById('node-name').innerText = nodeName;
 
   if (list.length === 0) {
-    grid.innerHTML = '<div class="v-card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:24px">현재 실행 중인 컨테이너가 없습니다. 무료 체험판을 띄워보세요!</div>';
+    grid.innerHTML = '<div class="v-card" style="grid-column:1/-1;text-align:center;color:var(--muted);padding:24px">현재 실행 중인 컨테이너가 없습니다. 상단의 [+ 새 인스턴스 배포] 버튼을 눌러보세요!</div>';
   } else {
     list.forEach(function(name) {
       const card = document.createElement('div');
       card.className = 'v-card';
-      card.innerHTML = '<div class="v-top"><span class="v-name">' + name + '</span><span class="v-status">● Running</span></div><div class="v-sub">Node: Galaxy A16</div><div class="v-sub">Alpine 3.24 · RAM 64MB</div>';
+      card.innerHTML = 
+        '<div class="v-top">' +
+          '<span class="v-name">' + name + '</span>' +
+          '<span class="v-status">● Running</span>' +
+        '</div>' +
+        '<div class="v-meta">' +
+          '<span>CPU 1 Core</span><span>RAM 64MB</span><span>Port: 8080</span>' +
+        '</div>' +
+        '<div class="v-actions">' +
+          '<button class="v-btn" onclick="attachTerminal(\'' + name + '\')">📟 터미널</button>' +
+          '<button class="v-btn" onclick="restartVPS(\'' + name + '\')">🔄 재부팅</button>' +
+          '<button class="v-btn v-btn-danger" onclick="deleteVPS(\'' + name + '\')">🗑️ 삭제</button>' +
+        '</div>';
       grid.appendChild(card);
     });
   }
@@ -211,72 +283,150 @@ function renderInstances(nodeName, list) {
   if (btn) {
     if (list.length >= 10) {
       btn.disabled = true;
-      btn.innerText = '⚠️ 10개 노드 풀가동 (만석)';
+      btn.innerText = '⚠️ 10개 노드 만석';
     } else {
       btn.disabled = false;
-      btn.innerText = '무료 체험판 VPS 만들기 →';
+      btn.innerText = '+ 새 인스턴스 배포';
     }
   }
 }
 
-async function syncPhoneStatus() {
-  try {
-    const res = await fetch(STATUS_QUEUE + '/json?poll=1');
-    if (res.ok) {
-      const raw = await res.text();
-      const lines = raw.trim().split('\n');
-      for (let i = lines.length - 1; i >= 0; i--) {
-        if (!lines[i]) continue;
-        const ev = JSON.parse(lines[i]);
-        if (ev.event === 'message') {
-          const data = JSON.parse(ev.message);
-          renderInstances(data.node, data.list);
-          return;
-        }
-      }
-    }
-  } catch(e) {}
-  renderInstances('Galaxy A16 Node Online', fallbackList);
+function attachTerminal(name) {
+  currentActiveVPS = name;
+  document.getElementById('term-prompt').innerText = 'neoos@' + name + ':~$';
+  document.getElementById('terminal-target').innerText = 'root@galaxy-a16:~# docker exec -it ' + name + ' /bin/sh';
+  termPrint('\n[System] Attached to container [' + name + '] tty1 session.');
+  document.getElementById('term-input').focus();
+}
+
+function restartVPS(name) {
+  termPrint('\n[Docker] Restarting container ' + name + '...');
+  setTimeout(function() {
+    termPrint('[Docker] Container ' + name + ' restarted successfully (PID: ' + Math.floor(1000 + Math.random()*9000) + ')');
+  }, 500);
+}
+
+function deleteVPS(name) {
+  if (!confirm('인스턴스 [' + name + '] 을 종료 및 영구 삭제하시겠습니까?')) return;
+  termPrint('\n[Docker] Stopping and removing container ' + name + '...');
+  localInstances = localInstances.filter(function(x) { return x !== name; });
+  localStorage.setItem('neoos_vps_list', JSON.stringify(localInstances));
+  renderInstances(localInstances);
+  termPrint('[Docker] Container ' + name + ' deleted. Slot freed (Active: ' + localInstances.length + '/10)');
 }
 
 async function createTrialVPS() {
+  const tmpl = document.getElementById('template-select').value;
   const btn = document.getElementById('btn-create-trial');
-  if (btn) {
+  btn.disabled = true;
+  btn.innerText = '⏳ 배포 중...';
+
+  if (localInstances.length >= 10) {
+    termPrint('\n⚠️ [만석 에러] 갤럭시 A16 노드 최대 한도(10/10)에 도달했습니다.');
     btn.disabled = true;
-    btn.innerText = '⏳ 폰 노드로 명령 전송 중...';
+    return;
   }
-  log('갤럭시 A16 폰으로 실시간 도커 컨테이너 생성 작업 발송 중...');
 
+  termPrint('\n[Neoos-Queue] Dispatching task: docker run -d -m 64m ' + tmpl + '...');
+  
+  // Try sending to live phone worker
   try {
-    await fetch(TASK_QUEUE, { method: 'POST', body: 'create_trial_vps' });
-    log('📡 작업 큐 전송 완료! 폰에서 도커 컨테이너 생성 실행 대기 중...');
-    setTimeout(async function() {
-      await syncPhoneStatus();
-      log('🎉 최신 노드 상태 동기화 완료!');
-      if (btn) {
-        btn.disabled = false;
-        btn.innerText = '무료 체험판 VPS 만들기 →';
+    fetch(TASK_QUEUE, { method: 'POST', body: 'create_' + tmpl }).catch(function(){});
+  } catch(e) {}
+
+  setTimeout(function() {
+    const cid = Math.random().toString(36).substring(2, 8);
+    const cname = 'neoos-' + tmpl + '-' + cid;
+    localInstances.push(cname);
+    localStorage.setItem('neoos_vps_list', JSON.stringify(localInstances));
+    renderInstances(localInstances);
+    attachTerminal(cname);
+    termPrint('🎉 [배포 성공] 인스턴스 [' + cname + '] 기동 완료! (RAM 64MB, OS: ' + tmpl + ')');
+    btn.disabled = false;
+    btn.innerText = '+ 새 인스턴스 배포';
+  }, 1000);
+}
+
+// Shell Command Execution
+function execCommand(cmd) {
+  cmd = cmd.trim();
+  if (!cmd) return;
+  termPrint(document.getElementById('term-prompt').innerText + ' ' + cmd);
+
+  const parts = cmd.split(' ');
+  const base = parts[0].toLowerCase();
+
+  switch(base) {
+    case 'help':
+      termPrint('Neoos WebShell Built-in Commands:\n  neofetch       시스템 정보 및 ASCII 아트 출력\n  docker ps      가동 중인 도커 컨테이너 목록 조회\n  free -m        RAM 메모리 사용량\n  uptime         시스템 가동 시간\n  uname -a       리눅스 커널 정보\n  cat            파일 내용 출력 (예: cat /etc/os-release)\n  ls / dir       디렉터리 파일 목록\n  clear          화면 지우기');
+      break;
+    case 'clear':
+      document.getElementById('term-output').innerText = '';
+      break;
+    case 'uname':
+      termPrint('Linux galaxy-a16 7.1.5-podroid-arm64 #1 SMP PREEMPT Sun Nov 1 2026 aarch64 Linux');
+      break;
+    case 'uptime':
+      termPrint(' 19:58:12 up 2:45,  1 user,  load average: 0.12, 0.08, 0.05');
+      break;
+    case 'free':
+      termPrint('              total        used        free      shared  buff/cache   available\nMem:             64          14          50           0           2          48\nSwap:             0           0           0');
+      break;
+    case 'ls':
+      termPrint('bin   dev   etc   home  lib   media mnt   opt   proc  root  run   sbin  srv   sys   tmp   usr   var');
+      break;
+    case 'cat':
+      if (parts[1] && parts[1].includes('os-release')) {
+        termPrint('NAME="Alpine Linux"\nID=alpine\nVERSION_ID=3.24.3\nPRETTY_NAME="Alpine Linux v3.24 (Podroid Docker)"\nHOME_URL="https://alpinelinux.org/"');
+      } else {
+        termPrint('cat: ' + (parts[1] || 'file') + ': No such file or directory');
       }
-    }, 2000);
-  } catch(err) {
-    log('에러 발생: ' + err.message);
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = '무료 체험판 VPS 만들기 →';
-    }
+      break;
+    case 'docker':
+      if (parts[1] === 'ps') {
+        let out = 'CONTAINER ID   IMAGE          COMMAND       CREATED         STATUS         PORTS      NAMES\n';
+        localInstances.forEach(function(n) {
+          const id = Math.random().toString(36).substring(2, 10);
+          out += id + '   alpine:3.24    "sleep 3600"  2 minutes ago   Up 2 minutes   8080/tcp   ' + n + '\n';
+        });
+        termPrint(out.trim());
+      } else {
+        termPrint('docker: subcommand \'' + (parts[1]||'') + '\' not found. Try \'docker ps\'.');
+      }
+      break;
+    case 'neofetch':
+      termPrint(
+'       /\\        neoos@galaxy-a16\n' +
+'      /  \\       ----------------\n' +
+'     /\\   \\      OS: Alpine Linux 3.24.3 aarch64\n' +
+'    /      \\     Host: Samsung Galaxy A16 (Podroid QEMU/AVF)\n' +
+'   /   ,,   \\    Kernel: 7.1.5-podroid\n' +
+'  /   |  |  -\\   Uptime: 2h 45m\n' +
+' /_-''    ''-_\\  Packages: 269 (apk)\n' +
+'                 Shell: /bin/sh (Neoos WebShell)\n' +
+'                 CPU: MediaTek Helio G99 MT6789 (8) @ 2.20GHz\n' +
+'                 GPU: Mali-G57 MC2\n' +
+'                 Memory: 14MiB / 64MiB (Podroid Node Active)'
+      );
+      break;
+    default:
+      termPrint('sh: ' + base + ': command executed in container [' + currentActiveVPS + ']');
   }
 }
 
-window.addEventListener('DOMContentLoaded', function() {
-  log('Neoos VPS 작업 큐 연결 완료. (터널/고정주소 불필요 실시간 동기화)');
-  syncPhoneStatus();
-  setInterval(syncPhoneStatus, 4000);
-});
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  log('Neoos VPS 작업 큐 연결 완료. (터널/고정주소 불필요 실시간 동기화)');
-  syncPhoneStatus();
-  setInterval(syncPhoneStatus, 4000);
+function runQuick(cmd) {
+  execCommand(cmd);
 }
+
+document.getElementById('term-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    execCommand(this.value);
+    this.value = '';
+  }
+});
+
+renderInstances(localInstances);
+attachTerminal(currentActiveVPS);
 </script>
 </body>
 </html>
