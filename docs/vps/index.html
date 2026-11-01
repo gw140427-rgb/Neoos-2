@@ -240,7 +240,7 @@ Type 'help' to see available commands or click quick command badges above.
 
 <script>
 const apiKey = 'neoos_vps_api';
-let apiBase = (localStorage.getItem(apiKey) || '').trim().replace(/\\/$/, '');
+let apiBase = (localStorage.getItem(apiKey) || '').trim().replace(/\/$/, '');
 let currentInstances = [];
 function printLine(message) {
   const output = document.getElementById('term-output');
@@ -303,7 +303,7 @@ function configurePodroid() {
   const current = localStorage.getItem(apiKey) || '';
   const value = prompt('Podroid API 주소를 입력하세요 (예: http://휴대폰IP:8080)', current);
   if (value === null) return;
-  const normalized = value.trim().replace(/\\/$/, '');
+  const normalized = value.trim().replace(/\/$/, '');
   if (normalized && !/^https?:\\/\\//i.test(normalized)) {
     alert('http:// 또는 https://로 시작하는 주소를 입력하세요.');
     return;
