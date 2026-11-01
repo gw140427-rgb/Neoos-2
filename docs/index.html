@@ -4,5 +4,108 @@ const base='https://raw.githubusercontent.com/gw140427-rgb/Neoos-2/main/minecraf
 const files=[['YangYang_AI_BP/manifest.json','bp/manifest.json','text'],['YangYang_AI_BP/entities/yangyang_buddy.json','bp/entities/yangyang_buddy.json','text'],['YangYang_AI_BP/items/yangyang_spawn_egg.json','bp/items/yangyang_spawn_egg.json','text'],['YangYang_AI_RP/manifest.json','rp/manifest.json','text'],['YangYang_AI_RP/entity/yangyang_buddy.entity.json','rp/entity/yangyang_buddy.entity.json','text'],['YangYang_AI_RP/geometry/yangyang_buddy.geo.json','rp/geometry/yangyang_buddy.geo.json','text'],['YangYang_AI_RP/render_controllers/yangyang_buddy.render_controllers.json','rp/render_controllers/yangyang_buddy.render_controllers.json','text'],['YangYang_AI_RP/textures/entity/yangyang_buddy.png','rp/textures/entity/yangyang_buddy.png','blob'],['YangYang_AI_RP/textures/item_texture.json','rp/textures/item_texture.json','text'],['YangYang_AI_RP/texts/ko_KR.lang','rp/texts/ko_KR.lang','text'],['YangYang_AI_RP/texts/en_US.lang','rp/texts/en_US.lang','text']];
 const status=document.getElementById('status'),button=document.getElementById('build');button.addEventListener('click',async()=>{if(!window.JSZip){status.textContent='ZIP 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.';return}button.disabled=true;status.textContent='GitHub에서 파일을 가져오는 중...';try{const fetched=await Promise.all(files.map(async([path,dest,type])=>{const r=await fetch(base+path);if(!r.ok)throw Error(path+' 다운로드 실패 ('+r.status+')');return[dest,type==='blob'?await r.blob():await r.text()]}));const bp=new JSZip(),rp=new JSZip();for(const[dest,content]of fetched){if(dest.startsWith('bp/'))bp.file(dest.slice(3),content);else rp.file(dest.slice(3),content)}status.textContent='애드온을 묶는 중...';const[bpb,rpb]=await Promise.all([bp.generateAsync({type:'blob'}),rp.generateAsync({type:'blob'})]);const outer=new JSZip();outer.file('YangYang_AI_BP.mcpack',bpb);outer.file('YangYang_AI_RP.mcpack',rpb);const result=await outer.generateAsync({type:'blob'});const url=URL.createObjectURL(result),a=document.createElement('a');a.href=url;a.download='YangYang_AI.mcaddon';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='완료! 다운로드한 파일을 열어 Minecraft로 가져오세요.'}catch(e){status.textContent='실패: '+e.message+'\n잠시 후 다시 시도하세요.'}finally{button.disabled=false}});
 </script><section id="bean-jail-game-link" style="margin:24px 0;padding:18px;border:1px solid #d4ddcf;border-radius:16px;background:#f4f8f2;color:#183526"><h2 style="margin-top:0">🍚 콩밥 먹기: 감옥 생존기</h2><p>랜덤 사건, 감옥 매점, 코인 경제, 강철 대장과 부하들의 갈등을 선택으로 해결하는 모바일 미니 게임입니다.</p><p><a href="./bean-jail/" style="display:inline-block;padding:11px 16px;border-radius:10px;background:#176b3a;color:white;text-decoration:none;font-weight:700">게임 시작하기 →</a></p></section>
-<section id="neoos-vps-link" style="margin:24px 0;padding:18px;border:1px solid #1c2b45;border-radius:16px;background:#0b1220;color:#e2e8f0"><h2 style="margin-top:0">🚀 Neoos Cloud VPS (Galaxy A16 Node)</h2><p style="margin:8px 0">포도이드(Podroid) 도커 기반 분산 클라우드 VPS 플랫폼입니다. 체험판 무료 배포부터 플러스, 프로 플랜까지 지원합니다.</p><p><a href="./vps/" style="display:inline-block;padding:11px 16px;border-radius:10px;background:linear-gradient(135deg,#22d3ee,#4ade80);color:#04121a;text-decoration:none;font-weight:700">실시간 VPS 대시보드 열기 →</a></p></section>
+<section id="neoos-vps-link" style="margin:28px 0;padding:22px;border:1px solid #1e2d4a;border-radius:18px;background:#0b1220;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif">
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+    <h2 style="margin:0;font-size:1.3rem;display:flex;align-items:center;gap:8px">🚀 Neoos Cloud VPS</h2>
+    <span style="display:inline-flex;align-items:center;gap:6px;background:rgba(52,211,153,.15);color:#34d399;border:1px solid rgba(52,211,153,.3);padding:4px 10px;border-radius:20px;font-size:0.8rem;font-family:monospace">
+      <span style="width:8px;height:8px;background:#34d399;border-radius:50%;display:inline-block"></span>
+      <span id="main-node-status">Galaxy A16 Node Online</span>
+    </span>
+  </div>
+  <p style="margin:0 0 16px;color:#94a3b8;font-size:0.9rem">스마트폰 Podroid 도커 엔진 기반 분산 가상 서버 플랫폼입니다. 웹에서 원클릭으로 건우의 갤럭시 A16 노드에 실제 Alpine Linux VPS를 배포합니다.</p>
+
+  <!-- Pricing Cards -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:18px">
+    <!-- 체험판 -->
+    <div style="background:#131f38;border:1px solid #38bdf8;border-radius:14px;padding:16px">
+      <div style="font-size:0.75rem;color:#38bdf8;font-weight:700">추천 플랜</div>
+      <div style="font-size:1.1rem;font-weight:800;margin:4px 0">체험판 (Trial)</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#f1f5f9">0원 <span style="font-size:0.8rem;color:#94a3b8;font-weight:400">/ 1시간</span></div>
+      <ul style="margin:10px 0 14px;padding-left:16px;font-size:0.8rem;color:#cbd5e1;line-height:1.5">
+        <li>1 Virtual Core (ARM64)</li>
+        <li>RAM 64MB 초경량 할당</li>
+        <li>최대 10개 인스턴스 제한</li>
+      </ul>
+      <button id="main-btn-trial" onclick="createMainVPS()" style="width:100%;padding:10px;border:none;border-radius:10px;background:linear-gradient(135deg,#0284c7,#38bdf8);color:#fff;font-weight:700;font-size:0.9rem;cursor:pointer">무료 체험판 생성 →</button>
+    </div>
+
+    <!-- 플러스 -->
+    <div style="background:#0e1729;border:1px solid #1e2d4a;border-radius:14px;padding:16px">
+      <div style="font-size:0.75rem;color:#a855f7;font-weight:700">개발자용</div>
+      <div style="font-size:1.1rem;font-weight:800;margin:4px 0">플러스 (Plus)</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#f1f5f9">1,000P <span style="font-size:0.8rem;color:#94a3b8;font-weight:400">/ 월</span></div>
+      <ul style="margin:10px 0 14px;padding-left:16px;font-size:0.8rem;color:#94a3b8;line-height:1.5">
+        <li>RAM 256MB 확장</li>
+        <li>포트 포워딩 지원</li>
+        <li>웹서버 / 파이썬 봇 가동</li>
+      </ul>
+      <button onclick="alert('플러스 플랜은 사전 예약 준비 중입니다!')" style="width:100%;padding:10px;border:1px solid #1e2d4a;border-radius:10px;background:#131f38;color:#94a3b8;font-weight:700;font-size:0.9rem;cursor:pointer">플러스 신청</button>
+    </div>
+
+    <!-- 프로 -->
+    <div style="background:#0e1729;border:1px solid #1e2d4a;border-radius:14px;padding:16px">
+      <div style="font-size:0.75rem;color:#fbbf24;font-weight:700">풀스택용</div>
+      <div style="font-size:1.1rem;font-weight:800;margin:4px 0">프로 (Pro)</div>
+      <div style="font-size:1.3rem;font-weight:800;color:#f1f5f9">3,000P <span style="font-size:0.8rem;color:#94a3b8;font-weight:400">/ 월</span></div>
+      <ul style="margin:10px 0 14px;padding-left:16px;font-size:0.8rem;color:#94a3b8;line-height:1.5">
+        <li>RAM 512MB 대용량</li>
+        <li>영구 스토리지 5GB</li>
+        <li>데이터베이스 / 고정 SSH</li>
+      </ul>
+      <button onclick="alert('프로 플랜은 사전 예약 준비 중입니다!')" style="width:100%;padding:10px;border:1px solid #1e2d4a;border-radius:10px;background:#131f38;color:#94a3b8;font-weight:700;font-size:0.9rem;cursor:pointer">프로 신청</button>
+    </div>
+  </div>
+
+  <!-- Realtime Log Box -->
+  <div id="main-vps-log" style="background:#05070d;border:1px solid #1e2d4a;border-radius:10px;padding:12px;font-family:monospace;font-size:0.8rem;color:#a3e635;min-height:48px;margin-bottom:14px;white-space:pre-wrap">[A16-Node] 연결 대기 중...</div>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+    <span style="font-size:0.82rem;color:#94a3b8" id="main-vps-active">가동 중인 인스턴스: 동기화 중...</span>
+    <a href="./vps/" style="display:inline-block;padding:9px 14px;border-radius:8px;background:linear-gradient(135deg,#22d3ee,#4ade80);color:#04121a;text-decoration:none;font-weight:700;font-size:0.88rem">전체 VPS 대시보드 열기 →</a>
+  </div>
+</section>
+
+<script>
+const MAIN_API = 'https://refbr-61-254-75-100.free.pinggy.net';
+
+async function checkMainStatus() {
+  try {
+    const res = await fetch(MAIN_API + '/', { mode: 'cors' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    document.getElementById('main-node-status').innerText = data.node + ' Online (' + data.running_vps + '/10)';
+    document.getElementById('main-vps-active').innerText = '현재 가동 중인 컨테이너: ' + data.running_vps + ' / 10개 (' + data.list.join(', ') + ')';
+    if (data.running_vps >= 10) {
+      const btn = document.getElementById('main-btn-trial');
+      btn.disabled = true;
+      btn.innerText = '⚠️ 10노드 만석';
+    }
+  } catch(e) {
+    document.getElementById('main-vps-log').innerText = '[노드 상태] ' + e.message;
+  }
+}
+
+async function createMainVPS() {
+  const btn = document.getElementById('main-btn-trial');
+  const log = document.getElementById('main-vps-log');
+  btn.disabled = true;
+  btn.innerText = '⏳ VPS 생성 중...';
+  log.innerText = '[요청] 갤럭시 A16 노드에 체험판 Alpine VPS 배포 요청 중...';
+
+  try {
+    const res = await fetch(MAIN_API + '/', { method: 'POST', mode: 'cors' });
+    const d = await res.json();
+    log.innerText = '🎉 [성공] 컨테이너 ID [' + d.container_id + '] 배포 완료! (RAM 64MB 할당)';
+    setTimeout(checkMainStatus, 1200);
+  } catch(e) {
+    log.innerText = '❌ [에러] ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerText = '무료 체험판 생성 →';
+  }
+}
+
+checkMainStatus();
+setInterval(checkMainStatus, 6000);
+</script>
 </body></html>
