@@ -178,7 +178,7 @@ footer a{color:var(--primary);text-decoration:none}
 
 <script>
 // Pinggy URL or fallback local
-let API_URL = 'https://refbr-61-254-75-100.free.pinggy.net';
+let API_URL = localStorage.getItem('neoos_vps_api') || 'http://localhost:8080';
 
 function log(msg) {
   const c = document.getElementById('log-console');
