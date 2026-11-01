@@ -6,6 +6,7 @@ on:
     paths:
       - 'docs/index.html'
       - 'docs/bean-jail/**'
+      - 'docs/vps/**'
       - 'neoos-universal/**'
       - '.github/workflows/yangyang-pages.yml'
       - 'minecraft-addon/**'
