@@ -61,7 +61,7 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:16px 0}foot
   <footer>NeoOS Cloud » <a href="https://github.com/gw140427-rgb/Neoos-2">GitHub 저장소</a> · <a href="../">NeoOS 홈</a></footer>
 </main>
 <script>
-'&use strict';
+'use strict';
 const URL_KEY = 'neoos_vps-api_url';
 const TOKEN_KEY = 'neoos_vps-api_token_session';
 const $ = (id) => document.getElementById(id);
@@ -71,7 +71,7 @@ let busy = false;
 function setMessage(message, state) {
   $('message').textContent = message;
   const pill = $('connection-pill');
-  pill.textContent = state === 'ok' ? '◮ Podroid 💏 Neo' : state === 'error' ? '● 연결 오류' : '○ 연결 설정 필요';
+  pill.textContent = state === 'ok' ? '◮ Podroid 연결됨' : state === 'error' ? '● 연결 오류' : '○ 연결 설정 필요';
   pill.dataset.state = state || 'idle';
 }
 function normalizeApiUrl(value) {
