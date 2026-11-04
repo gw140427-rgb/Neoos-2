@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d18"><title>NeoOS AWS VPS</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#080d18;color:#edf4ff}
+*{box-sizing:border-box}body{margin:0;padding:20px 14px 40px}main{max-width:900px;margin:auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+h1{font-size:1.35rem;margin:0}h2{font-size:1rem;margin:0 0 14px}.muted{color:#9aacc7;font-size:.86rem;line-height:1.55}
+.panel{background:#101a2b;border:1px solid #22334e;border-radius:16px;padding:17px;margin:13px 0}
+input,select{width:100%;padding:12px;border-radius:9px;border:1px solid #304663;background:#07111f;color:#edf4ff}
+label{display:block;color:#9aacc7;font-size:.8rem;margin:0 0 6px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+button{border:1px solid #304663;border-radius:9px;padding:10px 13px;background:#17243a;color:#edf4ff;font-weight:700}
+button.primary{background:#087bb7;border-color:#249fd7}button.danger{border-color:#8a4141;color:#ffb5b5}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 0;border-bottom:1px solid #22334e}
+.row:last-child{border:0}.id{font-family:monospace;overflow-wrap:anywhere}.status{color:#55dfad;font-size:.82rem}.status.stopped{color:#ffd17a}
+#message{white-space:pre-wrap;overflow-wrap:anywhere;background:#07111f;border:1px solid #22334e;border-radius:9px;padding:11px;margin-top:12px;font-size:.84rem}
+@media(max-width:560px){.grid{grid-template-columns:1fr}body{padding:14px 10px}}
+</style></head>
+<body><main>
+<header><div><h1>NeoOS · AWS VPS</h1><div class="muted">Amazon EC2 · Debian · ap-northeast-2 (Seoul)</div></div><a href="./" style="color:#5cc8ff">Podroid dashboard</a></header>
+<section class="panel">
+<h2>API 연결</h2><div class="grid">
+<div><label for="api">AWS API 주소 (HTTPS)</label><input id="api" type="url" placeholder="https://your-api.example.com"></div>
+<div><label for="token">NeoOS API 토큰</label><input id="token" type="password" autocomplete="off" placeholder="서버에 설정한 토큰"></div>
+</div><div class="actions"><button class="primary" id="save">연결 및 저장</button><button id="clear">토큰 지우기</button><button id="refresh">새로고침</button></div><div id="message" role="status">AWS API에 연결되지 않았어.</div>
+</section>
+<section class="panel"><h2>Debian EC2 인스턴스 만들기</h2>
+<div class="muted">서버 생성은 AWS 요금이 발생할 수 있어. 계정 소유자와 비용을 확인한 뒤 사용해.</div>
+<div class="grid" style="margin-top:13px">
+<div><label for="name">서버 이름</label><input id="name" maxlength="48" value="NeoOS Debian"></div>
+<div><label for="type">인스턴스 유형</label><select id="type"><option value="t3.micro">t3.micro (기본 허용)</option></select></div>
+<div><label for="volume">디스크 (GB)</label><select id="volume"><option>12</option><option>16</option><option>20</option></select></div>
+</div><div class="actions"><button class="primary" id="create">EC2 서버 생성 요청</button></div>
+</section>
+<section class="panel"><h2>내 NeoOS 서버</h2><div id="instances" class="muted">연결 후 실제 EC2 목록이 표시돼.</div></section>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id), U='neoos.aws.url', T='neoos.aws.token.session';
+let base='',token='';
+function say(s){$('message').textContent=s}
+function headers(){return {'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/json'}}
+async function api(path,method='GET',body){const r=await fetch(base+path,{method,headers:headers(),body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.message||('HTTP '+r.status));return d}
+function button(label,cls,fn){const b=document.createElement('button');b.textContent=label;b.className=cls||'';b.addEventListener('click',fn);return b}
+async function refresh(){if(!base||!token)return;try{const d=await api('/api/instances');const root=$('instances');root.replaceChildren();if(!d.instances.length){root.textContent='NeoOS 태그가 붙은 EC2 인스턴스가 없어.';return}
+for(const x of d.instances){const row=document.createElement('div');row.className='row';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=x.name;const meta=document.createElement('div');meta.className='muted id';meta.textContent=x.id+' · '+x.type+' · '+(x.public_ip||'공인 IP 없음');const state=document.createElement('div');state.className='status '+(x.state==='stopped'?'stopped':'');state.textContent=x.state;info.append(name,meta,state);row.append(info);
+if(x.state==='stopped')row.append(button('시작','',()=>act(x.id,'start')));
+if(x.state==='running'){row.append(button('중지','',()=>act(x.id,'stop')));row.append(button('재부팅','',()=>act(x.id,'reboot')))}
+row.append(button('삭제','danger',()=>terminate(x.id)));root.append(row)}
+say('AWS EC2 목록을 가져왔어. 리전: '+d.region)}catch(e){say('조회 실패: '+e.message)}}
+async function act(id,a){if(!confirm(id+' 서버에 '+a+' 작업을 요청할까?'))return;try{await api('/api/instances/'+id+'/'+a,'POST',{});say('요청 접수됨: '+a);setTimeout(refresh,2500)}catch(e){say('실패: '+e.message)}}
+async function terminate(id){if(!confirm(id+' 인스턴스를 종료(terminate)할까? 종료 후 되돌릴 수 없어.'))return;try{await api('/api/instances/'+id,'DELETE');say('종료 요청 접수됨');setTimeout(refresh,2500)}catch(e){say('실패: '+e.message)}}
+$('save').onclick=async()=>{try{base=new URL($('api').value.trim()).origin;token=$('token').value.trim();if(!base.startsWith('https://'))throw Error('HTTPS API 주소를 입력해.');if(token.length<32)throw Error('토큰은 32자 이상이어야 해.');localStorage.setItem(U,base);sessionStorage.setItem(T,token);$('token').value='';await refresh()}catch(e){say(e.message)}};
+$('clear').onclick=()=>{sessionStorage.removeItem(T);token='';$('token').value='';say('현재 탭의 토큰을 지웠어.')};
+$('refresh').onclick=refresh;
+$('create').onclick=async()=>{if(!confirm('AWS EC2 인스턴스를 생성하면 요금이 발생할 수 있어. 계정 소유자와 비용을 확인했어?'))return;try{const d=await api('/api/instances','POST',{name:$('name').value,instance_type:$('type').value,volume_gb:Number($('volume').value)});say('EC2 생성 요청 접수됨: '+d.instance.id);setTimeout(refresh,4000)}catch(e){say('생성 실패: '+e.message)}};
+$('api').value=localStorage.getItem(U)||'';token=sessionStorage.getItem(T)||'';if(token)refresh();
+</script></body></html>
