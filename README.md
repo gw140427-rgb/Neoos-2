@@ -48,6 +48,11 @@ The workflow in `.github/workflows/neoos-heartbeat.yml` runs hourly on GitHub Ac
 - Do not put passwords, tokens, or private personal information in task descriptions.
 - Add deployment secrets only after reviewing the deployment design.
 
+## VPS dashboards
+
+- **AWS EC2 dashboard:** [docs/vps/aws.html](docs/vps/aws.html); setup and IAM requirements: [docs/vps/AWS.md](docs/vps/AWS.md). The AWS backend uses an attached IAM role and only manages instances tagged for NeoOS.
+- **Podroid dashboard:** [docs/vps/](docs/vps/), authenticated read-only Docker status.
+
 ## Podroid VPS dashboard
 
 The optional `docs/vps/` dashboard connects to a Podroid Docker node through a bearer-token-protected, read-only status API. Setup instructions are in [`docs/vps/README.md`](docs/vps/README.md). The old public `ntfy.sh` command worker is disabled; container creation and shell execution are not exposed by this starter.
