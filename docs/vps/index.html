@@ -23,19 +23,19 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:16px 0}foot
 <body>
 <main>
   <header class="top">
-    <div class="brand"><div class="brand-mark" aria-hidden="true">☁</div><div><h1>NeoOS VPS</h1><p>Galaxy A16 · Podroid · Docker 상태 대시보드</p></div></div>
+    <div class="brand"><div class="brand-mark" aria-hidden="true">☁</div><div><h1>NeoOS VPS</h1><p>NeoOS Cloud · AWS EC2 / Podroid · Docker 상태 대시보드</p></div></div>
     <div class="pill" id="connection-pill" data-state="idle">연결 설정 필요</div>
   </header>
 
   <section class="panel" aria-labelledby="connect-title">
-    <h2 id="connect-title">Podroid 연결 설정</h2>
-    <p class="small muted">Podroid 안에서 실행 중인 NeoOS 상태 API의 주소와 인증 토큰을 입력해. 주소는 이 브라우저에 저장하고, 토큰은 현재 탭 세션에만 보관해.</p>
+    <h2 id="connect-title">서버 연결 설정</h2>
+    <p class="small muted">AWS EC2 또는 Podroid에서 실행 중인 NeoOS 상태 API의 HTTPS 주소와 인증 토큰을 입력해. 주소는 이 브라우저에 저장하고, 토큰은 현재 탭 세션에만 보관해.</p>
     <div class="form-grid" style="margin-top:14px">
       <div class="field"><label for="api-url">API 주소</label><input id="api-url" type="url" inputmode="url" placeholder="http://192.168.0.10:8080" autocomplete="url"></div>
-      <div class="field"><label for="api-token">API 토큰</label><input id="api-token" type="password" placeholder="Podroid에서 만든 토큰" autocomplete="off"></div>
+      <div class="field"><label for="api-token">API 토큰</label><input id="api-token" type="password" placeholder="서버에서 만든 토큰" autocomplete="off"></div>
     </div>
     <div class="actions"><button class="btn primary" id="connect-btn" type="button">저장하고 연결 확인</button><button class="btn" id="forget-btn" type="button">토큰 지우기</button><button class="btn" id="refresh-btn" type="button">상태 새로고침</button></div>
-    <div class="state-line" id="message" role="status" aria-live="polite">아직 Podroid API에 연결하지 않았어.</div>
+    <div class="state-line" id="message" role="status" aria-live="polite">아직 서버 API에 연결하지 않았어.</div>
   </section>
 
   <section class="panel" aria-labelledby="status-title">
@@ -50,12 +50,12 @@ footer{text-align:center;color:var(--muted);font-size:.78rem;padding:16px 0}foot
 
   <section class="panel" aria-labelledby="instances-title">
     <h2 id="instances-title">실행 중인 컨테이너</h2>
-    <div class="list" id="instance-list"><div class="empty">Podroid에 연결하면 실제 컨테이너 목록이 여기에 표시돼.</div></div>
+    <div class="list" id="instance-list"><div class="empty">서버에 연결하면 실제 컨테이너 목록이 여기에 표시돼.</div></div>
   </section>
 
   <section class="panel small muted">
     <strong style="color:var(--text)">연결이 안 될 때</strong>
-    <p style="margin:8px 0 0">Podroid에서 Docker가 실행 중인지, API 서버가 켜져 있는지 확인해. HTTPS로 열린 대시보드에서 HTTP 로컬 주소에 연결할 때는 브라우저의 로컬 네트워크 권한이 필요할 수 있어. API 포트 8080을 인터넷 전체에 직접 공개하지 마.</p>
+    <p style="margin:8px 0 0">EC2 또는 Podroid에서 Docker와 API 서버가 실행 중인지 확인해. HTTPS 대시보드에서는 서버 API도 HTTPS 주소를 사용해야 해. HTTP 주소는 브라우저가 차단할 수 있어. API 포트 8080을 인터넷 전체에 직접 공개하지 마.</p>
   </section>
 
   <footer>NeoOS Cloud » <a href="https://github.com/gw140427-rgb/Neoos-2">GitHub 저장소</a> · <a href="../">NeoOS 홈</a></footer>
@@ -144,7 +144,7 @@ async function refreshStatus() {
   } catch (error) {
     resetStats();
     const reason = error.name === 'AbortError' ? '연결 시간이 초과됐어.' : error.message;
-    setMessage('Podroid API 연결 실패: ' + reason + ' 주소·토큰·로컬 네트워크 권한을 확인해.', 'error');
+    setMessage('서버 API 연결 실패: ' + reason + ' 주소·토큰·로컬 네트워크 권한을 확인해.', 'error');
   } finally {
     clearTimeout(timeout);
     busy = false;
@@ -162,7 +162,7 @@ function saveAndConnect() {
     localStorage.setItem(URL_KEY, normalized);
     sessionStorage.setItem(TOKEN_KEY, token);
     $('api-token').value = '';
-    setMessage('설정을 저장했어. Podroid 상태를 확인하는 중이야…', 'idle');
+    setMessage('설정을 저장했어. 서버 상태를 확인하는 중이야…', 'idle');
     refreshStatus();
   } catch (error) {
     setMessage(error.message, 'error');
@@ -177,7 +177,7 @@ function forgetToken() {
 $('connect-btn').addEventListener('click', saveAndConnect);
 $('forget-btn').addEventListener('click', forgetToken);
 $('refresh-btn').addEventListener('click', refreshStatus);
-$('api-token&).addEventListener('keydown', (event) => { if (event.key === 'Enter') saveAndConnect(); });
+$('api-token').addEventListener('keydown', (event) => { if (event.key === 'Enter') saveAndConnect(); });
 const savedUrl = localStorage.getItem(URL_KEY) || '';
 if (savedUrl) {
   $('api-url').value = savedUrl;
