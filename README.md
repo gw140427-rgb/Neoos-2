@@ -1,7 +1,8 @@
 # NeoOS Rebuild
 
 A clean, safety-first starter for rebuilding NeoOS with:
-- a local **Model Context Protocol (MCP)** server for task tracking and project status;
+- a Model Context Protocol (MCP) server for task tracking and project status;
+- persistent SQLite storage for tasks and journal entries;
 - a safe periodic worker that reports queued work without executing arbitrary commands;
 - a GitHub Actions scheduled heartbeat (hourly best-effort; not a guaranteed 24/7 process).
 
@@ -25,29 +26,32 @@ Run the MCP server over stdio for an MCP-compatible client:
 python neoos_mcp.py
 ```
 
-The MCP server uses a local JSON task file at `data/tasks.json` by default. Set `NEOOS_DATA_DIR` to change the directory.
+By default, the SQLite database is created at `data/neoos.sqlite3`. Set `NEOOS_DB_PATH` to choose an exact database file path, or set `NEOOS_DATA_DIR` to change the default data directory. Existing `tasks.json` and `journal.jsonl` files are imported once and left in place. SQLite uses WAL mode and a busy timeout.
 
 ## Tools exposed by MCP
 
-- `neoos_status`: runtime and workspace status.
+- `neoos_status`: runtime and database status.
 - `list_tasks`: list task records.
 - `add_task`: add a queued task.
 - `update_task_status`: update a task to `queued`, `in_progress`, `blocked`, or `done`.
-- `read_journal`: read recent worker journal entries.
+- `read_journal`: read recent journal entries.
 
-The initial worker is deliberately **non-executing**: it records a heartbeat and summarizes queued tasks. It does not run shell commands, deploy services, modify Render, or delete data.
+The worker is deliberately **non-executing**: it records a heartbeat and summarizes queued tasks. It does not run shell commands, deploy services, modify Render, or delete data.
 
 ## Scheduled worker
 
-The workflow in `.github/workflows/neoos-heartbeat.yml` runs hourly on GitHub Actions and can also be started manually. GitHub scheduled jobs are best-effort and may be delayed; this is not a continuously running 24/7 daemon.
+The workflow in `.github/workflows/neoos-heartbeat.yml` runs hourly on GitHub Actions and can also be started manually. GitHub-hosted workflow runners are ephemeral, so the workflow is a test/heartbeat only; it is not the durable database host.
+
+## Persistent VPS deployment
+
+For AWS EC2, store the database on the EBS-backed path `/var/lib/neoos/neoos.sqlite3` by setting `NEOOS_DB_PATH`. A systemd unit template is in `deploy/systemd/neoos-mcp.service`; deployment and recovery prerequisites are documented in [docs/vps/aws-ec2.md](docs/vps/aws-ec2.md).
+
+The existing `vps_server.py` endpoint is a separate authenticated, read-only Docker status API. It does not create/delete containers or execute terminal commands.
 
 ## Safety and persistence
 
-- No API keys or secrets are required for the basic task tracker.
-- Task state persists only where the process can write its data directory. GitHub-hosted workflow runners are ephemeral, so their local state is not persistent between runs.
-- Do not put passwords, tokens, or private personal information in task descriptions.
-- Add deployment secrets only after reviewing the deployment design.
-
-## Podroid VPS dashboard
-
-The optional `docs/vps/` dashboard connects to a Podroid Docker node through a bearer-token-protected, read-only status API. Setup instructions are in [`docs/vps/README.md`](docs/vps/README.md). The old public `ntfy.sh` command worker is disabled; container creation and shell execution are not exposed by this starter.
+- SQLite is included with standard Python builds; no paid database service is required for this configuration.
+- The database persists only when its file is placed on a persistent disk. The EC2 setup uses its attached EBS volume.
+- Keep backups. Do not store passwords, API keys, or private personal information in task descriptions.
+- S3 object storage is not connected; the AWS account inventory showed no buckets in accessible regions. Create one only after reviewing ownership, access controls, and possible charges.
+- Never commit environment files or tokens.
