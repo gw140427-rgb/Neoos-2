@@ -177,7 +177,7 @@ function forgetToken() {
 $('connect-btn').addEventListener('click', saveAndConnect);
 $('forget-btn').addEventListener('click', forgetToken);
 $('refresh-btn').addEventListener('click', refreshStatus);
-$('api-token&).addEventListener('keydown', (event) => { if (event.key === 'Enter') saveAndConnect(); });
+$('api-token').addEventListener('keydown', (event) => { if (event.key === 'Enter') saveAndConnect(); });
 const savedUrl = localStorage.getItem(URL_KEY) || '';
 if (savedUrl) {
   $('api-url').value = savedUrl;
