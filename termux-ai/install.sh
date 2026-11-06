@@ -1,7 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -eu
 
-if [ -z "\${PREFIX:-}" ] || [ ! -d "$PREFIX" ]; then
+if [ -z "${PREFIX:-}" ] || [ ! -d "$PREFIX" ]; then
   echo "이 설치 스크립트는 Android Termux에서 실행해야 합니다."
   exit 1
 fi
@@ -11,9 +11,13 @@ if ! command -v python >/dev/null 2>&1; then
   pkg install -y python
 fi
 
+PROGRAM_DIR="$PREFIX/lib/termux-ai"
+PROGRAM="$PROGRAM_DIR/termux_ai.py"
 DEST="$PREFIX/bin/termux-ai"
+TMP="$PROGRAM.download"
 RAW_URL="https://raw.githubusercontent.com/gw140427-rgb/Neoos-2/termux-ai-v1/termux-ai/termux_ai.py"
-TMP="\${DEST}.download"
+
+mkdir -p "$PROGRAM_DIR"
 
 python - "$RAW_URL" "$TMP" <<'PY'
 import sys
@@ -29,8 +33,13 @@ with open(destination, "wb") as handle:
     handle.write(data)
 PY
 
-mv "$TMP" "$DEST"
-chmod 700 "$DEST"
+mv "$TMP" "$PROGRAM"
+cat > "$DEST" <<EOF
+#!/data/data/com.termux/files/usr/bin/bash
+exec "$PREFIX/bin/python" "$PROGRAM" "\$@"
+EOF
+chmod 700 "$DEST" "$PROGRAM"
+
 echo "Termux AI 설치 완료!"
 echo "다음 명령을 실행하세요: termux-ai setup"
 echo "설정 후 실행: termux-ai"
