@@ -47,8 +47,8 @@ case ":$PATH:" in
   *":$BIN_DIR:"*) ;;
   *)
     say "현재 PATH에 $BIN_DIR 이 없어요."
-    say "다음 명령을 실행해 PATH를 추가하세요:"
-    printf '  echo \'export PATH="%s:$PATH"\' >> ~/.bashrc && source ~/.bashrc\n' "$BIN_DIR"
+    say "다음 줄을 ~/.bashrc에 추가한 뒤 셸을 다시 시작하세요:"
+    printf 'export PATH="%s:$PATH"\n' "$BIN_DIR"
     ;;
 esac
 say "실행: yangyang-ai"
