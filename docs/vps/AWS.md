@@ -29,6 +29,15 @@ The API deliberately does not create security groups or open SSH to the internet
 
 Attach a narrowly scoped IAM role to the API host. It needs EC2 read access for instance discovery and permission to run, start, stop, reboot, and terminate only the intended NeoOS instances. Add `iam:PassRole` only if using `NEOOS_EC2_INSTANCE_PROFILE`, and scope it to that exact role. Do not use long-lived IAM user access keys.
 
+
+## Credential and SSH safety
+
+- The API refuses to start unless `NEOOS_VPS_API_TOKEN` is configured with a random secret of at least 32 characters.
+- Set `NEOOS_ALLOWED_ORIGINS` to exact HTTPS dashboard origins. Wildcard origins are rejected.
+- The Vercel proxy requires `NEOOS_BACKEND_URL` and `NEOOS_API_TOKEN` deployment environment variables; no credential fallback is embedded in source.
+- Newly created instances use the configured EC2 key pair only. The API does not set shared Linux passwords or enable SSH password authentication.
+- If an earlier version was deployed, rotate the previously used API token and review existing instance SSH authentication before re-enabling management. Removing a credential from current source does not revoke it from an already-running server or erase it from Git history.
+
 ## API
 
 - `GET /health`: unauthenticated health check
