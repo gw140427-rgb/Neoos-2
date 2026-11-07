@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun NeoOSApp() {
     val context = androidx.compose.ui.platform.LocalContext.current
-    val prefs = remember { context.getSharedPreferences("neoos_native", MODE_PRIVATE) }
+    val prefs = remember { context.getSharedPreferences("neoos_native", android.content.Context.MODE_PRIVATE) }
     var endpoint by remember { mutableStateOf(prefs.getString("endpoint", "") ?: "") }
     var token by remember { mutableStateOf("") }
     var status by remember { mutableStateOf("서버 주소를 설정한 뒤 연결 상태를 확인하세요.") }
