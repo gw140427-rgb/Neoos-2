@@ -1,0 +1,54 @@
+name: NeoOS Python safety tests
+
+on:
+  push:
+    branches:
+      - 'security/**'
+    paths:
+      - 'aws_vps_server.py'
+      - 'api/**'
+      - 'docs/api/**'
+      - 'docs/vps/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/python-safety-tests.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'aws_vps_server.py'
+      - 'api/**'
+      - 'docs/api/**'
+      - 'docs/vps/**'
+      - 'tests/**'
+      - 'requirements.txt'
+      - '.github/workflows/python-safety-tests.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+      - name: Compile Python source
+        run: python -m compileall -q aws_vps_server.py neoos_mcp.py neoos_store.py worker.py tests
+      - name: Check API proxy JavaScript syntax
+        run: |
+          node --input-type=module --check < api/instances.js
+          node --input-type=module --check < docs/api/instances.js
+      - name: Run unit and security tests
+        run: python -m unittest discover -s tests -v
