@@ -13,6 +13,10 @@
       "destination": "/bean-jail/index.html"
     },
     {
+      "source": "/game/",
+      "destination": "/bean-jail/index.html"
+    },
+    {
       "source": "/api/instances/:match*",
       "destination": "/api/instances"
     }
