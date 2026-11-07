@@ -101,6 +101,8 @@ class TestAwsVpsGuardrails(unittest.TestCase):
         params = fake.calls[0][1]
         self.assertEqual(params["InstanceType"], "t3.micro")
         self.assertEqual(params["BlockDeviceMappings"][0]["Ebs"]["VolumeSize"], 8)
+        self.assertNotIn("UserData", params)
+        self.assertNotIn("PasswordAuthentication", str(params))
 
     def test_control_plane_cannot_be_stopped(self):
         fake = FakeEc2([instance(PROTECTED)])
@@ -128,5 +130,30 @@ class TestAwsVpsGuardrails(unittest.TestCase):
         self.assertEqual([c[0] for c in fake.calls], ["stop_instances", "terminate_instances"])
 
 
+    def test_missing_or_short_server_token_fails_closed(self):
+        for token in ("", "short"):
+
+            with self.subTest(token_length=len(token)), mock.patch.object(aws_vps_server, "TOKEN", token):
+                status, body = self.request("/api/instances")
+                self.assertEqual(status, 503)
+                self.assertEqual(json.loads(body)["error"], "server_token_not_configured")
+
+    def test_no_embedded_credentials_or_password_bootstrap_remain(self):
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1]
+        sources = [
+            root / "aws_vps_server.py",
+            root / "api" / "instances.js",
+            root / "docs" / "api" / "instances.js",
+            root / "docs" / "vps" / "aws.html",
+        ]
+        combined = "\\n".join(path.read_text(encoding="utf-8") for path in sources)
+        self.assertNotIn("neoos-vps-api-token-2026-sydney-secure-production-gw", combined)
+        self.assertNotIn("neoos2026!", combined)
+        self.assertNotIn("PasswordAuthentication yes", combined)
+        self.assertNotIn("DEFAULT_TOKEN", combined)
+
+    def test_wildcard_cors_is_not_enabled_by_default(self):
+        self.assertNotIn("*", aws_vps_server.ORIGINS)
 if __name__ == "__main__":
     unittest.main()
