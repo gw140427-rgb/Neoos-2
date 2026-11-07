@@ -340,6 +340,7 @@ let currentTime=0;
 let lastTick=0;
 let muted=false;
 let dragging=null;
+let lastRecordStopAt=0;
 let recordState={active:false,stopping:false,recorder:null,chunks:[],timer:null,startedAt:0,format:'webm',raf:0};
 
 const video=document.createElement('video');
@@ -942,6 +943,7 @@ function updateRecordProgress(){
 function startRecording(pref){
   if(!source){toast('먼저 미디어를 불러와 줘.');switchTab('media');return;}
   if(recordState.active){toast('이미 녹화 중이야. 내보내기 패널의 [■ 녹화 중지]로 멈춰 줘.');return;}
+  if(Date.now()-lastRecordStopAt<1200){toast('방금 녹화를 저장했어. 잠깐 뒤에 다시 시작할 수 있어.');return;}
   if(recordState.stopping){toast('방금 녹화를 저장하는 중이야. 잠깐만.');return;}
   if(typeof MediaRecorder==='undefined'){toast('이 브라우저는 MediaRecorder 녹화를 지원하지 않아.');return;}
   let mime=pickMime(pref);
@@ -1008,6 +1010,7 @@ function stopRecording(){
   const rec=recordState.recorder;
   recordState.active=false;
   recordState.stopping=true;
+  lastRecordStopAt=Date.now();
   $('recordBadge').hidden=true;
   $('recordBtn').textContent='● 수동 녹화 시작';
   try{if(rec.state!=='inactive')rec.stop();}catch(e){recordState.stopping=false;}
