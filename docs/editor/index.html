@@ -340,7 +340,7 @@ let currentTime=0;
 let lastTick=0;
 let muted=false;
 let dragging=null;
-let recordState={active:false,recorder:null,chunks:[],timer:null,startedAt:0,format:'webm',raf:0};
+let recordState={active:false,stopping:false,recorder:null,chunks:[],timer:null,startedAt:0,format:'webm',raf:0};
 
 const video=document.createElement('video');
 video.playsInline=true;
@@ -941,7 +941,8 @@ function updateRecordProgress(){
 }
 function startRecording(pref){
   if(!source){toast('먼저 미디어를 불러와 줘.');switchTab('media');return;}
-  if(recordState.active){stopRecording('manual');return;}
+  if(recordState.active){toast('이미 녹화 중이야. 내보내기 패널의 [■ 녹화 중지]로 멈춰 줘.');return;}
+  if(recordState.stopping){toast('방금 녹화를 저장하는 중이야. 잠깐만.');return;}
   if(typeof MediaRecorder==='undefined'){toast('이 브라우저는 MediaRecorder 녹화를 지원하지 않아.');return;}
   let mime=pickMime(pref);
   if(!mime&&pref==='mp4'){
@@ -967,7 +968,7 @@ function startRecording(pref){
     toast('녹화기를 시작하지 못했어: '+e.message);
     return;
   }
-  recordState={active:true,recorder:rec,chunks:chunks,timer:null,startedAt:Date.now(),format:actualMp4?'mp4':'webm',raf:0};
+  recordState={active:true,stopping:false,recorder:rec,chunks:chunks,timer:null,startedAt:Date.now(),format:actualMp4?'mp4':'webm',raf:0};
   rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
   rec.onerror=e=>{
     $('recordBadge').hidden=true;
@@ -978,6 +979,7 @@ function startRecording(pref){
     toast('녹화 오류 — 다시 시도해 줘.');
   };
   rec.onstop=()=>{
+    recordState.stopping=false;
     const type=actualMp4?'video/mp4':'video/webm';
     const blob=new Blob(chunks,{type:type});
     const ext=actualMp4?'mp4':'webm';
@@ -1003,7 +1005,12 @@ function startRecording(pref){
 }
 function stopRecording(){
   if(!recordState.active||!recordState.recorder)return;
-  try{if(recordState.recorder.state!=='inactive')recordState.recorder.stop();}catch(e){}
+  const rec=recordState.recorder;
+  recordState.active=false;
+  recordState.stopping=true;
+  $('recordBadge').hidden=true;
+  $('recordBtn').textContent='● 수동 녹화 시작';
+  try{if(rec.state!=='inactive')rec.stop();}catch(e){recordState.stopping=false;}
   setPlaying(false);
   setExportStatus('녹화를 마무리하는 중...');
 }
