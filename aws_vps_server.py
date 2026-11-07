@@ -23,9 +23,8 @@ except ImportError:
     class ClientError(Exception): pass
 
 REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
-DEFAULT_TOKEN = "neoos-vps-api-token-2026-sydney-secure-production-gw"
-TOKEN = os.environ.get("NEOOS_VPS_API_TOKEN", DEFAULT_TOKEN).strip()
-ORIGINS = {x.strip().rstrip("/") for x in os.environ.get("NEOOS_ALLOWED_ORIGINS", "*").split(",") if x.strip()}
+TOKEN = os.environ.get("NEOOS_VPS_API_TOKEN", "").strip()
+ORIGINS = {x.strip().rstrip("/") for x in os.environ.get("NEOOS_ALLOWED_ORIGINS", "").split(",") if x.strip()}
 
 SUBNET_ID = os.environ.get("NEOOS_EC2_SUBNET_ID", "subnet-00aabf5e5f73895da").strip()
 SECURITY_GROUP_ID = os.environ.get("NEOOS_EC2_SECURITY_GROUP_ID", "sg-0716aa2cc0376be39").strip()
@@ -92,16 +91,15 @@ class Handler(BaseHTTPRequestHandler):
 
     def end_headers(self) -> None:
         origin = self.headers.get("Origin", "").rstrip("/")
-        if origin and (origin in ORIGINS or "*" in ORIGINS):
+        if origin and origin in ORIGINS:
             self.send_header("Access-Control-Allow-Origin", origin)
-        elif "*" in ORIGINS or not ORIGINS:
-            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
         super().end_headers()
 
     def authorized(self) -> bool:
-        if len(TOKEN) < 16:
+        if len(TOKEN) < 32:
             self.send_json(503, {"error": "server_token_not_configured"})
             return False
         scheme, sep, supplied = self.headers.get("Authorization", "").partition(" ")
@@ -159,6 +157,10 @@ class Handler(BaseHTTPRequestHandler):
         }
 
     def do_OPTIONS(self) -> None:
+        origin = self.headers.get("Origin", "").rstrip("/")
+        if origin and origin not in ORIGINS:
+            self.send_json(403, {"error": "origin_not_allowed"})
+            return
         self.send_response(204)
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -238,15 +240,6 @@ class Handler(BaseHTTPRequestHandler):
         instance_type = FIXED_INSTANCE_TYPE
         volume_gb = FIXED_VOLUME_GB
 
-        user_data_script = """#!/bin/bash
-echo "ubuntu:neoos2026!" | chpasswd
-echo "root:neoos2026!" | chpasswd
-sed -i -E "s/^#?PasswordAuthentication .*/PasswordAuthentication yes/" /etc/ssh/sshd_config
-sed -i -E "s/^#?KbdInteractiveAuthentication .*/KbdInteractiveAuthentication yes/" /etc/ssh/sshd_config
-echo -e "PasswordAuthentication yes\nKbdInteractiveAuthentication yes\nAuthenticationMethods password publickey" > /etc/ssh/sshd_config.d/01-permit-pwd.conf
-systemctl restart ssh
-"""
-
         params = {
             "ImageId": ami_id,
             "InstanceType": instance_type,
@@ -255,7 +248,6 @@ systemctl restart ssh
             "KeyName": KEY_NAME,
             "SubnetId": SUBNET_ID,
             "SecurityGroupIds": [SECURITY_GROUP_ID],
-            "UserData": user_data_script,
             "BlockDeviceMappings": [{
                 "DeviceName": "/dev/sda1" if "debian" in os_choice else "/dev/xvda",
                 "Ebs": {"VolumeSize": volume_gb, "VolumeType": "gp3", "DeleteOnTermination": True},
@@ -296,6 +288,12 @@ systemctl restart ssh
 
 
 def main() -> int:
+    if len(TOKEN) < 32:
+        raise SystemExit("Set NEOOS_VPS_API_TOKEN to a random secret of at least 32 characters.")
+    if not ORIGINS or "*" in ORIGINS:
+        raise SystemExit("Set NEOOS_ALLOWED_ORIGINS to one or more exact HTTPS dashboard origins; wildcards are not allowed.")
+    if any(not origin.startswith("https://") for origin in ORIGINS):
+        raise SystemExit("Every NEOOS_ALLOWED_ORIGINS entry must use HTTPS.")
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8080"))
     server = ThreadingHTTPServer((host, port), Handler)
