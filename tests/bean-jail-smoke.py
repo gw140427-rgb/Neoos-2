@@ -73,12 +73,24 @@ def main():
             "Local save/load implementation is missing.")
     require("brawl:{title:" in html and "콩돌이와 두부" in html,
             "Gang-underlings event is missing.")
-    require('id="bean-jail-game-link"' in home_html and 'href="./bean-jail/"' in home_html,
+    require('href="/game"' in home_html and '콩밥 먹기' in home_html,
             "Landing page does not link to the game.")
+    require('href="/cloud"' in home_html and 'href="/editor"' in home_html,
+            "Landing page does not link to the other NeoOS apps.")
+    require('mcaddon' not in home_html.lower() and '마인크래프트' not in home_html,
+            "Legacy Minecraft add-on section is still on the landing page.")
     require(len(parser.scripts) == 1, f"Expected one inline game script; found {len(parser.scripts)}.")
     script = parser.scripts[0]
     require("function validState" in script and "function finishTurnIfNeeded" in script,
             "State validation or turn progression code is missing.")
+    require("ai_tip:" in script and "black_market:" in script,
+            "v1.1 events (ai_tip, black_market) are missing.")
+    require("천재 해커 조기 출소" in script and "hackerEligible" in script,
+            "The hidden hacker ending is missing.")
+    require("AudioContext" in script and "createOscillator" in script,
+            "Web Audio sound effects are missing.")
+    require("inputLocked" in script and "eventReadyAt" in script,
+            "Double-tap / event-modal input guards are missing.")
 
     # Parse-check the browser script without running browser-only APIs.
     temp_path = None
