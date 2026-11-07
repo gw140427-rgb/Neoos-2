@@ -234,7 +234,7 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blu
   <div class="modal-box">
     <h3>💻 터미널 연결 정보 (<span id="modal-inst-name">neoos</span>)</h3>
     <p style="font-size:.84rem;color:var(--muted);margin:0 0 12px">
-      SSH 접속은 EC2 키 페어 또는 AWS Systems Manager(Session Manager)를 사용해. NeoOS는 기본 비밀번호를 만들거나 화면에 표시하지 않아.
+      SSH 접속은 EC2 키 페어 또는 AWS Systems Manager(Session Manager)를 사용해. NeoOS는 기본 비밀번호를 만들거나 화면에 표시하지 않아. SSH 명령어의 PATH_TO_EC2_KEY.pem은 실제 키 파일 경로로 바꿔야 해.
     </p>
 
     <div style="font-size:.8rem;color:var(--muted);margin-bottom:4px">SSH 명령어 (터치하여 복사):</div>
@@ -359,7 +359,7 @@ function openTerminal(name, ip, instanceId) {
   const user = inst && /debian/i.test(inst.os || '') ? 'admin' : 'ubuntu';
   const region = String(inst && inst.region || 'ap-southeast-2').match(/ap-[a-z]+-[0-9]+/)?.[0] || 'ap-southeast-2';
   $('modal-inst-name').textContent = name;
-  $('ssh-cmd-text').textContent = `ssh -i <EC2_KEY_FILE> ${user}@${ip}`;
+  $('ssh-cmd-text').textContent = `ssh -i PATH_TO_EC2_KEY.pem ${user}@${ip}`;
   $('aws-session-link').href = `https://141216315429-vtbzd6ri.ap-southeast-2.console.aws.amazon.com/systems-manager/session-manager/${instanceId}?region=${region}#:`;
   $('term-modal').style.display = 'grid';
   log(`터미널 접속 모달 열림: ${name} (${ip})`);
