@@ -153,6 +153,7 @@ class TestAwsVpsGuardrails(unittest.TestCase):
         self.assertNotIn("neoos2026" + "!", combined)
         self.assertNotIn("PasswordAuthentication yes", combined)
         self.assertNotIn("DEFAULT_TOKEN", combined)
+        self.assertNotIn("<EC2_KEY_FILE>", combined)
 
     def test_wildcard_cors_is_not_enabled_by_default(self):
         self.assertNotIn("*", aws_vps_server.ORIGINS)
