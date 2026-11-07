@@ -1,6 +1,7 @@
 package com.neoos.launcher
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -70,7 +71,7 @@ class MainActivity : ComponentActivity() {
 private fun NeoOSScreen() {
     val context = LocalContext.current
     val prefs = remember {
-        context.getSharedPreferences("neoos_launcher", ComponentActivity.MODE_PRIVATE)
+        context.getSharedPreferences("neoos_launcher", Context.MODE_PRIVATE)
     }
     var vmPackage by remember { mutableStateOf(prefs.getString("vm_package", "") ?: "") }
     var termuxPackage by remember { mutableStateOf(prefs.getString("termux_package", "com.termux") ?: "com.termux") }
