@@ -157,9 +157,10 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
 /* GitHub Pages(하위 경로)에서도 /cloud·/editor·/game 링크가 열리도록 상대 경로로 바꿔 줘. */
 (function(){
   if(!/(^|\.)github\.io$/i.test(location.hostname))return;
+  var legacy={cloud:'./cloud/',editor:'./editor/',game:'./bean-jail/'};
   document.querySelectorAll('a[data-app]').forEach(function(a){
     var app=a.dataset.app;
-    a.setAttribute('href',app==='home'?'./':'./'+app+'/');
+    a.setAttribute('href',app==='home'?'./':(legacy[app]||'./'+app+'/'));
   });
 })();
 </script>

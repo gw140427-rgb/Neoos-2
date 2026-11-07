@@ -156,9 +156,12 @@ class RouteRedirectTests(unittest.TestCase):
             self.assertIn("../cloud/", html)
             self.assertIn('http-equiv="refresh"', html)
 
-    def test_game_short_route_points_at_the_game(self):
-        html = read("game/index.html")
-        self.assertIn("../bean-jail/", html)
+    def test_game_short_route_is_rewritten(self):
+        config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
+        rewrites = {item["source"]: item["destination"] for item in config["rewrites"]}
+        self.assertEqual(rewrites["/game"], "/bean-jail/index.html")
+        self.assertFalse((DOCS / "game" / "index.html").exists(),
+                         "a real /game page would shadow the rewrite")
 
     def test_vercel_configs_match(self):
         root = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
