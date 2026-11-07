@@ -1,26 +1,24 @@
-# NeoOS Rebuild
+# NeoOS-2
 
-A clean, safety-first starter for rebuilding NeoOS with:
-- a Model Context Protocol (MCP) server for task tracking and project status;
-- persistent SQLite storage for tasks and journal entries;
-- a safe periodic worker that reports queued work without executing arbitrary commands;
-- a GitHub Actions scheduled heartbeat (hourly best-effort; not a guaranteed 24/7 process).
+MCP-compatible server and SQLite task manager for the NeoOS rebuild.
 
-## Status
-
-This is a new starter implementation, not a restoration of the deleted repository. It does not contain the old NeoOS source or automatically repair existing Render services.
-
-## Run locally (Python 3.11+ recommended)
+## Local setup
 
 ```bash
-python -m venv .venv
-# activate the environment, then:
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
-python -m unittest discover -s tests -v
-python worker.py
 ```
 
-Run the MCP server over stdio for an MCP-compatible client:
+Run tests to verify the setup:
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+## Running the server
+
+Run the MCP server over stdio for an MCP client:
 
 ```bash
 python neoos_mcp.py
@@ -47,6 +45,11 @@ The workflow in `.github/workflows/neoos-heartbeat.yml` runs hourly on GitHub Ac
 For AWS EC2, store the database on the EBS-backed path `/var/lib/neoos/neoos.sqlite3` by setting `NEOOS_DB_PATH`. A systemd unit template is in `deploy/systemd/neoos-mcp.service`; deployment and recovery prerequisites are documented in [docs/vps/aws-ec2.md](docs/vps/aws-ec2.md).
 
 The existing `vps_server.py` endpoint is a separate authenticated, read-only Docker status API. It does not create/delete containers or execute terminal commands.
+
+## VPS dashboards
+
+- **AWS EC2 dashboard:** [docs/vps/aws.html](docs/vps/aws.html); setup and IAM requirements: [docs/vps/AWS.md](docs/vps/AWS.md). The AWS backend uses an attached IAM role and only manages instances tagged for NeoOS.
+- **Podroid dashboard:** [docs/vps/](docs/vps/), authenticated read-only Docker status.
 
 ## Safety and persistence
 
