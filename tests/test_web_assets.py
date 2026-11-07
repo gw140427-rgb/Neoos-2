@@ -54,6 +54,14 @@ class PortalTests(unittest.TestCase):
         self.assertNotIn("podroid", lowered)
         self.assertNotIn("aws ec2", lowered)
 
+    def test_hidden_panels_stay_hidden(self):
+        editor = read("editor/index.html")
+        cloud = read("cloud/index.html")
+        self.assertIn(".stage-empty[hidden]{display:none}", editor)
+        self.assertIn(".media-item[hidden]{display:none}", editor)
+        self.assertIn(".banner[hidden]{display:none}", cloud)
+        self.assertIn(".maint[hidden]{display:none}", cloud)
+
     def test_dark_theme_is_declared(self):
         self.assertIn('name="viewport"', self.html)
         self.assertIn("color-scheme:dark", self.html)
