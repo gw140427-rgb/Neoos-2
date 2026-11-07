@@ -1,0 +1,31 @@
+[Unit]
+Description=NeoOS-2 MCP API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=neoos
+Group=neoos
+WorkingDirectory=/opt/Neoos-2
+EnvironmentFile=/etc/neoos/neoos.env
+Environment=NEOOS_MCP_TRANSPORT=streamable-http
+Environment=HOST=127.0.0.1
+Environment=PORT=8000
+Environment=NEOOS_DB_PATH=/var/lib/neoos/neoos.sqlite3
+ExecStart=/opt/Neoos-2/.venv/bin/python /opt/Neoos-2/neoos_mcp.py
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/neoos
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
