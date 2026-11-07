@@ -324,7 +324,7 @@ const ctx=canvas.getContext('2d');
 const FILTERS={
   normal:{css:'none'},
   bw:{css:'grayscale(1) contrast(1.12) brightness(1.02)'},
-  cyber:{css:'saturate(1.65) hue-rotate(190deg) contrast(1.18) brightness(1.03)'},
+  cyber:{css:'saturate(1.45) contrast(1.14) brightness(1.02)'},
   vintage:{css:'sepia(0.3) saturate(1.28) contrast(1.05) brightness(1.06)'},
   sepia:{css:'sepia(0.92) contrast(1.06)'}
 };
@@ -681,6 +681,13 @@ function drawFrame(t){
       drawSample(t);
     }
     ctx.filter='none';
+    if(filter==='cyber'){
+      ctx.save();
+      ctx.globalCompositeOperation='soft-light';
+      ctx.fillStyle='rgba(8,126,255,0.72)';
+      ctx.fillRect(0,0,W,H);
+      ctx.restore();
+    }
   }else{
     const g=ctx.createLinearGradient(0,0,W,H);
     g.addColorStop(0,'#120c26');g.addColorStop(1,'#041018');
