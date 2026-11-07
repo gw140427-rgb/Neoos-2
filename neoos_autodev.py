@@ -85,7 +85,7 @@ def validate_plan(data: Any) -> list[str]:
 def _command_for(action: str) -> list[str]:
     """Map an action identifier to a fixed argv; never use shell=True."""
     if action == "compile":
-        return [sys.executable, "-m", "compileall", "-q", "neoos_mcp.py", "worker.py", "neoos_autodev.py", "tests"]
+        return [sys.executable, "-m", "compileall", "-q", "neoos_mcp.py", "worker.py", "neoos_autodev.py", "neoos_local_ai.py", "tests"]
     if action == "test":
         return [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
     if action == "git_status":
