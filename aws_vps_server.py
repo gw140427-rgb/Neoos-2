@@ -153,7 +153,7 @@ class Handler(BaseHTTPRequestHandler):
             "ip": item.get("PublicIpAddress") or "할당 중...",
             "private_ip": item.get("PrivateIpAddress"),
             "region": item.get("Placement", {}).get("AvailabilityZone") or REGION,
-            "storage": f"{item.get('BlockDeviceMappings', [{}])[0].get('Ebs', {}).get('VolumeSize', 8)}GB gp3 EBS",
+            "storage": f"{(item.get('BlockDeviceMappings') or [{}])[0].get('Ebs', {}).get('VolumeSize', 8) if (item.get('BlockDeviceMappings') or [{}]) else 8}GB gp3 EBS",
             "uptime": item.get("LaunchTime").isoformat() if item.get("LaunchTime") else "알 수 없음",
             "isReal": True
         }
