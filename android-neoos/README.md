@@ -1,34 +1,30 @@
-# NeoOS Android Launcher
+# NeoOS Android Native Control Center
 
-An Android home-screen launcher for the NeoOS mobile environment.
+This is a native Android application written in Kotlin and Jetpack Compose. It is no longer an app launcher for Termux, a VM app, or Heybon.
 
-## What it does
+## Current native features
 
-- Presents a full-screen NeoOS home screen.
-- Offers launch cards for NeoOS VM, Termux, and Heybon.
-- Stores each target application's Android package name locally.
-- Declares itself as an Android HOME app so the system can start it as the home screen after boot.
+- Native dashboard and connection settings.
+- HTTPS connection to a configured NeoOS API endpoint.
+- Health check using `GET /health`.
+- VPS inventory using `GET /api/instances`.
+- Optional Bearer token entered at runtime. The token is not persisted.
+- Server address is stored locally in app preferences.
 
-## Important Android behavior
+## API requirements
 
-A normal Android app cannot replace Samsung's bootloader or start before Android. It also cannot reliably force another app's activity to the foreground from a background boot receiver on modern Android versions.
+The configured server must be reachable from the phone over HTTPS and implement:
+- `GET /health`
+- `GET /api/instances`
 
-For automatic startup, install this app and select **NeoOS** as the device's default Home app. Android will then show NeoOS when it starts the Home screen after boot. The user can switch back to One UI Home in Android's Home app settings.
+The documented AWS backend currently binds to loopback on its host and requires a separately configured HTTPS reverse proxy or secure SSM tunnel. This Android app does not bypass that network restriction and does not contain AWS credentials.
 
-The immersive UI hides the status and navigation bars, but Android may reveal system bars with an edge swipe. This is not a replacement for device-owner lock-task/kiosk management.
+## Android behavior and limits
+
+- The app can be selected as the Android Home app, but it cannot replace Samsung firmware, the bootloader, or Android itself.
+- Android requires the user to approve installation of an APK.
+- No existing NeoOS, VM, Debian, or phone data is deleted or modified by this app.
 
 ## Build
 
-Open the `android-neoos` directory in Android Studio, allow Gradle sync, then build the app:
-
-```bash
-./gradlew assembleDebug
-```
-
-The project currently does not include a Gradle wrapper. Android Studio can generate/use its configured Gradle installation, or a wrapper can be added from an installed Gradle distribution.
-
-## Configure app targets
-
-Open **환경 설정** in NeoOS and enter the Android package names for the VM app and Heybon app. Termux defaults to `com.termux`.
-
-The launcher does not guess package IDs or install other apps. A launch card reports an error if its configured target is not installed or does not expose a launcher activity.
+The GitHub Actions workflow builds a debug APK with JDK 17 and Gradle 8.9. The APK is published as the `neoos-android-debug-apk` workflow artifact after a successful build.
