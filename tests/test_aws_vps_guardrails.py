@@ -147,9 +147,10 @@ class TestAwsVpsGuardrails(unittest.TestCase):
             root / "docs" / "api" / "instances.js",
             root / "docs" / "vps" / "aws.html",
         ]
-        combined = "\\n".join(path.read_text(encoding="utf-8") for path in sources)
-        self.assertNotIn("neoos-vps-api-token-2026-sydney-secure-production-gw", combined)
-        self.assertNotIn("neoos2026!", combined)
+        combined = "\n".join(path.read_text(encoding="utf-8") for path in sources)
+        self.assertNotIn('os.environ.get("NEOOS_VPS_API_TOKEN", DEFAULT_TOKEN)', combined)
+        self.assertNotIn("process.env.NEOOS_API_TOKEN ||", combined)
+        self.assertNotIn("neoos2026" + "!", combined)
         self.assertNotIn("PasswordAuthentication yes", combined)
         self.assertNotIn("DEFAULT_TOKEN", combined)
 
