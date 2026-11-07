@@ -33,13 +33,15 @@ header{display:flex;justify-content:space-between;align-items:center;gap:14px;fl
 .panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
 .panel-header h2{font-size:1.1rem;margin:0;display:flex;align-items:center;gap:8px}
 
-.instance-card{background:#091424;border:1px solid #233b5d;border-radius:15px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;box-shadow:0 4px 16px #0002}
+.instance-card{background:#091424;border:1px solid #233b5d;border-radius:15px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;box-shadow:0 4px 16px #0002;transition:all .2s}
 .inst-main{display:flex;align-items:center;gap:14px}
 .inst-icon{width:42px;height:42px;border-radius:12px;background:#152842;display:grid;place-items:center;font-size:20px;border:1px solid #2b4569}
 .inst-name{font-size:1.05rem;font-weight:800;color:#fff}
 .inst-sub{font-size:.8rem;color:var(--muted);margin-top:4px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
 .inst-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;padding:4px 10px;border-radius:999px;background:#0d2d22;color:var(--green);border:1px solid #1b634c}
 .inst-badge.stopped{background:#332610;color:var(--amber);border-color:#6e501b}
+.inst-badge.rebooting{background:#162b42;color:var(--blue);border-color:#1c5a91;animation:pulse 1s infinite alternate}
+@keyframes pulse{from{opacity:.6}to{opacity:1}}
 .inst-actions{display:flex;gap:8px;flex-wrap:wrap}
 
 .btn{border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:#142236;color:var(--text);font-weight:700;font-size:.85rem;cursor:pointer;transition:all .15s}
@@ -65,8 +67,12 @@ input,select{width:100%;border:1px solid #233956;border-radius:10px;background:#
 input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow)}
 
 .status-log{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem;color:var(--muted);background:#050c17;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-top:14px;white-space:pre-wrap;line-height:1.6}
-details summary{color:var(--muted);cursor:pointer;font-size:.82rem;user-select:none}
-details[open] summary{margin-bottom:12px}
+
+/* 모달 스타일 */
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:#0008;backdrop-filter:blur(4px);display:none;place-items:center;z-index:999;padding:16px}
+.modal-box{background:var(--panel);border:1px solid var(--line);border-radius:18px;max-width:520px;width:100%;padding:22px;box-shadow:0 24px 60px #0008}
+.modal-box h3{margin:0 0 12px;font-size:1.15rem;display:flex;align-items:center;gap:8px}
+.code-box{background:#050b14;border:1px solid #203554;border-radius:10px;padding:12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.88rem;color:var(--green);display:flex;justify-content:space-between;align-items:center;margin:10px 0 16px;word-break:break-all}
 
 @media(max-width:720px){
 .stats-grid{grid-template-columns:1fr 1fr}
@@ -89,7 +95,7 @@ details[open] summary{margin-bottom:12px}
     </div>
     <div class="pill">
       <span class="pill-dot"></span>
-      <span>NeoOS Engine 온라인 · ap-southeast-2</span>
+      <span id="engine-status">NeoOS Engine 온라인 · ap-southeast-2</span>
     </div>
   </header>
 
@@ -112,7 +118,7 @@ details[open] summary{margin-bottom:12px}
       <div class="stat-sub">100% 무중단 안정 가동</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">공인 IP 주소</div>
+      <div class="stat-label">기본 공인 IP</div>
       <div class="stat-val" style="font-size:1.05rem;font-family:monospace">3.27.117.86</div>
       <div class="stat-sub">호주 시드니 리전</div>
     </div>
@@ -131,25 +137,7 @@ details[open] summary{margin-bottom:12px}
     </div>
 
     <div id="instances-list">
-      <!-- 기본 활성 neoos 인스턴스 -->
-      <div class="instance-card">
-        <div class="inst-main">
-          <div class="inst-icon">🐧</div>
-          <div>
-            <div style="display:flex;align-items:center;gap:10px">
-              <span class="inst-name">neoos</span>
-              <span class="inst-badge">● Running</span>
-            </div>
-            <div class="inst-sub">i-0c4a3985afb8d417b · t3.micro (2 vCPU / 1GB RAM) · IP: 3.27.117.86</div>
-            <div class="inst-sub" style="color:#577499">Ubuntu 26.04 LTS · ap-southeast-2 (Sydney) · 8GB gp3 EBS</div>
-          </div>
-        </div>
-        <div class="inst-actions">
-          <button class="btn primary sm" onclick="connectTerminal('neoos', '3.27.117.86')">터미널 접속</button>
-          <button class="btn sm" onclick="actionInstance('neoos', 'reboot')">재부팅</button>
-          <button class="btn danger sm" onclick="actionInstance('neoos', 'stop')">중지</button>
-        </div>
-      </div>
+      <!-- 렌더링 영역 -->
     </div>
   </section>
 
@@ -226,7 +214,7 @@ details[open] summary{margin-bottom:12px}
 
     <!-- 고급 백엔드 터널 설정 (필요할 때만) -->
     <details style="margin-top:20px;border-top:1px solid var(--line);padding-top:14px">
-      <summary>⚙️ 고급 엔드포인트 및 API 토큰 설정 (개발자 전용)</summary>
+      <summary style="color:var(--muted);cursor:pointer;font-size:.82rem">⚙️ 고급 엔드포인트 및 API 토큰 설정 (개발자 전용)</summary>
       <div class="form-grid" style="margin-top:12px">
         <div class="field">
           <label for="api-url">커스텀 API 엔드포인트</label>
@@ -245,15 +233,121 @@ details[open] summary{margin-bottom:12px}
   </section>
 </main>
 
+<!-- 터미널 접속 모달 -->
+<div class="modal-overlay" id="term-modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <h3>💻 터미널 연결 정보 (<span id="modal-inst-name">neoos</span>)</h3>
+    <p style="font-size:.84rem;color:var(--muted);margin:0 0 12px">
+      아래 명령어를 복사하여 스마트폰의 SSH 앱(Termius / Termux)에 붙여넣거나, AWS 웹 세션으로 바로 들어갈 수 있습니다.
+    </p>
+
+    <div style="font-size:.8rem;color:var(--muted);margin-bottom:4px">SSH 명령어 (터치하여 복사):</div>
+    <div class="code-box" id="ssh-cmd-box" onclick="copySshCmd()" style="cursor:pointer">
+      <span id="ssh-cmd-text">ssh ubuntu@3.27.117.86</span>
+      <span style="font-size:.76rem;color:var(--blue)">[복사]</span>
+    </div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <a class="btn primary sm" id="aws-session-link" href="https://141216315429-vtbzd6ri.ap-southeast-2.console.aws.amazon.com/systems-manager/session-manager/i-0c4a3985afb8d417b?region=ap-southeast-2#:" target="_blank" rel="noopener">AWS 웹 콘솔 터미널 열기 ↗</a>
+      <button class="btn sm" onclick="closeModal()" type="button">닫기</button>
+    </div>
+  </div>
+</div>
+
 <script>
 'use strict';
 const $ = id => document.getElementById(id);
 let selectedOs = 'ubuntu';
 
+// 기본 인스턴스 데이터 (로컬 스토리지 연동)
+const DEFAULT_INSTANCES = [
+  {
+    id: 'i-0c4a3985afb8d417b',
+    name: 'neoos',
+    os: 'Ubuntu 26.04 LTS',
+    icon: '🐧',
+    spec: 't3.micro (2 vCPU / 1GB RAM)',
+    ip: '3.27.117.86',
+    region: 'ap-southeast-2 (Sydney)',
+    storage: '8GB gp3 EBS',
+    state: 'running',
+    uptime: '1일 17시간'
+  }
+];
+
+function loadInstances() {
+  try {
+    const raw = localStorage.getItem('neoos_vps_instances');
+    if (!raw) return DEFAULT_INSTANCES;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_INSTANCES;
+  } catch (_) {
+    return DEFAULT_INSTANCES;
+  }
+}
+
+function saveInstances(list) {
+  try {
+    localStorage.setItem('neoos_vps_instances', JSON.stringify(list));
+  } catch (_) {}
+}
+
+let instances = loadInstances();
+
 function log(msg) {
   const el = $('status-log');
   const time = new Date().toLocaleTimeString();
   el.textContent = `[${time}] ${msg}\n` + el.textContent;
+}
+
+function renderInstances() {
+  const container = $('instances-list');
+  container.innerHTML = '';
+  $('total-count').textContent = instances.length + '대';
+
+  instances.forEach((inst, idx) => {
+    const card = document.createElement('div');
+    card.className = 'instance-card';
+
+    let badgeClass = 'inst-badge';
+    let badgeText = '● ' + inst.state.toUpperCase();
+    if (inst.state === 'stopped') badgeClass += ' stopped';
+    if (inst.state === 'rebooting' || inst.state === 'initializing') badgeClass += ' rebooting';
+
+    let actionButtons = '';
+    if (inst.state === 'running') {
+      actionButtons = `
+        <button class="btn primary sm" onclick="openTerminal('${inst.name}', '${inst.ip}')" type="button">터미널 접속</button>
+        <button class="btn sm" onclick="rebootInstance(${idx})" type="button">재부팅</button>
+        <button class="btn sm" onclick="stopInstance(${idx})" type="button">중지</button>
+      `;
+    } else if (inst.state === 'stopped') {
+      actionButtons = `
+        <button class="btn primary sm" onclick="startInstance(${idx})" type="button">시작</button>
+        <button class="btn danger sm" onclick="terminateInstance(${idx})" type="button">삭제</button>
+      `;
+    } else {
+      actionButtons = `<button class="btn sm" disabled type="button">상태 변경 중...</button>`;
+    }
+
+    card.innerHTML = `
+      <div class="inst-main">
+        <div class="inst-icon">${inst.icon}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="inst-name">${inst.name}</span>
+            <span class="${badgeClass}">${badgeText}</span>
+          </div>
+          <div class="inst-sub">${inst.id} · ${inst.spec} · IP: ${inst.ip || '할당 중...'}</div>
+          <div class="inst-sub" style="color:#577499">${inst.os} · ${inst.region} · ${inst.storage}</div>
+        </div>
+      </div>
+      <div class="inst-actions">
+        ${actionButtons}
+      </div>
+    `;
+    container.appendChild(card);
+  });
 }
 
 function selectOs(el, os) {
@@ -263,18 +357,73 @@ function selectOs(el, os) {
   log(`OS 템플릿 선택: ${os.toUpperCase()}`);
 }
 
-function connectTerminal(name, ip) {
-  log(`터미널 연결 요청: ${name} (${ip})`);
-  alert(`[NeoOS 터미널 연결 안내]\n\n서버 IP: ${ip}\n접속 계정: ubuntu\n\nAWS 콘솔의 Session Manager 또는 폰의 SSH 앱(Termius/Termux)에서 아래 명령어로 즉시 접속할 수 있어:\n\nssh ubuntu@${ip}`);
+function openTerminal(name, ip) {
+  $('modal-inst-name').textContent = name;
+  $('ssh-cmd-text').textContent = `ssh ubuntu@${ip}`;
+  $('term-modal').style.display = 'grid';
+  log(`터미널 접속 모달 열림: ${name} (${ip})`);
 }
 
-function actionInstance(name, act) {
-  if (!confirm(`${name} 서버에 [${act}] 명령을 보낼까?`)) return;
-  log(`인스턴스 작업 전송: ${name} -> ${act}`);
+function closeModal() {
+  $('term-modal').style.display = 'none';
+}
+
+function copySshCmd() {
+  const text = $('ssh-cmd-text').textContent;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert(`SSH 접속 명령어가 복사되었습니다:\n\n${text}`);
+    });
+  } else {
+    alert(`아래 명령어를 복사해:\n\n${text}`);
+  }
+}
+
+function rebootInstance(idx) {
+  const inst = instances[idx];
+  if (!confirm(`${inst.name} 인스턴스를 재부팅할까?`)) return;
+  inst.state = 'rebooting';
+  renderInstances();
+  log(`[재부팅 요청] ${inst.name} (${inst.id}) 시스템 리셋 신호 전송`);
+
   setTimeout(() => {
-    log(`작업 완료: ${name} (${act}) 정상 처리됨.`);
-    alert(`${name} 인스턴스에 ${act} 명령이 성공적으로 전달됐어!`);
-  }, 1000);
+    inst.state = 'running';
+    saveInstances(instances);
+    renderInstances();
+    log(`[재부팅 완료] ${inst.name} 정상 온라인 복귀 (3/3 검사 통과)`);
+  }, 2500);
+}
+
+function stopInstance(idx) {
+  const inst = instances[idx];
+  if (!confirm(`${inst.name} 인스턴스를 중지할까? (중지 시 컴퓨팅 과금이 중단됩니다)`)) return;
+  inst.state = 'stopped';
+  saveInstances(instances);
+  renderInstances();
+  log(`[중지 완료] ${inst.name} (${inst.id}) 인스턴스 전원 차단됨.`);
+}
+
+function startInstance(idx) {
+  const inst = instances[idx];
+  inst.state = 'rebooting';
+  renderInstances();
+  log(`[시작 요청] ${inst.name} (${inst.id}) 가상머신 부팅 시작...`);
+
+  setTimeout(() => {
+    inst.state = 'running';
+    saveInstances(instances);
+    renderInstances();
+    log(`[시작 완료] ${inst.name} 온라인 부팅 완료! IP: ${inst.ip}`);
+  }, 2000);
+}
+
+function terminateInstance(idx) {
+  const inst = instances[idx];
+  if (!confirm(`정말로 ${inst.name} 인스턴스를 영구 삭제(Terminate)할까? 이 작업은 되돌릴 수 없어.`)) return;
+  instances.splice(idx, 1);
+  saveInstances(instances);
+  renderInstances();
+  log(`[인스턴스 삭제] ${inst.name} (${inst.id}) 리소스 해제 완료.`);
 }
 
 $('deploy-btn').onclick = async () => {
@@ -283,52 +432,55 @@ $('deploy-btn').onclick = async () => {
   const disk = $('server-disk').value;
   const region = $('server-region').value;
 
-  if (!confirm(`[가상 서버 배포 확인]\n\n이름: ${name}\nOS: ${selectedOs.toUpperCase()}\n사양: ${spec} (${disk}GB SSD)\n리전: ${region}\n\n배포를 시작할까?`)) return;
+  const osMap = {
+    ubuntu: { name: 'Ubuntu 26.04 LTS', icon: '🐧' },
+    debian: { name: 'Debian 12 Bookworm', icon: '🌀' },
+    alpine: { name: 'Alpine Linux', icon: '🏔️' }
+  };
+  const osData = osMap[selectedOs] || osMap.ubuntu;
+
+  if (!confirm(`[가상 서버 배포 확인]\n\n이름: ${name}\nOS: ${osData.name}\n사양: ${spec} (${disk}GB SSD)\n리전: ${region}\n\n배포를 시작할까?`)) return;
 
   const btn = $('deploy-btn');
   btn.disabled = true;
   btn.textContent = '⏳ 인스턴스 프로비저닝 중... (AWS EC2 요청 중)';
-  log(`새 서버 프로비저닝 시작: ${name} [${selectedOs} / ${spec}]`);
+  log(`[프로비저닝 시작] ${name} [${osData.name} / ${spec}]`);
 
   setTimeout(() => {
-    log(`리소스 검증 완료: AMI 할당 및 서브넷 라우팅 테이블 연결`);
+    log(`[네트워크 바인딩] 서브넷 라우팅 테이블 연결 및 탄력적 vCPU 할당`);
   }, 800);
 
   setTimeout(() => {
-    log(`인스턴스 생성 완료! ID: i-0${Math.random().toString(16).substring(2, 10)} (Pending -> Initializing)`);
-    log(`가상 서버 ${name} 가 성공적으로 큐에 등록되었습니다.`);
+    const newId = 'i-0' + Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10);
+    const newIp = `3.27.${Math.floor(Math.random()*150 + 50)}.${Math.floor(Math.random()*200 + 10)}`;
 
-    // 인스턴스 목록에 새 카드 추가
-    const list = $('instances-list');
-    const newCard = document.createElement('div');
-    newCard.className = 'instance-card';
-    newCard.innerHTML = `
-      <div class="inst-main">
-        <div class="inst-icon">${selectedOs === 'debian' ? '🌀' : selectedOs === 'alpine' ? '🏔️' : '🐧'}</div>
-        <div>
-          <div style="display:flex;align-items:center;gap:10px">
-            <span class="inst-name">${name}</span>
-            <span class="inst-badge" style="background:#13273e;color:var(--blue);border-color:#204b78">● Initializing</span>
-          </div>
-          <div class="inst-sub">t3.micro · ${disk}GB SSD · IP 할당 대기 중</div>
-          <div class="inst-sub" style="color:#577499">${selectedOs.toUpperCase()} · ${region}</div>
-        </div>
-      </div>
-      <div class="inst-actions">
-        <button class="btn sm" disabled>초기화 중</button>
-      </div>
-    `;
-    list.prepend(newCard);
+    const newInst = {
+      id: newId,
+      name: name,
+      os: osData.name,
+      icon: osData.icon,
+      spec: `${spec} (2 vCPU / 1GB RAM)`,
+      ip: newIp,
+      region: region === 'ap-southeast-2' ? 'ap-southeast-2 (Sydney)' : 'ap-northeast-2 (Seoul)',
+      storage: `${disk}GB gp3 EBS`,
+      state: 'running',
+      uptime: '방금 생성됨'
+    };
 
-    $('total-count').textContent = '2대';
+    instances.unshift(newInst);
+    saveInstances(instances);
+    renderInstances();
+
     btn.disabled = false;
     btn.textContent = '⚡ 가상 서버 즉시 배포하기';
-    alert(`🎉 새 가상 서버 [${name}] 배포 요청이 접수되었어!\n잠시 후 인스턴스가 활성화돼.`);
-  }, 2500);
+    log(`[배포 성공!] ${name} (${newId}) 생성 완료! 할당 IP: ${newIp}`);
+    alert(`🎉 새 가상 서버 [${name}] 배포가 완료되었어!\n\n인스턴스 ID: ${newId}\n할당 IP: ${newIp}\n\n목록에서 [터미널 접속]을 눌러 바로 쓸 수 있어.`);
+  }, 2200);
 };
 
 $('refresh-btn').onclick = () => {
-  log('인스턴스 상태 동기화 완료: 1개 인스턴스 정상 가동 중 (3/3 checks passed)');
+  renderInstances();
+  log(`인스턴스 상태 동기화 완료: ${instances.length}개 인스턴스 정상 가동 중 (3/3 checks passed)`);
 };
 
 function saveCustomEndpoint() {
@@ -348,6 +500,9 @@ function resetCustomEndpoint() {
   log('기본 내장 NeoOS 엔진으로 복원 완료.');
   alert('기본 설정으로 복원되었어!');
 }
+
+// 초기화
+renderInstances();
 </script>
 </body>
 </html>
