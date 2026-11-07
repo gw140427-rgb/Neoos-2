@@ -42,7 +42,7 @@ const $=id=>document.getElementById(id), U='neoos.aws.url', T='neoos.aws.token.s
 let base='',token='';
 function say(s){$('message').textContent=s}
 function headers(){return {'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/json'}}
-async function api(path,method='GET',body){const r=await fetch(base+path,{method,headers:headers(),body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok)throw Error(d.error||d.message||('HTTP '+r.status));return d}
+async function api(path,method='GET',body){const r=await fetch(base+path,{method,headers:headers(),body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok){const err=typeof d.error==='string'?d.error:(typeof d.message==='string'?d.message:('HTTP '+r.status));throw Error(err)}return d}
 function button(label,cls,fn){const b=document.createElement('button');b.textContent=label;b.className=cls||'';b.addEventListener('click',fn);return b}
 async function refresh(){if(!base||!token)return;try{const d=await api('/api/instances');const root=$('instances');root.replaceChildren();if(!d.instances.length){root.textContent='NeoOS 태그가 붙은 EC2 인스턴스가 없어.';return}
 for(const x of d.instances){const row=document.createElement('div');row.className='row';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=x.name;const meta=document.createElement('div');meta.className='muted id';meta.textContent=x.id+' · '+x.type+' · '+(x.public_ip||'공인 IP 없음');const state=document.createElement('div');state.className='status '+(x.state==='stopped'?'stopped':'');state.textContent=x.state;info.append(name,meta,state);row.append(info);
@@ -55,6 +55,6 @@ async function terminate(id){if(!confirm(id+' 인스턴스를 종료(terminate)�
 $('save').onclick=async()=>{try{base=new URL($('api').value.trim()).origin;token=$('token').value.trim();if(!base.startsWith('https://'))throw Error('HTTPS API 주소를 입력해.');if(token.length<32)throw Error('토큰은 32자 이상이어야 해.');localStorage.setItem(U,base);sessionStorage.setItem(T,token);$('token').value='';await refresh()}catch(e){say(e.message)}};
 $('clear').onclick=()=>{sessionStorage.removeItem(T);token='';$('token').value='';say('현재 탭의 토큰을 지웠어.')};
 $('refresh').onclick=refresh;
-$('create').onclick=async()=>{if(!confirm('AWS EC2 인스턴스를 생성하면 요금이 발생할 수 있어. 계정 소유자와 비용을 확인했어?'))return;try{const d=await api('/api/instances','POST',{name:$('name').value,instance_type:$('type').value,volume_gb:Number($('volume').value)});say('EC2 생성 요청 접수됨: '+d.instance.id);setTimeout(refresh,4000)}catch(e){say('생성 실패: '+e.message)}};
+$('create').onclick=async()=>{if(!base||!token){say('먼저 상단에서 AWS API 주소와 토큰을 연결해줘.');return}if(!confirm('AWS EC2 인스턴스를 생성하면 요금이 발생할 수 있어. 계정 소유자와 비용을 확인했어?'))return;try{const d=await api('/api/instances','POST',{name:$('name').value,instance_type:$('type').value,volume_gb:Number($('volume').value)});say('EC2 생성 요청 접수됨: '+d.instance.id);setTimeout(refresh,4000)}catch(e){say('생성 실패: '+e.message)}};
 $('api').value=localStorage.getItem(U)||'';token=sessionStorage.getItem(T)||'';if(token)refresh();
 </script></body></html>
