@@ -233,9 +233,8 @@ textarea{resize:vertical;min-height:64px}
     <section class="card panel" id="panel-text" role="tabpanel" hidden>
       <h2>💬 자막 오버레이</h2>
       <button type="button" class="btn-primary" id="addText" style="width:100%">＋ 현재 시간에 자막 추가</button>
-      <div class="textlist" id="textList">
-        <p class="hint" id="textEmpty">아직 자막이 없어. 추가하면 타임라인에 막대로 표시돼.</p>
-      </div>
+      <div class="textlist" id="textList"></div>
+      <p class="hint" id="textEmpty">아직 자막이 없어. 추가하면 타임라인에 막대로 표시돼.</p>
       <div id="textEditor" hidden>
         <div class="field">
           <label for="textValue">자막 내용</label>
@@ -785,7 +784,8 @@ function selectedText(){return texts.find(t=>t.id===selectedTextId)||null;}
 function renderTextList(){
   const list=$('textList');
   list.replaceChildren();
-  $('textEmpty').hidden=texts.length>0;
+  const empty=$('textEmpty');
+  if(empty)empty.hidden=texts.length>0;
   texts.forEach(item=>{
     const row=document.createElement('button');
     row.type='button';
