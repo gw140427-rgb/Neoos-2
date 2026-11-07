@@ -62,3 +62,10 @@ python neoos_autodev.py validate plans/neoos-ai-autodev.json
 ```
 
 CI runs compilation, repository unit tests, and baseline plan validation on pull requests.
+
+## Local model API references
+
+- Ollama documents its local OpenAI-compatible base URL as `http://localhost:11434/v1`: https://github.com/ollama/ollama/blob/main/docs/api/introduction.mdx
+- llama.cpp documents an OpenAI-compatible HTTP server and chat-completions API: https://github.com/ggml-org/llama.cpp/blob/master/tools/server/README.md
+
+These projects provide compatible local server interfaces; this repository does not install or start either runtime automatically.
