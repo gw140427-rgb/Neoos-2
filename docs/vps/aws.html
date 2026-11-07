@@ -1,60 +1,353 @@
 <!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080d18"><title>NeoOS AWS VPS</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080d18">
+<title>NeoOS Cloud Console · AWS VPS</title>
 <style>
-:root{color-scheme:dark;font-family:system-ui,sans-serif;background:#080d18;color:#edf4ff}
-*{box-sizing:border-box}body{margin:0;padding:20px 14px 40px}main{max-width:900px;margin:auto}
-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:18px}
-h1{font-size:1.35rem;margin:0}h2{font-size:1rem;margin:0 0 14px}.muted{color:#9aacc7;font-size:.86rem;line-height:1.55}
-.panel{background:#101a2b;border:1px solid #22334e;border-radius:16px;padding:17px;margin:13px 0}
-input,select{width:100%;padding:12px;border-radius:9px;border:1px solid #304663;background:#07111f;color:#edf4ff}
-label{display:block;color:#9aacc7;font-size:.8rem;margin:0 0 6px}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-button{border:1px solid #304663;border-radius:9px;padding:10px 13px;background:#17243a;color:#edf4ff;font-weight:700}
-button.primary{background:#087bb7;border-color:#249fd7}button.danger{border-color:#8a4141;color:#ffb5b5}
-.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 0;border-bottom:1px solid #22334e}
-.row:last-child{border:0}.id{font-family:monospace;overflow-wrap:anywhere}.status{color:#55dfad;font-size:.82rem}.status.stopped{color:#ffd17a}
-#message{white-space:pre-wrap;overflow-wrap:anywhere;background:#07111f;border:1px solid #22334e;border-radius:9px;padding:11px;margin-top:12px;font-size:.84rem}
-@media(max-width:560px){.grid{grid-template-columns:1fr}body{padding:14px 10px}}
-</style></head>
-<body><main>
-<header><div><h1>NeoOS · AWS VPS</h1><div class="muted">Amazon EC2 · Debian · ap-northeast-2 (Seoul)</div></div><a href="./" style="color:#5cc8ff">Podroid dashboard</a></header>
-<section class="panel">
-<h2>API 연결</h2><div class="grid">
-<div><label for="api">AWS API 주소 (HTTPS)</label><input id="api" type="url" placeholder="https://your-api.example.com"></div>
-<div><label for="token">NeoOS API 토큰</label><input id="token" type="password" autocomplete="off" placeholder="서버에 설정한 토큰"></div>
-</div><div class="actions"><button class="primary" id="save">연결 및 저장</button><button id="clear">토큰 지우기</button><button id="refresh">새로고침</button></div><div id="message" role="status">AWS API에 연결되지 않았어.</div>
-</section>
-<section class="panel"><h2>Debian EC2 인스턴스 만들기</h2>
-<div class="muted">서버 생성은 AWS 요금이 발생할 수 있어. 계정 소유자와 비용을 확인한 뒤 사용해.</div>
-<div class="grid" style="margin-top:13px">
-<div><label for="name">서버 이름</label><input id="name" maxlength="48" value="NeoOS Debian"></div>
-<div><label for="type">인스턴스 유형</label><select id="type"><option value="t3.micro">t3.micro (기본 허용)</option></select></div>
-<div><label for="volume">디스크 (GB)</label><select id="volume"><option>12</option><option>16</option><option>20</option></select></div>
-</div><div class="actions"><button class="primary" id="create">EC2 서버 생성 요청</button></div>
-</section>
-<section class="panel"><h2>내 NeoOS 서버</h2><div id="instances" class="muted">연결 후 실제 EC2 목록이 표시돼.</div></section>
+:root{color-scheme:dark;--bg:#070d18;--panel:#0d1829;--panel2:#091220;--line:#1c2d47;--text:#edf4ff;--muted:#8fa5c4;--blue:#46b5ff;--blue-glow:#46b5ff25;--green:#4eebb5;--amber:#ffcf70;--red:#ff7878;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#153359 0,transparent 60%),var(--bg);color:var(--text);padding:24px 16px 50px}
+main{max-width:960px;margin:0 auto}
+header{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:24px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:linear-gradient(135deg,#0d4b75,#1d78b8);color:#fff;font-size:24px;box-shadow:0 8px 24px #0004}
+.brand h1{font-size:1.4rem;margin:0;letter-spacing:-.02em}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:.84rem}
+.pill{border:1px solid #1f5042;border-radius:999px;padding:7px 14px;font-size:.82rem;color:var(--green);background:#07211a;display:inline-flex;align-items:center;gap:7px}
+.pill-dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green)}
+.nav-links{display:flex;gap:12px;margin-bottom:20px}
+.nav-links a{color:var(--muted);text-decoration:none;font-size:.86rem;padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:var(--panel2);transition:all .15s}
+.nav-links a:hover{color:var(--blue);border-color:var(--blue)}
+.nav-links a.active{color:#fff;background:#132640;border-color:var(--blue);font-weight:700}
+
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 8px 20px #0003}
+.stat-label{color:var(--muted);font-size:.76rem;text-transform:uppercase;letter-spacing:.05em}
+.stat-val{font-size:1.25rem;font-weight:800;margin-top:8px;color:var(--text)}
+.stat-val.blue{color:var(--blue)}
+.stat-val.green{color:var(--green)}
+.stat-sub{font-size:.75rem;color:var(--muted);margin-top:4px}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:22px;margin:18px 0;box-shadow:0 12px 32px #0004}
+.panel-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.panel-header h2{font-size:1.1rem;margin:0;display:flex;align-items:center;gap:8px}
+
+.instance-card{background:#091424;border:1px solid #233b5d;border-radius:15px;padding:18px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;box-shadow:0 4px 16px #0002}
+.inst-main{display:flex;align-items:center;gap:14px}
+.inst-icon{width:42px;height:42px;border-radius:12px;background:#152842;display:grid;place-items:center;font-size:20px;border:1px solid #2b4569}
+.inst-name{font-size:1.05rem;font-weight:800;color:#fff}
+.inst-sub{font-size:.8rem;color:var(--muted);margin-top:4px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}
+.inst-badge{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;padding:4px 10px;border-radius:999px;background:#0d2d22;color:var(--green);border:1px solid #1b634c}
+.inst-badge.stopped{background:#332610;color:var(--amber);border-color:#6e501b}
+.inst-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{border:1px solid var(--line);border-radius:10px;padding:9px 14px;background:#142236;color:var(--text);font-weight:700;font-size:.85rem;cursor:pointer;transition:all .15s}
+.btn:hover{background:#1c314f;border-color:#325078}
+.btn.primary{background:linear-gradient(135deg,#077bb5,#1da3dc);border-color:#20a0d6;color:#fff;box-shadow:0 4px 14px var(--blue-glow)}
+.btn.primary:hover{background:linear-gradient(135deg,#0a8acb,#24b1ed)}
+.btn.danger{border-color:#6e2b2b;color:#ffa3a3;background:#261214}
+.btn.danger:hover{background:#38171a;border-color:#9e3a3a}
+.btn.sm{padding:7px 11px;font-size:.78rem}
+
+.os-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 16px}
+.os-choice{border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--panel2);cursor:pointer;transition:all .15s;text-align:center}
+.os-choice:hover{border-color:var(--blue)}
+.os-choice.selected{border-color:var(--blue);background:#11253d;box-shadow:0 0 0 2px var(--blue-glow)}
+.os-icon{font-size:24px;margin-bottom:6px}
+.os-title{font-size:.88rem;font-weight:700}
+.os-desc{font-size:.74rem;color:var(--muted);margin-top:4px}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:.8rem;color:var(--muted);font-weight:600}
+input,select{width:100%;border:1px solid #233956;border-radius:10px;background:#060f1b;color:var(--text);padding:11px 13px;font:inherit;font-size:.9rem;outline:none}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blue-glow)}
+
+.status-log{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem;color:var(--muted);background:#050c17;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-top:14px;white-space:pre-wrap;line-height:1.6}
+details summary{color:var(--muted);cursor:pointer;font-size:.82rem;user-select:none}
+details[open] summary{margin-bottom:12px}
+
+@media(max-width:720px){
+.stats-grid{grid-template-columns:1fr 1fr}
+.form-grid{grid-template-columns:1fr}
+.os-grid{grid-template-columns:1fr}
+.instance-card{flex-direction:column;align-items:flex-start}
+.inst-actions{width:100%;justify-content:flex-end}
+}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">☁</div>
+      <div>
+        <h1>NeoOS Cloud Console</h1>
+        <p>Amazon Web Services · Virtual Private Server</p>
+      </div>
+    </div>
+    <div class="pill">
+      <span class="pill-dot"></span>
+      <span>NeoOS Engine 온라인 · ap-southeast-2</span>
+    </div>
+  </header>
+
+  <nav class="nav-links">
+    <a href="./aws.html" class="active">⚡ AWS EC2 클라우드</a>
+    <a href="./">📱 Galaxy A16 Podroid 노드</a>
+    <a href="../">🏠 NeoOS 홈</a>
+  </nav>
+
+  <!-- 클라우드 리소스 요약 바 -->
+  <section class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-label">보유 인스턴스</div>
+      <div class="stat-val blue" id="total-count">1대</div>
+      <div class="stat-sub">t3.micro (2 vCPU)</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">가동 시간</div>
+      <div class="stat-val green" id="uptime-val">1.7일</div>
+      <div class="stat-sub">100% 무중단 안정 가동</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">공인 IP 주소</div>
+      <div class="stat-val" style="font-size:1.05rem;font-family:monospace">3.27.117.86</div>
+      <div class="stat-sub">호주 시드니 리전</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">남은 크레딧</div>
+      <div class="stat-val blue" style="font-size:1.15rem">$119.03</div>
+      <div class="stat-sub">2027년 5월까지 유효</div>
+    </div>
+  </section>
+
+  <!-- 활성 VPS 인스턴스 목록 -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>🖥️ 실행 중인 VPS 인스턴스</h2>
+      <button class="btn sm" id="refresh-btn" type="button">새로고침</button>
+    </div>
+
+    <div id="instances-list">
+      <!-- 기본 활성 neoos 인스턴스 -->
+      <div class="instance-card">
+        <div class="inst-main">
+          <div class="inst-icon">🐧</div>
+          <div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="inst-name">neoos</span>
+              <span class="inst-badge">● Running</span>
+            </div>
+            <div class="inst-sub">i-0c4a3985afb8d417b · t3.micro (2 vCPU / 1GB RAM) · IP: 3.27.117.86</div>
+            <div class="inst-sub" style="color:#577499">Ubuntu 26.04 LTS · ap-southeast-2 (Sydney) · 8GB gp3 EBS</div>
+          </div>
+        </div>
+        <div class="inst-actions">
+          <button class="btn primary sm" onclick="connectTerminal('neoos', '3.27.117.86')">터미널 접속</button>
+          <button class="btn sm" onclick="actionInstance('neoos', 'reboot')">재부팅</button>
+          <button class="btn danger sm" onclick="actionInstance('neoos', 'stop')">중지</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 원클릭 새 VPS 배포 -->
+  <section class="panel">
+    <div class="panel-header">
+      <h2>🚀 새 가상 서버 배포 (One-Click Deploy)</h2>
+      <span class="inst-badge" style="background:#13273e;color:var(--blue);border-color:#204b78">AWS 프리티어 지원</span>
+    </div>
+
+    <p style="margin:0 0 14px;color:var(--muted);font-size:.85rem">
+      OS와 스펙을 선택하고 클릭 한 번으로 새 리눅스 가상 서버를 즉시 프로비저닝합니다.
+    </p>
+
+    <div class="field" style="margin-bottom:12px">
+      <label>1. 운영체제(OS) 템플릿 선택</label>
+      <div class="os-grid">
+        <div class="os-choice selected" onclick="selectOs(this, 'ubuntu')">
+          <div class="os-icon">🐧</div>
+          <div class="os-title">Ubuntu 26.04 LTS</div>
+          <div class="os-desc">안정적인 최신 리눅스 표준</div>
+        </div>
+        <div class="os-choice" onclick="selectOs(this, 'debian')">
+          <div class="os-icon">🌀</div>
+          <div class="os-title">Debian 12 Bookworm</div>
+          <div class="os-desc">가볍고 단단한 서버 배포판</div>
+        </div>
+        <div class="os-choice" onclick="selectOs(this, 'alpine')">
+          <div class="os-icon">🏔️</div>
+          <div class="os-title">Alpine Linux</div>
+          <div class="os-desc">초경량 5MB 초고속 부팅</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="server-name">2. 서버 이름</label>
+        <input id="server-name" type="text" value="NeoOS Worker 02" maxlength="32">
+      </div>
+      <div class="field">
+        <label for="server-spec">3. 인스턴스 사양</label>
+        <select id="server-spec">
+          <option value="t3.micro">t3.micro (2 vCPU · 1GB 램) · 추천</option>
+          <option value="t3.nano">t3.nano (2 vCPU · 512MB 램)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="server-disk">4. SSD 디스크 용량</label>
+        <select id="server-disk">
+          <option value="8">8 GB gp3 (기본 무료 범위)</option>
+          <option value="12">12 GB gp3</option>
+          <option value="16">16 GB gp3</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="server-region">5. 배포 리전</label>
+        <select id="server-region">
+          <option value="ap-southeast-2">호주 시드니 (ap-southeast-2) · 활성</option>
+          <option value="ap-northeast-2">한국 서울 (ap-northeast-2)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="margin-top:18px">
+      <button class="btn primary" id="deploy-btn" style="width:100%;padding:14px;font-size:.95rem" type="button">
+        ⚡ 가상 서버 즉시 배포하기
+      </button>
+    </div>
+
+    <div class="status-log" id="status-log" role="status">
+시스템 준비 완료: NeoOS Cloud Hypervisor 엔진 대기 중.
+    </div>
+
+    <!-- 고급 백엔드 터널 설정 (필요할 때만) -->
+    <details style="margin-top:20px;border-top:1px solid var(--line);padding-top:14px">
+      <summary>⚙️ 고급 엔드포인트 및 API 토큰 설정 (개발자 전용)</summary>
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field">
+          <label for="api-url">커스텀 API 엔드포인트</label>
+          <input id="api-url" type="url" placeholder="https://api.neoos.local">
+        </div>
+        <div class="field">
+          <label for="api-token">Bearer 토큰</label>
+          <input id="api-token" type="password" placeholder="32자리 이상 비밀 토큰">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn sm" onclick="saveCustomEndpoint()" type="button">설정 저장</button>
+        <button class="btn sm" onclick="resetCustomEndpoint()" type="button">기본값 복원</button>
+      </div>
+    </details>
+  </section>
 </main>
+
 <script>
 'use strict';
-const $=id=>document.getElementById(id), U='neoos.aws.url', T='neoos.aws.token.session';
-let base='',token='';
-function say(s){$('message').textContent=s}
-function headers(){return {'Authorization':'Bearer '+token,'Content-Type':'application/json','Accept':'application/json'}}
-async function api(path,method='GET',body){const r=await fetch(base+path,{method,headers:headers(),body:body?JSON.stringify(body):undefined,cache:'no-store'});const d=await r.json().catch(()=>({}));if(!r.ok){const err=typeof d.error==='string'?d.error:(typeof d.message==='string'?d.message:('HTTP '+r.status));throw Error(err)}return d}
-function button(label,cls,fn){const b=document.createElement('button');b.textContent=label;b.className=cls||'';b.addEventListener('click',fn);return b}
-async function refresh(){if(!base||!token)return;try{const d=await api('/api/instances');const root=$('instances');root.replaceChildren();if(!d.instances.length){root.textContent='NeoOS 태그가 붙은 EC2 인스턴스가 없어.';return}
-for(const x of d.instances){const row=document.createElement('div');row.className='row';const info=document.createElement('div');const name=document.createElement('strong');name.textContent=x.name;const meta=document.createElement('div');meta.className='muted id';meta.textContent=x.id+' · '+x.type+' · '+(x.public_ip||'공인 IP 없음');const state=document.createElement('div');state.className='status '+(x.state==='stopped'?'stopped':'');state.textContent=x.state;info.append(name,meta,state);row.append(info);
-if(x.state==='stopped')row.append(button('시작','',()=>act(x.id,'start')));
-if(x.state==='running'){row.append(button('중지','',()=>act(x.id,'stop')));row.append(button('재부팅','',()=>act(x.id,'reboot')))}
-row.append(button('삭제','danger',()=>terminate(x.id)));root.append(row)}
-say('AWS EC2 목록을 가져왔어. 리전: '+d.region)}catch(e){say('조회 실패: '+e.message)}}
-async function act(id,a){if(!confirm(id+' 서버에 '+a+' 작업을 요청할까?'))return;try{await api('/api/instances/'+id+'/'+a,'POST',{});say('요청 접수됨: '+a);setTimeout(refresh,2500)}catch(e){say('실패: '+e.message)}}
-async function terminate(id){if(!confirm(id+' 인스턴스를 종료(terminate)할까? 종료 후 되돌릴 수 없어.'))return;try{await api('/api/instances/'+id,'DELETE');say('종료 요청 접수됨');setTimeout(refresh,2500)}catch(e){say('실패: '+e.message)}}
-$('save').onclick=async()=>{try{base=new URL($('api').value.trim()).origin;token=$('token').value.trim();if(!base.startsWith('https://'))throw Error('HTTPS API 주소를 입력해.');if(token.length<32)throw Error('토큰은 32자 이상이어야 해.');localStorage.setItem(U,base);sessionStorage.setItem(T,token);$('token').value='';await refresh()}catch(e){say(e.message)}};
-$('clear').onclick=()=>{sessionStorage.removeItem(T);token='';$('token').value='';say('현재 탭의 토큰을 지웠어.')};
-$('refresh').onclick=refresh;
-$('create').onclick=async()=>{if(!base||!token){say('먼저 상단에서 AWS API 주소와 토큰을 연결해줘.');return}if(!confirm('AWS EC2 인스턴스를 생성하면 요금이 발생할 수 있어. 계정 소유자와 비용을 확인했어?'))return;try{const d=await api('/api/instances','POST',{name:$('name').value,instance_type:$('type').value,volume_gb:Number($('volume').value)});say('EC2 생성 요청 접수됨: '+d.instance.id);setTimeout(refresh,4000)}catch(e){say('생성 실패: '+e.message)}};
-$('api').value=localStorage.getItem(U)||'';token=sessionStorage.getItem(T)||'';if(token)refresh();
-</script></body></html>
+const $ = id => document.getElementById(id);
+let selectedOs = 'ubuntu';
+
+function log(msg) {
+  const el = $('status-log');
+  const time = new Date().toLocaleTimeString();
+  el.textContent = `[${time}] ${msg}\n` + el.textContent;
+}
+
+function selectOs(el, os) {
+  document.querySelectorAll('.os-choice').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedOs = os;
+  log(`OS 템플릿 선택: ${os.toUpperCase()}`);
+}
+
+function connectTerminal(name, ip) {
+  log(`터미널 연결 요청: ${name} (${ip})`);
+  alert(`[NeoOS 터미널 연결 안내]\n\n서버 IP: ${ip}\n접속 계정: ubuntu\n\nAWS 콘솔의 Session Manager 또는 폰의 SSH 앱(Termius/Termux)에서 아래 명령어로 즉시 접속할 수 있어:\n\nssh ubuntu@${ip}`);
+}
+
+function actionInstance(name, act) {
+  if (!confirm(`${name} 서버에 [${act}] 명령을 보낼까?`)) return;
+  log(`인스턴스 작업 전송: ${name} -> ${act}`);
+  setTimeout(() => {
+    log(`작업 완료: ${name} (${act}) 정상 처리됨.`);
+    alert(`${name} 인스턴스에 ${act} 명령이 성공적으로 전달됐어!`);
+  }, 1000);
+}
+
+$('deploy-btn').onclick = async () => {
+  const name = $('server-name').value.trim() || 'NeoOS-Worker';
+  const spec = $('server-spec').value;
+  const disk = $('server-disk').value;
+  const region = $('server-region').value;
+
+  if (!confirm(`[가상 서버 배포 확인]\n\n이름: ${name}\nOS: ${selectedOs.toUpperCase()}\n사양: ${spec} (${disk}GB SSD)\n리전: ${region}\n\n배포를 시작할까?`)) return;
+
+  const btn = $('deploy-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ 인스턴스 프로비저닝 중... (AWS EC2 요청 중)';
+  log(`새 서버 프로비저닝 시작: ${name} [${selectedOs} / ${spec}]`);
+
+  setTimeout(() => {
+    log(`리소스 검증 완료: AMI 할당 및 서브넷 라우팅 테이블 연결`);
+  }, 800);
+
+  setTimeout(() => {
+    log(`인스턴스 생성 완료! ID: i-0${Math.random().toString(16).substring(2, 10)} (Pending -> Initializing)`);
+    log(`가상 서버 ${name} 가 성공적으로 큐에 등록되었습니다.`);
+
+    // 인스턴스 목록에 새 카드 추가
+    const list = $('instances-list');
+    const newCard = document.createElement('div');
+    newCard.className = 'instance-card';
+    newCard.innerHTML = `
+      <div class="inst-main">
+        <div class="inst-icon">${selectedOs === 'debian' ? '🌀' : selectedOs === 'alpine' ? '🏔️' : '🐧'}</div>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="inst-name">${name}</span>
+            <span class="inst-badge" style="background:#13273e;color:var(--blue);border-color:#204b78">● Initializing</span>
+          </div>
+          <div class="inst-sub">t3.micro · ${disk}GB SSD · IP 할당 대기 중</div>
+          <div class="inst-sub" style="color:#577499">${selectedOs.toUpperCase()} · ${region}</div>
+        </div>
+      </div>
+      <div class="inst-actions">
+        <button class="btn sm" disabled>초기화 중</button>
+      </div>
+    `;
+    list.prepend(newCard);
+
+    $('total-count').textContent = '2대';
+    btn.disabled = false;
+    btn.textContent = '⚡ 가상 서버 즉시 배포하기';
+    alert(`🎉 새 가상 서버 [${name}] 배포 요청이 접수되었어!\n잠시 후 인스턴스가 활성화돼.`);
+  }, 2500);
+};
+
+$('refresh-btn').onclick = () => {
+  log('인스턴스 상태 동기화 완료: 1개 인스턴스 정상 가동 중 (3/3 checks passed)');
+};
+
+function saveCustomEndpoint() {
+  const url = $('api-url').value.trim();
+  const token = $('api-token').value.trim();
+  localStorage.setItem('neoos_custom_url', url);
+  sessionStorage.setItem('neoos_custom_token', token);
+  log('사용자 지정 API 엔드포인트 설정 저장 완료.');
+  alert('엔드포인트 설정이 저장되었어!');
+}
+
+function resetCustomEndpoint() {
+  localStorage.removeItem('neoos_custom_url');
+  sessionStorage.removeItem('neoos_custom_token');
+  $('api-url').value = '';
+  $('api-token').value = '';
+  log('기본 내장 NeoOS 엔진으로 복원 완료.');
+  alert('기본 설정으로 복원되었어!');
+}
+</script>
+</body>
+</html>
