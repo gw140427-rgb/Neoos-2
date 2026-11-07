@@ -396,51 +396,120 @@ function copyPassword() {
   }
 }
 
-function rebootInstance(idx) {
-  const inst = instances[idx];
-  if (!confirm(`${inst.name} 인스턴스를 재부팅할까?`)) return;
-  inst.state = 'rebooting';
+async function syncInstances(silent = false) {
+  const customUrl = localStorage.getItem('neoos_custom_url');
+  const customToken = sessionStorage.getItem('neoos_custom_token');
+  const targetUrl = customUrl ? `${customUrl.replace(/\/+$/, '')}/api/instances` : '/api/instances';
+  
+  if (!silent) $('refresh-btn').textContent = '🔄 동기화 중...';
+  try {
+    const headers = {};
+    if (customToken) headers['Authorization'] = `Bearer ${customToken}`;
+    const res = await fetch(targetUrl, { headers });
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data.instances)) {
+        instances = data.instances;
+        saveInstances(instances);
+        renderInstances();
+        if (!silent) log(`[AWS 동기화 완료] 실시간 EC2 인스턴스 ${instances.length}대 확인됨 (${data.region || 'Sydney'})`);
+        $('refresh-btn').textContent = '🔄 동기화';
+        return;
+      }
+    }
+    if (!silent) log(`[알림] API 대기 중 (${res.status}), 저장된 인스턴스 목록 표시`);
+  } catch (err) {
+    if (!silent) log(`[네트워크] 백엔드 동기화 확인 중 (${err.message})`);
+  }
+  $('refresh-btn').textContent = '🔄 동기화';
   renderInstances();
-  log(`[재부팅 요청] ${inst.name} (${inst.id}) 시스템 리셋 신호 전송`);
-
-  setTimeout(() => {
-    inst.state = 'running';
-    saveInstances(instances);
-    renderInstances();
-    log(`[재부팅 완료] ${inst.name} 정상 온라인 복귀 (3/3 검사 통과)`);
-  }, 2500);
 }
 
-function stopInstance(idx) {
+async function rebootInstance(idx) {
   const inst = instances[idx];
-  if (!confirm(`${inst.name} 인스턴스를 중지할까? (중지 시 컴퓨팅 과금이 중단됩니다)`)) return;
+  if (!confirm(`${inst.name} (${inst.id}) 실제 AWS 인스턴스를 재부팅할까?`)) return;
+  inst.state = 'rebooting';
+  renderInstances();
+  log(`[재부팅 요청] ${inst.name} (${inst.id}) AWS 신호 전송...`);
+
+  try {
+    const res = await fetch(`/api/instances/${inst.id}/reboot`, { method: 'POST' });
+    if (res.ok) {
+      log(`[재부팅 완료] AWS EC2 재부팅 신호 접수됨`);
+    } else {
+      log(`[재부팅 실패] 상태 코드: ${res.status}`);
+    }
+  } catch (e) {
+    log(`[재부팅 오류] ${e.message}`);
+  }
+  setTimeout(() => syncInstances(true), 3000);
+}
+
+async function stopInstance(idx) {
+  const inst = instances[idx];
+  if (!confirm(`${inst.name} (${inst.id}) 실제 AWS 인스턴스를 중지할까? (중지 시 컴퓨팅 요금이 나가지 않습니다)`)) return;
   inst.state = 'stopped';
   saveInstances(instances);
   renderInstances();
-  log(`[중지 완료] ${inst.name} (${inst.id}) 인스턴스 전원 차단됨.`);
+  log(`[중지 요청] ${inst.name} (${inst.id}) AWS 중지 신호 전송...`);
+
+  try {
+    const res = await fetch(`/api/instances/${inst.id}/stop`, { method: 'POST' });
+    if (res.ok) {
+      log(`[중지 완료] AWS EC2 인스턴스 전원 차단 진행 중`);
+    } else {
+      log(`[중지 실패] 상태 코드: ${res.status}`);
+    }
+  } catch (e) {
+    log(`[중지 오류] ${e.message}`);
+  }
+  setTimeout(() => syncInstances(true), 3000);
 }
 
-function startInstance(idx) {
+async function startInstance(idx) {
   const inst = instances[idx];
   inst.state = 'rebooting';
   renderInstances();
-  log(`[시작 요청] ${inst.name} (${inst.id}) 가상머신 부팅 시작...`);
+  log(`[시작 요청] ${inst.name} (${inst.id}) AWS 부팅 신호 전송...`);
 
-  setTimeout(() => {
-    inst.state = 'running';
-    saveInstances(instances);
-    renderInstances();
-    log(`[시작 완료] ${inst.name} 온라인 부팅 완료! IP: ${inst.ip}`);
-  }, 2000);
+  try {
+    const res = await fetch(`/api/instances/${inst.id}/start`, { method: 'POST' });
+    if (res.ok) {
+      log(`[시작 완료] AWS EC2 인스턴스 전원 켜는 중`);
+    } else {
+      log(`[시작 실패] 상태 코드: ${res.status}`);
+    }
+  } catch (e) {
+    log(`[시작 오류] ${e.message}`);
+  }
+  setTimeout(() => syncInstances(true), 3000);
 }
 
-function terminateInstance(idx) {
+async function terminateInstance(idx) {
   const inst = instances[idx];
-  if (!confirm(`정말로 ${inst.name} 인스턴스를 영구 삭제(Terminate)할까? 이 작업은 되돌릴 수 없어.`)) return;
-  instances.splice(idx, 1);
-  saveInstances(instances);
-  renderInstances();
-  log(`[인스턴스 삭제] ${inst.name} (${inst.id}) 리소스 해제 완료.`);
+  if (inst.id === 'i-0c4a3985afb8d417b') {
+    alert('⚠️ neoos 메인 컨트롤 플레인 인스턴스는 보호되어 있어 삭제할 수 없어!');
+    return;
+  }
+  if (!confirm(`[경고: 영구 삭제]\n\n정말로 ${inst.name} (${inst.id}) 인스턴스를 AWS에서 영구 삭제(Terminate)할까? 가상머신과 모든 데이터가 완전히 삭제돼.`)) return;
+
+  log(`[삭제 요청] ${inst.name} (${inst.id}) AWS Terminate 신호 전송...`);
+  try {
+    const res = await fetch(`/api/instances/${inst.id}`, { method: 'DELETE' });
+    if (res.ok) {
+      log(`[삭제 완료] AWS EC2 인스턴스 영구 종료됨`);
+      instances.splice(idx, 1);
+      saveInstances(instances);
+      renderInstances();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      log(`[삭제 실패] ${err.error || res.status}`);
+      alert(`삭제 실패: ${err.error || res.statusText}`);
+    }
+  } catch (e) {
+    log(`[삭제 오류] ${e.message}`);
+  }
+  setTimeout(() => syncInstances(true), 3000);
 }
 
 $('deploy-btn').onclick = async () => {
@@ -456,48 +525,47 @@ $('deploy-btn').onclick = async () => {
   };
   const osData = osMap[selectedOs] || osMap.ubuntu;
 
-  if (!confirm(`[가상 서버 배포 확인]\n\n이름: ${name}\nOS: ${osData.name}\n사양: ${spec} (${disk}GB SSD)\n리전: ${region}\n\n배포를 시작할까?`)) return;
+  if (!confirm(`[진짜 AWS EC2 가상 서버 배포]\n\n서버명: ${name}\nOS: ${osData.name}\n사양: ${spec} (${disk}GB SSD)\n리전: ${region}\n\nAWS 데이터센터에 실제 EC2 인스턴스를 즉시 생성할까?`)) return;
 
   const btn = $('deploy-btn');
   btn.disabled = true;
-  btn.textContent = '⏳ 인스턴스 프로비저닝 중... (AWS EC2 요청 중)';
-  log(`[프로비저닝 시작] ${name} [${osData.name} / ${spec}]`);
+  btn.textContent = '⏳ AWS EC2 인스턴스 프로비저닝 중...';
+  log(`[AWS EC2 배포 요청 전송] ${name} (${osData.name})`);
 
-  setTimeout(() => {
-    log(`[네트워크 바인딩] 서브넷 라우팅 테이블 연결 및 탄력적 vCPU 할당`);
-  }, 800);
+  try {
+    const res = await fetch('/api/instances', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: name,
+        os: selectedOs,
+        instance_type: spec,
+        volume_gb: parseInt(disk, 10) || 8
+      })
+    });
 
-  setTimeout(() => {
-    const newId = 'i-0' + Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10);
-    const newIp = `3.27.${Math.floor(Math.random()*150 + 50)}.${Math.floor(Math.random()*200 + 10)}`;
-
-    const newInst = {
-      id: newId,
-      name: name,
-      os: osData.name,
-      icon: osData.icon,
-      spec: `${spec} (2 vCPU / 1GB RAM)`,
-      ip: newIp,
-      region: region === 'ap-southeast-2' ? 'ap-southeast-2 (Sydney)' : 'ap-northeast-2 (Seoul)',
-      storage: `${disk}GB gp3 EBS`,
-      state: 'running',
-      uptime: '방금 생성됨'
-    };
-
-    instances.unshift(newInst);
-    saveInstances(instances);
-    renderInstances();
-
+    if (res.ok) {
+      const data = await res.json();
+      const newInst = data.instance;
+      log(`[배포 성공!] AWS EC2 ${newInst.name} (${newInst.id}) 생성 완료! 상태: ${newInst.state}`);
+      alert(`🎉 AWS EC2 실물 가상 서버 [${newInst.name}]가 성공적으로 배포되었어!\n\n인스턴스 ID: ${newInst.id}\n상태: ${newInst.state}\n공인 IP: ${newInst.ip}\n\n초기 부팅(약 1~2분) 후 [터미널 접속]으로 바로 SSH 접속할 수 있어.`);
+      await syncInstances();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      log(`[배포 실패] AWS API 에러: ${err.message || err.error || res.status}`);
+      alert(`⚠️ 인스턴스 생성 실패: ${err.message || err.detail || err.error || res.statusText}`);
+    }
+  } catch (err) {
+    log(`[배포 오류] ${err.message}`);
+    alert(`통신 오류: ${err.message}`);
+  } finally {
     btn.disabled = false;
     btn.textContent = '⚡ 가상 서버 즉시 배포하기';
-    log(`[배포 성공!] ${name} (${newId}) 생성 완료! 할당 IP: ${newIp}`);
-    alert(`🎉 새 가상 서버 [${name}] 배포가 완료되었어!\n\n인스턴스 ID: ${newId}\n할당 IP: ${newIp}\n\n목록에서 [터미널 접속]을 눌러 바로 쓸 수 있어.`);
-  }, 2200);
+  }
 };
 
 $('refresh-btn').onclick = () => {
-  renderInstances();
-  log(`인스턴스 상태 동기화 완료: ${instances.length}개 인스턴스 정상 가동 중 (3/3 checks passed)`);
+  syncInstances();
 };
 
 function saveCustomEndpoint() {
@@ -520,6 +588,8 @@ function resetCustomEndpoint() {
 
 // 초기화
 renderInstances();
+syncInstances(true);
+setInterval(() => syncInstances(true), 12000);
 </script>
 </body>
 </html>

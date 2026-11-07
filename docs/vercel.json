@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/instances/:match*",
+      "destination": "/api/instances"
+    }
+  ]
+}
