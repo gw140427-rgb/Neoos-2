@@ -179,25 +179,21 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blu
         <input id="server-name" type="text" value="NeoOS Worker 02" maxlength="32">
       </div>
       <div class="field">
-        <label for="server-spec">3. 인스턴스 사양</label>
-        <select id="server-spec">
-          <option value="t3.micro">t3.micro (2 vCPU · 1GB 램) · 추천</option>
-          <option value="t3.nano">t3.nano (2 vCPU · 512MB 램)</option>
+        <label for="server-spec">3. 인스턴스 사양 (비용 보호 고정)</label>
+        <select id="server-spec" disabled title="요금 보호를 위해 t3.micro로 고정되어 있어">
+          <option value="t3.micro" selected>t3.micro (2 vCPU · 1GB 램) · 고정</option>
         </select>
       </div>
       <div class="field">
-        <label for="server-disk">4. SSD 디스크 용량</label>
-        <select id="server-disk">
-          <option value="8">8 GB gp3 (기본 무료 범위)</option>
-          <option value="12">12 GB gp3</option>
-          <option value="16">16 GB gp3</option>
+        <label for="server-disk">4. SSD 디스크 용량 (고정)</label>
+        <select id="server-disk" disabled title="요금 보호를 위해 8GB로 고정되어 있어">
+          <option value="8" selected>8 GB gp3 (고정)</option>
         </select>
       </div>
       <div class="field">
-        <label for="server-region">5. 배포 리전</label>
-        <select id="server-region">
-          <option value="ap-southeast-2">호주 시드니 (ap-southeast-2) · 활성</option>
-          <option value="ap-northeast-2">한국 서울 (ap-northeast-2)</option>
+        <label for="server-region">5. 배포 리전 (고정)</label>
+        <select id="server-region" disabled title="현재 시드니 리전에서만 배포해">
+          <option value="ap-southeast-2" selected>호주 시드니 (ap-southeast-2) · 고정</option>
         </select>
       </div>
     </div>
