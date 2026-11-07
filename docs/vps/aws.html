@@ -234,7 +234,7 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blu
   <div class="modal-box">
     <h3>💻 터미널 연결 정보 (<span id="modal-inst-name">neoos</span>)</h3>
     <p style="font-size:.84rem;color:var(--muted);margin:0 0 12px">
-      SSH 접속 허용 및 비밀번호 설정 완료! 스마트폰 SSH 앱이나 Termux에서 비밀번호로 즉시 접속할 수 있습니다.
+      SSH 접속은 EC2 키 페어 또는 AWS Systems Manager(Session Manager)를 사용해. NeoOS는 기본 비밀번호를 만들거나 화면에 표시하지 않아.
     </p>
 
     <div style="font-size:.8rem;color:var(--muted);margin-bottom:4px">SSH 명령어 (터치하여 복사):</div>
@@ -243,11 +243,6 @@ input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px var(--blu
       <span style="font-size:.76rem;color:var(--blue)">[복사]</span>
     </div>
 
-    <div style="font-size:.8rem;color:var(--muted);margin-bottom:4px">초기 비밀번호 (터치하여 복사):</div>
-    <div class="code-box" onclick="copyPassword()" style="cursor:pointer;color:var(--amber)">
-      <span id="ssh-pwd-text">neoos2026!</span>
-      <span style="font-size:.76rem;color:var(--blue)">[복사]</span>
-    </div>
 
     <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
       <a class="btn primary sm" id="aws-session-link" href="https://141216315429-vtbzd6ri.ap-southeast-2.console.aws.amazon.com/systems-manager/session-manager/i-0c4a3985afb8d417b?region=ap-southeast-2#:" target="_blank" rel="noopener">AWS 웹 콘솔 터미널 열기 ↗</a>
@@ -319,7 +314,7 @@ function renderInstances() {
     let actionButtons = '';
     if (inst.state === 'running') {
       actionButtons = `
-        <button class="btn primary sm" onclick="openTerminal('${inst.name}', '${inst.ip}')" type="button">터미널 접속</button>
+        <button class="btn primary sm" onclick="openTerminal('${inst.name}', '${inst.ip}', '${inst.id}')" type="button">터미널 접속</button>
         <button class="btn sm" onclick="rebootInstance(${idx})" type="button">재부팅</button>
         <button class="btn sm" onclick="stopInstance(${idx})" type="button">중지</button>
       `;
@@ -359,9 +354,13 @@ function selectOs(el, os) {
   log(`OS 템플릿 선택: ${os.toUpperCase()}`);
 }
 
-function openTerminal(name, ip) {
+function openTerminal(name, ip, instanceId) {
+  const inst = instances.find(item => item.id === instanceId);
+  const user = inst && /debian/i.test(inst.os || '') ? 'admin' : 'ubuntu';
+  const region = String(inst && inst.region || 'ap-southeast-2').match(/ap-[a-z]+-[0-9]+/)?.[0] || 'ap-southeast-2';
   $('modal-inst-name').textContent = name;
-  $('ssh-cmd-text').textContent = `ssh ubuntu@${ip}`;
+  $('ssh-cmd-text').textContent = `ssh -i <EC2_KEY_FILE> ${user}@${ip}`;
+  $('aws-session-link').href = `https://141216315429-vtbzd6ri.ap-southeast-2.console.aws.amazon.com/systems-manager/session-manager/${instanceId}?region=${region}#:`;
   $('term-modal').style.display = 'grid';
   log(`터미널 접속 모달 열림: ${name} (${ip})`);
 }
@@ -381,16 +380,6 @@ function copySshCmd() {
   }
 }
 
-function copyPassword() {
-  const text = $('ssh-pwd-text').textContent;
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => {
-      alert(`비밀번호가 복사되었습니다:\n\n${text}`);
-    });
-  } else {
-    alert(`비밀번호:\n\n${text}`);
-  }
-}
 
 async function syncInstances(silent = false) {
   const customUrl = localStorage.getItem('neoos_custom_url');
