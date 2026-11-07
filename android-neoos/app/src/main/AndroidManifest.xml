@@ -1,14 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
     <application
-        android:allowBackup="true"
+        android:allowBackup="false"
         android:label="NeoOS"
         android:theme="@android:style/Theme.Material.Light.NoActionBar"
-        android:supportsRtl="true">
-
+        android:supportsRtl="true"
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:exported="true"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize"
             android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
