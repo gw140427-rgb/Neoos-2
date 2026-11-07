@@ -1,18 +1,167 @@
 <!doctype html>
-<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>양양이 마인크래프트 애드온 만들기</title><meta name="generator" content="YangYang Add-on v1.0.1"><style>body{font-family:system-ui,sans-serif;max-width:720px;margin:24px auto;padding:0 16px;line-height:1.6}button{font-size:1rem;padding:12px 18px;border:0;border-radius:10px;background:#176b3a;color:white}button:disabled{opacity:.5}#status{white-space:pre-wrap}</style></head><body><h1>양양이 마인크래프트 애드온</h1><p>안드로이드용 Minecraft Bedrock 애드온 파일(<code>.mcaddon</code>)을 브라우저에서 생성합니다. 로그인이나 결제는 필요하지 않습니다.</p><p><strong>주의:</strong> 게임 안에서의 동작은 아직 테스트되지 않았습니다. 기존 월드는 백업하세요.</p><button id="build">.mcaddon 만들기</button><p id="status">준비됨</p><script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script><script>
-const base='https://raw.githubusercontent.com/gw140427-rgb/Neoos-2/main/minecraft-addon/';
-const files=[['YangYang_AI_BP/manifest.json','bp/manifest.json','text'],['YangYang_AI_BP/entities/yangyang_buddy.json','bp/entities/yangyang_buddy.json','text'],['YangYang_AI_BP/items/yangyang_spawn_egg.json','bp/items/yangyang_spawn_egg.json','text'],['YangYang_AI_RP/manifest.json','rp/manifest.json','text'],['YangYang_AI_RP/entity/yangyang_buddy.entity.json','rp/entity/yangyang_buddy.entity.json','text'],['YangYang_AI_RP/geometry/yangyang_buddy.geo.json','rp/geometry/yangyang_buddy.geo.json','text'],['YangYang_AI_RP/render_controllers/yangyang_buddy.render_controllers.json','rp/render_controllers/yangyang_buddy.render_controllers.json','text'],['YangYang_AI_RP/textures/entity/yangyang_buddy.png','rp/textures/entity/yangyang_buddy.png','blob'],['YangYang_AI_RP/textures/item_texture.json','rp/textures/item_texture.json','text'],['YangYang_AI_RP/texts/ko_KR.lang','rp/texts/ko_KR.lang','text'],['YangYang_AI_RP/texts/en_US.lang','rp/texts/en_US.lang','text']];
-const status=document.getElementById('status'),button=document.getElementById('build');button.addEventListener('click',async()=>{if(!window.JSZip){status.textContent='ZIP 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.';return}button.disabled=true;status.textContent='GitHub에서 파일을 가져오는 중...';try{const fetched=await Promise.all(files.map(async([path,dest,type])=>{const r=await fetch(base+path);if(!r.ok)throw Error(path+' 다운로드 실패 ('+r.status+')');return[dest,type==='blob'?await r.blob():await r.text()]}));const bp=new JSZip(),rp=new JSZip();for(const[dest,content]of fetched){if(dest.startsWith('bp/'))bp.file(dest.slice(3),content);else rp.file(dest.slice(3),content)}status.textContent='애드온을 묶는 중...';const[bpb,rpb]=await Promise.all([bp.generateAsync({type:'blob'}),rp.generateAsync({type:'blob'})]);const outer=new JSZip();outer.file('YangYang_AI_BP.mcpack',bpb);outer.file('YangYang_AI_RP.mcpack',rpb);const result=await outer.generateAsync({type:'blob'});const url=URL.createObjectURL(result),a=document.createElement('a');a.href=url;a.download='YangYang_AI.mcaddon';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);status.textContent='완료! 다운로드한 파일을 열어 Minecraft로 가져오세요.'}catch(e){status.textContent='실패: '+e.message+'\n잠시 후 다시 시도하세요.'}finally{button.disabled=false}});
-</script><section id="bean-jail-game-link" style="margin:24px 0;padding:18px;border:1px solid #d4ddcf;border-radius:16px;background:#f4f8f2;color:#183526"><h2 style="margin-top:0">🍚 콩밥 먹기: 감옥 생존기</h2><p>랜덤 사건, 감옥 매점, 코인 경제, 강철 대장과 부하들의 갈등을 선택으로 해결하는 모바일 미니 게임입니다.</p><p><a href="./bean-jail/" style="display:inline-block;padding:11px 16px;border-radius:10px;background:#176b3a;color:white;text-decoration:none;font-weight:700">게임 시작하기 →</a></p></section>
-<section id="neoos-vps-link" style="margin:28px 0;padding:22px;border:1px solid #1e2d4a;border-radius:18px;background:#0b1220;color:#e2e8f0;font-family:system-ui,-apple-system,sans-serif">
-  <h2 style="margin:0 0 10px;font-size:1.25rem">🚀 NeoOS VPS</h2>
-  <p style="margin:0 0 10px;color:#cbd5e1;font-size:.92rem">Galaxy A16의 Podroid Docker 노드에 연결해 실제 실행 상태를 확인하는 대시보드입니다.</p>
-  <p style="margin:0 0 16px;color:#94a3b8;font-size:.84rem">연결 주소와 API 토큰을 설정해야 실제 상태가 표시됩니다. 이 페이지는 컨테이너 생성이나 임의 터미널 명령을 지원하지 않습니다.</p>
-  <a href="./vps/" style="display:inline-block;padding:10px 15px;border-radius:9px;background:#1686c2;color:white;text-decoration:none;font-weight:700">VPS 상태 대시보드 열기 →</a>
-  <p style="margin:12px 0 0;color:#94a3b8;font-size:.84rem">AWS EC2 기반 Debian VPS 관리 대시보드도 추가됐습니다.</p>
-  <a href="./vps/aws.html" style="display:inline-block;padding:10px 15px;border-radius:9px;background:#d97706;color:#111827;text-decoration:none;font-weight:700">AWS EC2 VPS 열기 →</a>
-</section>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05060c">
+<meta name="description" content="NeoOS — AI 샌드박스 클라우드, 브라우저 영상 편집기, 미니 게임을 한 곳에서. 건우의 3대 플랫폼 포털.">
+<title>NeoOS · AI 샌드박스 &amp; 크리에이티브 허브</title>
+<style>
+:root{color-scheme:dark;--bg:#05060c;--panel:#0c1020;--panel2:#101529;--line:#232a44;--text:#f2f5ff;--muted:#9aa6c6;--violet:#8b5cf6;--cyan:#22d3ee;--pink:#f472b6;--green:#4ade80;--amber:#fbbf24}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;color:var(--text);font:16px/1.6 system-ui,-apple-system,"Noto Sans KR","Segoe UI",Roboto,sans-serif;
+background:
+ radial-gradient(ellipse 70% 45% at 12% -8%,#3b1a7a55 0,transparent 60%),
+ radial-gradient(ellipse 60% 40% at 92% 0%,#0e4a5e66 0,transparent 55%),
+ radial-gradient(ellipse 60% 50% at 50% 110%,#4a103755 0,transparent 60%),
+ var(--bg)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse at 50% 30%,#000 20%,transparent 75%)}
+a{color:inherit}
+.page{position:relative;max-width:1120px;margin:0 auto;padding:26px 18px 60px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:34px}
+.brand{display:flex;align-items:center;gap:11px;text-decoration:none}
+.logo{width:42px;height:42px;border-radius:13px;display:grid;place-items:center;font-weight:900;font-size:18px;color:#fff;background:conic-gradient(from 200deg,#7c3aed,#22d3ee,#f472b6,#7c3aed);box-shadow:0 8px 28px #7c3aed55}
+.brand b{font-size:1.06rem;letter-spacing:-.01em}
+.brand small{display:block;color:var(--muted);font-size:.72rem;letter-spacing:.06em}
+.toplinks{display:flex;gap:7px;flex-wrap:wrap}
+.toplinks a{text-decoration:none;font-size:.8rem;color:var(--muted);border:1px solid var(--line);background:#0a0e1bcc;padding:8px 12px;border-radius:999px;transition:.15s}
+.toplinks a:hover{color:#fff;border-color:#3d4a70}
 
+.hero{text-align:center;padding:14px 0 30px}
+.kicker{display:inline-flex;align-items:center;gap:8px;font-size:.72rem;font-weight:800;letter-spacing:.16em;color:#c4b5fd;border:1px solid #43318a;background:#1a1038cc;padding:6px 12px;border-radius:999px}
+.kicker i{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hero h1{font-size:clamp(2.1rem,8vw,3.6rem);line-height:1.08;margin:16px 0 12px;letter-spacing:-.035em;font-weight:900}
+.hero h1 span{background:linear-gradient(100deg,#a78bfa 0%,#22d3ee 42%,#f472b6 85%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{max-width:600px;margin:0 auto;color:#b3bedb;font-size:.98rem}
+.hero .chips{display:flex;justify-content:center;gap:7px;flex-wrap:wrap;margin-top:18px}
+.hero .chips span{font-size:.74rem;color:#c9d4f2;border:1px solid #2a3552;background:#0b1020b3;border-radius:999px;padding:5px 11px}
 
+.grid{display:grid;grid-template-columns:1fr;gap:16px;margin-top:8px}
+@media(min-width:860px){.grid{grid-template-columns:repeat(3,1fr)}}
+.app{position:relative;display:flex;flex-direction:column;text-decoration:none;border:1px solid var(--line);border-radius:22px;padding:22px;background:linear-gradient(180deg,#0e1324e6,#0a0e1ae6);overflow:hidden;transition:transform .18s,border-color .18s,box-shadow .18s}
+.app::before{content:"";position:absolute;inset:-1px -1px auto -1px;height:3px;background:var(--accent,linear-gradient(90deg,#7c3aed,#22d3ee));opacity:.9}
+.app::after{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;border-radius:50%;background:var(--glow,#7c3aed22);filter:blur(30px);pointer-events:none}
+.app:hover{transform:translateY(-4px);border-color:#3c4a72;box-shadow:0 22px 50px #0008}
+.app.cloud{--accent:linear-gradient(90deg,#22d3ee,#3b82f6);--glow:#0ea5e933}
+.app.editor{--accent:linear-gradient(90deg,#8b5cf6,#f472b6);--glow:#8b5cf633}
+.app.game{--accent:linear-gradient(90deg,#fbbf24,#4ade80);--glow:#fbbf2433}
+.apphead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+.iconbox{width:54px;height:54px;border-radius:16px;display:grid;place-items:center;font-size:26px;background:#0a1120;border:1px solid #24304d;box-shadow:inset 0 0 22px #ffffff08}
+.tag{font-size:.66rem;font-weight:800;letter-spacing:.08em;border-radius:999px;padding:4px 9px;border:1px solid #2b3a5e;color:#b9c9ee;background:#0b1426;white-space:nowrap}
+.tag.live{color:#a7f3d0;border-color:#166534;background:#052e1b}
+.tag.new{color:#fde68a;border-color:#78551a;background:#2a1f06}
+.app h2{font-size:1.14rem;margin:0 0 4px;letter-spacing:-.01em}
+.app .sub{color:#93a2c4;font-size:.82rem;margin:0 0 14px}
+.app ul{list-style:none;margin:0 0 20px;padding:0;display:flex;flex-direction:column;gap:7px}
+.app li{font-size:.82rem;color:#c7d2ec;display:flex;gap:8px;align-items:flex-start}
+.app li::before{content:"▸";color:var(--cyan);font-size:.8rem;line-height:1.5}
+.app.editor li::before{color:#c4b5fd}
+.app.game li::before{color:var(--amber)}
+.cta{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid #1e2740;padding-top:14px;font-weight:800;font-size:.86rem;color:#fff}
+.cta .arrow{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:#04060d;font-size:.9rem;transition:transform .18s}
+.app:hover .cta .arrow{transform:translateX(4px)}
+
+.foot{margin-top:36px;padding-top:20px;border-top:1px solid #1b2338;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;color:#6c7a99;font-size:.76rem}
+.foot a{color:#93b7e8;text-decoration:none}
+.foot a:hover{text-decoration:underline}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="top">
+    <a class="brand" href="/" data-app="home">
+      <span class="logo" aria-hidden="true">N</span>
+      <span><b>NeoOS</b><small>AI SANDBOX &amp; CREATIVE HUB</small></span>
+    </a>
+    <nav class="toplinks" aria-label="앱 바로가기">
+      <a href="/cloud" data-app="cloud">☁ Cloud</a>
+      <a href="/editor" data-app="editor">🎬 Studio</a>
+      <a href="/game" data-app="game">🍚 Game</a>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <span class="kicker"><i></i> NEOOS PLATFORM · 3 APPS</span>
+    <h1>내 손안의 <span>AI 클라우드</span><br>그리고 크리에이티브 스튜디오</h1>
+    <p>서버를 띄우고, 영상을 자르고, 감옥에서 살아남기. 설치 없이 브라우저에서 바로 도는 건우의 3대 플랫폼.</p>
+    <div class="chips">
+      <span>⚡ 원클릭 VPS</span>
+      <span>🎬 실시간 영상 편집</span>
+      <span>🎮 레트로 생존 게임</span>
+      <span>📱 모바일 최적화</span>
+    </div>
+  </section>
+
+  <main class="grid">
+    <a class="app cloud" href="/cloud" data-app="cloud" aria-label="NeoOS Cloud 콘솔 열기">
+      <div class="apphead">
+        <span class="iconbox" aria-hidden="true">☁</span>
+        <span class="tag live">● ONLINE</span>
+      </div>
+      <h2>NeoOS Cloud</h2>
+      <p class="sub">AI 샌드박스 &amp; 고속 VPS 콘솔</p>
+      <ul>
+        <li>원클릭 리눅스 서버 배포 (t3.micro 고정)</li>
+        <li>개발자 비밀번호 잠금 · 어드민 게이트</li>
+        <li>24시간 만료 타이머 &amp; 크레딧 가드레일</li>
+        <li>ask-cli · Railway 무료 샌드박스 가이드 내장</li>
+        <li>서버 켜기 / 점검 모드 원클릭 전환</li>
+      </ul>
+      <span class="cta">콘솔 열기 <span class="arrow">→</span></span>
+    </a>
+
+    <a class="app editor" href="/editor" data-app="editor" aria-label="NeoOS 캡컷 스튜디오 열기">
+      <div class="apphead">
+        <span class="iconbox" aria-hidden="true">🎬</span>
+        <span class="tag new">NEW</span>
+      </div>
+      <h2>NeoOS CapCut Studio</h2>
+      <p class="sub">브라우저 기반 실시간 비디오 에디터</p>
+      <ul>
+        <li>타임라인 탐색 · 재생/일시정지 미리보기</li>
+        <li>자막 오버레이 추가·드래그·구간 설정</li>
+        <li>5가지 필터 (B&amp;W · Cyberpunk Blue · Vintage …)</li>
+        <li>0.5x ~ 2x 배속 조절</li>
+        <li>MediaRecorder 녹화 → WebM / MP4 저장</li>
+      </ul>
+      <span class="cta">편집 시작 <span class="arrow">→</span></span>
+    </a>
+
+    <a class="app game" href="/game" data-app="game" aria-label="콩밥 먹기 감옥 생존기 시작">
+      <div class="apphead">
+        <span class="iconbox" aria-hidden="true">🍚</span>
+        <span class="tag new">v1.1</span>
+      </div>
+      <h2>콩밥 먹기: 감옥 생존기</h2>
+      <p class="sub">15일 선택형 감옥 생존 미니 게임</p>
+      <ul>
+        <li>Web Audio 레트로 사운드 (클릭·코인·경고)</li>
+        <li>신규 사건: 숨겨진 폰 · 특가 매점</li>
+        <li>히든 엔딩 💻 천재 해커 조기 출소</li>
+        <li>더블 탭·중복 클릭 버그 수정</li>
+        <li>기기에 자동 저장 + 세이브 내보내기</li>
+      </ul>
+      <span class="cta">게임 시작 <span class="arrow">→</span></span>
+    </a>
+  </main>
+
+  <footer class="foot">
+    <span>© 2026 NeoOS · made by <a href="https://github.com/gw140427-rgb" target="_blank" rel="noopener">@gw140427-rgb</a></span>
+    <span>3 apps · no install · <a href="https://github.com/gw140427-rgb/Neoos-2" target="_blank" rel="noopener">GitHub</a></span>
+  </footer>
+</div>
+<script>
+/* GitHub Pages(하위 경로)에서도 /cloud·/editor·/game 링크가 열리도록 상대 경로로 바꿔 줘. */
+(function(){
+  if(!/(^|\.)github\.io$/i.test(location.hostname))return;
+  document.querySelectorAll('a[data-app]').forEach(function(a){
+    var app=a.dataset.app;
+    a.setAttribute('href',app==='home'?'./':'./'+app+'/');
+  });
+})();
+</script>
 </body>
 </html>

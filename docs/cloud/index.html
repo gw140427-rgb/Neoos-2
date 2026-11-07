@@ -1,0 +1,1160 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070d18">
+<meta name="description" content="NeoOS Cloud — 독립형 AI 샌드박스 & 고속 VPS 클라우드 콘솔. 원클릭 배포, 24시간 크레딧 가드레일, ask-cli 내장.">
+<title>NeoOS Cloud · AI 샌드박스 & VPS 콘솔</title>
+<style>
+:root{color-scheme:dark;--bg:#060b14;--panel:#0c1626;--panel2:#0a1220;--line:#1b2c45;--text:#eef5ff;--muted:#8ea5c4;--blue:#46b5ff;--cyan:#22d3ee;--green:#4eebb5;--amber:#ffcf70;--red:#ff7b7b;--violet:#8b5cf6}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% -15%,#133258 0,transparent 60%),radial-gradient(ellipse at 100% 10%,#062a33 0,transparent 45%),var(--bg);color:var(--text);font:15px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Noto Sans KR","Segoe UI",Roboto,sans-serif;padding:22px 14px 54px}
+main{max-width:980px;margin:0 auto}
+a{color:inherit}
+button{font:inherit;color:inherit;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+header.top{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand-mark{width:48px;height:48px;border-radius:15px;display:grid;place-items:center;font-size:24px;background:linear-gradient(135deg,#0b4b7a,#1b9bc9);color:#fff;box-shadow:0 8px 26px #0005}
+.brand h1{font-size:1.3rem;margin:0;letter-spacing:-.02em;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.brand p{margin:4px 0 0;color:var(--muted);font-size:.8rem}
+.beta{font-size:.68rem;font-weight:800;color:#bff3ff;background:#083240;border:1px solid #0e6172;border-radius:999px;padding:2px 8px;letter-spacing:.04em}
+.head-pills{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.pill{border:1px solid #1f5042;border-radius:999px;padding:7px 13px;font-size:.8rem;color:var(--green);background:#07211a;display:inline-flex;align-items:center;gap:7px;white-space:nowrap}
+.pill.off{color:var(--amber);border-color:#6e501b;background:#22190a}
+.pill-dot{width:8px;height:8px;border-radius:50%;background:currentColor;box-shadow:0 0 9px currentColor}
+.adminbtn{border:1px solid #6e501b;background:#22190a;color:#ffd98a;border-radius:999px;padding:7px 13px;font-size:.8rem;font-weight:700;min-height:36px}
+.adminbtn.unlocked{border-color:#1f5042;background:#07211a;color:var(--green)}
+
+.appnav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.appnav a{text-decoration:none;font-size:.8rem;color:var(--muted);padding:8px 12px;border-radius:999px;border:1px solid var(--line);background:#0a101c;white-space:nowrap}
+.appnav a:hover{color:#fff;border-color:var(--blue)}
+.appnav a.active{color:#fff;background:linear-gradient(135deg,#0b5c8a,#0e7490);border-color:#1c9ac4;font-weight:700}
+
+.card{background:linear-gradient(180deg,#0d1828,#0a111d);border:1px solid var(--line);border-radius:18px;padding:18px;margin:14px 0;box-shadow:0 14px 34px #0005}
+.card h2{font-size:1.06rem;margin:0 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.card-head h2{margin:0}
+.muted{color:var(--muted);font-size:.85rem}
+.hint{font-size:.78rem;color:var(--muted);margin:8px 0 0;line-height:1.6}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:4px}
+.stat{background:#0a1321;border:1px solid var(--line);border-radius:14px;padding:13px}
+.stat-label{color:var(--muted);font-size:.72rem;letter-spacing:.03em}
+.stat-val{font-size:1.15rem;font-weight:800;margin-top:5px;color:#fff;font-variant-numeric:tabular-nums}
+.stat-val.blue{color:var(--blue)}
+.stat-val.green{color:var(--green)}
+.stat-sub{font-size:.7rem;color:var(--muted);margin-top:3px}
+.quota-bar{height:6px;background:#1a2740;border-radius:99px;overflow:hidden;margin-top:8px}
+.quota-bar span{display:block;height:100%;background:linear-gradient(90deg,#1da3dc,#4eebb5);width:0;transition:width .3s}
+
+.banner{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:13px;padding:11px 14px;margin:12px 0;font-size:.84rem;border:1px solid #26405f;background:#0d1c2e;color:#d8e6f8}
+.banner.warn{border-color:#7a5a1c;background:#241c0b;color:#ffe0a3}
+.banner.bad{border-color:#7a2530;background:#280f14;color:#ffc2c2}
+.banner strong{font-weight:800}
+.banner .spacer{flex:1}
+
+.instance{border:1px solid #22395a;background:#08111e;border-radius:15px;padding:16px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap}
+.instance.expired{border-color:#7a2530;box-shadow:0 0 0 1px #7a253055 inset}
+.inst-main{display:flex;align-items:center;gap:13px;min-width:0}
+.inst-icon{width:44px;height:44px;border-radius:13px;background:#132640;display:grid;place-items:center;font-size:20px;border:1px solid #2b4569;flex:0 0 auto}
+.inst-name{font-weight:800;color:#fff;font-size:1rem}
+.inst-sub{font-size:.76rem;color:var(--muted);margin-top:3px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;word-break:break-all}
+.state{display:inline-flex;align-items:center;gap:6px;font-size:.74rem;padding:3px 9px;border-radius:999px;background:#0d2d22;color:var(--green);border:1px solid #1b634c}
+.state.stopped{background:#332610;color:var(--amber);border-color:#6e501b}
+.state.pending{background:#162b42;color:var(--blue);border-color:#1c5a91;animation:pulse 1s infinite alternate}
+@keyframes pulse{from{opacity:.55}to{opacity:1}}
+.expiry{display:inline-block;font-size:.72rem;padding:3px 9px;border-radius:999px;margin-top:6px;border:1px solid #26405f;color:#b9d4f2;background:#0b1a2b}
+.expiry.warn{border-color:#7a5a1c;color:#ffd98a;background:#241c0b}
+.expiry.bad{border-color:#7a2530;color:#ffb3bd;background:#280f14}
+.expiry.ok{color:#9fe6cf;border-color:#1b634c;background:#07211a}
+.inst-actions{display:flex;gap:7px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);border-radius:10px;padding:8px 13px;background:#132033;color:var(--text);font-weight:700;font-size:.8rem;min-height:38px}
+.btn:hover:not(:disabled){background:#1b2c44;border-color:#325078}
+.btn.primary{background:linear-gradient(135deg,#0b7fb6,#1da3dc);border-color:#20a0d6;color:#fff}
+.btn.danger{border-color:#6e2b2b;color:#ffa3a3;background:#261214}
+.btn.ghost{background:#0a1322}
+.btn.sm{padding:6px 10px;font-size:.74rem;min-height:32px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.os-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:8px 0 14px}
+.os-choice{border:1px solid var(--line);border-radius:12px;padding:13px;background:var(--panel2);cursor:pointer;text-align:center;transition:.15s}
+.os-choice:hover{border-color:var(--blue)}
+.os-choice.selected{border-color:var(--blue);background:#102338;box-shadow:0 0 0 2px #46b5ff22}
+.os-icon{font-size:22px}
+.os-title{font-size:.84rem;font-weight:700;margin-top:4px}
+.os-desc{font-size:.7rem;color:var(--muted);margin-top:2px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.field label{font-size:.76rem;color:var(--muted);font-weight:700}
+input,select{width:100%;border:1px solid #233956;border-radius:10px;background:#060f1b;color:var(--text);padding:10px 12px;font:inherit;font-size:.88rem;outline:none}
+input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #46b5ff22}
+input:disabled,select:disabled{opacity:.55}
+.status-log{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.76rem;color:var(--muted);background:#050c17;border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-top:12px;white-space:pre-wrap;line-height:1.6;max-height:170px;overflow:auto}
+.code{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#050b14;border:1px solid #203554;border-radius:10px;padding:10px 12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8rem;color:var(--green);margin:8px 0;word-break:break-all}
+.code button{flex:0 0 auto;border:1px solid #2a4a6e;background:#0d1e31;color:#bcdcff;border-radius:8px;padding:4px 9px;font-size:.72rem;min-height:30px}
+.code span{min-width:0}
+
+.glist{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.glist li{background:#0a1321;border:1px solid var(--line);border-radius:11px;padding:10px 12px;font-size:.79rem;color:#cfe0f6}
+.glist b{display:block;color:#fff;font-size:.82rem;margin-bottom:2px}
+.glist small{color:var(--muted);font-size:.72rem}
+
+.qs-tabs{display:flex;gap:6px;background:#08101c;border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:12px;flex-wrap:wrap}
+.qs-tabs button{border:0;background:transparent;color:var(--muted);font-weight:700;font-size:.8rem;border-radius:9px;padding:8px 11px;min-height:36px}
+.qs-tabs button[aria-selected="true"]{background:linear-gradient(135deg,#0b5c8a,#0e7490);color:#fff}
+.qs-panel{font-size:.85rem;color:#d6e4f7}
+.qs-panel h3{font-size:.9rem;margin:10px 0 6px;color:#fff}
+.qs-panel ul{margin:6px 0 0;padding-left:19px;color:#c7d8ee;font-size:.8rem;line-height:1.7}
+.specrow{display:flex;gap:7px;flex-wrap:wrap;margin:8px 0}
+.spec{font-size:.72rem;border:1px solid #26405f;background:#0b1a2b;border-radius:999px;padding:4px 10px;color:#bcdcff}
+
+.adminbox{border:1px dashed #3a4d6b;border-radius:13px;padding:13px;background:#08111d;margin-top:10px}
+.svc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px}
+.svc-btn{border:1px solid var(--line);background:#0d1826;border-radius:12px;padding:12px;text-align:left;font-weight:700;font-size:.84rem;min-height:56px}
+.svc-btn small{display:block;font-weight:500;color:var(--muted);font-size:.72rem;margin-top:3px}
+.svc-btn.on[aria-pressed="true"]{border-color:#1b634c;background:#07211a;color:#9ff0d2;box-shadow:0 0 0 2px #4eebb522}
+.svc-btn.off[aria-pressed="true"]{border-color:#7a2530;background:#280f14;color:#ffc2c2;box-shadow:0 0 0 2px #ff7b7b22}
+
+.modal{position:fixed;inset:0;background:#000a;backdrop-filter:blur(5px);display:grid;place-items:center;padding:16px;z-index:1000;overflow:auto}
+.modal[hidden]{display:none}
+.modal-box{background:linear-gradient(180deg,#101d30,#0b1421);border:1px solid #27405f;border-radius:18px;max-width:520px;width:100%;padding:22px;box-shadow:0 28px 70px #000a}
+.modal-box h3{margin:0 0 8px;font-size:1.1rem;display:flex;align-items:center;gap:8px}
+.modal-box p{font-size:.84rem;color:var(--muted);margin:.35rem 0}
+.field-err{color:#ff9d9d;font-size:.78rem;min-height:1.2em;margin-top:6px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+
+.maint{position:fixed;inset:0;z-index:900;display:grid;place-items:center;padding:20px;overflow:auto;background:radial-gradient(ellipse at 50% 20%,#1a2130 0,#05070c 65%)}
+.maint[hidden]{display:none}
+.maint-card{max-width:560px;width:100%;text-align:center;background:#0b1018;border:1px solid #2a3446;border-radius:24px;padding:34px 24px;box-shadow:0 30px 80px #000b}
+.maint-icon{font-size:64px;line-height:1;margin-bottom:14px;filter:drop-shadow(0 0 22px #ff7b7b66)}
+.maint-card h1{font-size:1.4rem;margin:0 0 10px;letter-spacing:-.01em}
+.maint-card .lead{font-size:.98rem;color:#e7edf7;margin:0 0 8px;font-weight:700}
+.maint-card p{color:#93a3ba;font-size:.85rem;line-height:1.65;margin:.4rem 0}
+.maint-meta{font-size:.75rem;color:#6f7f96;margin-top:10px}
+.maint-card .btn{margin-top:16px}
+.maint-admin{border-top:1px solid #253044;margin-top:20px;padding-top:16px}
+
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:#132133;border:1px solid #32507a;color:#fff;padding:10px 16px;border-radius:12px;font-size:.83rem;box-shadow:0 16px 40px #000a;opacity:0;pointer-events:none;transition:.2s;z-index:1200;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(max-width:760px){
+  .stats{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .os-grid{grid-template-columns:1fr}
+  .glist{grid-template-columns:1fr}
+  .svc-grid{grid-template-columns:1fr}
+  .instance{flex-direction:column;align-items:flex-start}
+  .inst-actions{width:100%}
+  .inst-actions .btn{flex:1}
+  body{padding:16px 12px 44px}
+}
+</style>
+</head>
+<body>
+
+<!-- ⛔ 점검/종료 전면 화면 -->
+<div class="maint" id="maintenanceOverlay" hidden role="alertdialog" aria-modal="true" aria-labelledby="maintTitle">
+  <div class="maint-card">
+    <div class="maint-icon" aria-hidden="true">🛑</div>
+    <h1 id="maintTitle">서버가 종료되었습니다.</h1>
+    <p class="lead">관리자(개발자)가 점검을 위해 서비스를 일시 중지했습니다.</p>
+    <p>점검이 끝나면 다시 이용할 수 있어. 급한 일이면 개발자에게 알려 줘.</p>
+    <p class="maint-meta" id="maintMeta"></p>
+    <button type="button" class="btn primary" id="maintLoginBtn">🔐 개발자 로그인</button>
+
+    <div class="maint-admin" id="maintAdminBox" hidden>
+      <p style="color:#9ff0d2">🔓 관리자 인증됨 — 서비스를 다시 켤 수 있어.</p>
+      <button type="button" class="btn" id="maintResumeBtn" style="border-color:#1b634c;background:#07211a;color:#9ff0d2">🟢 서버 켜기 (서비스 재개)</button>
+      <button type="button" class="btn ghost" id="maintLockBtn">잠금</button>
+    </div>
+  </div>
+</div>
+
+<main>
+  <header class="top">
+    <div class="brand">
+      <div class="brand-mark" aria-hidden="true">☁</div>
+      <div>
+        <h1>NeoOS Cloud <span class="beta">CLOUD CONSOLE</span></h1>
+        <p>독립형 AI 샌드박스 &amp; 고속 VPS 클라우드 · 원클릭 배포</p>
+      </div>
+    </div>
+    <div class="head-pills">
+      <span class="pill" id="servicePill"><span class="pill-dot"></span> 서비스 온라인</span>
+      <button type="button" class="adminbtn" id="adminBadge">🔒 관리자 잠금</button>
+    </div>
+  </header>
+
+  <nav class="appnav" aria-label="NeoOS 앱">
+    <a href="/cloud" class="active" data-app="cloud">🚀 NeoOS Cloud</a>
+    <a href="/" data-app="home">🏠 NeoOS 홈</a>
+    <a href="/editor" data-app="editor">🎬 캡컷 스튜디오</a>
+    <a href="/game" data-app="game">🍚 콩밥 감옥</a>
+  </nav>
+
+  <!-- 요약 -->
+  <section class="stats" aria-label="클라우드 요약">
+    <div class="stat">
+      <div class="stat-label">보유 인스턴스</div>
+      <div class="stat-val blue" id="total-count">– / 2대</div>
+      <div class="stat-sub">쿼터 2대 고정</div>
+      <div class="quota-bar"><span id="quotaBar"></span></div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">가동 중</div>
+      <div class="stat-val green" id="running-count">0대</div>
+      <div class="stat-sub">t3.micro · 8GB gp3</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">기본 공인 IP</div>
+      <div class="stat-val" id="primary-ip" style="font-size:.95rem;font-family:ui-monospace,monospace">3.27.117.86</div>
+      <div class="stat-sub">ap-southeast-2 · Sydney</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">남은 크레딧</div>
+      <div class="stat-val blue" style="font-size:1.05rem">$119.03</div>
+      <div class="stat-sub">2027년 5월까지 · 참고용</div>
+    </div>
+  </section>
+
+  <!-- 24시간 만료 배너 -->
+  <div class="banner warn" id="ttlBanner" hidden></div>
+
+  <!-- 인스턴스 -->
+  <section class="card" aria-labelledby="instTitle">
+    <div class="card-head">
+      <h2 id="instTitle">🖥️ 실행 중인 인스턴스</h2>
+      <div style="display:flex;gap:7px">
+        <button type="button" class="btn sm" id="refreshBtn">🔄 새로고침</button>
+      </div>
+    </div>
+    <div id="instances-list"></div>
+    <p class="hint">목록과 상태는 잠금 없이 누구나 볼 수 있어. 터미널·재부팅·중지·삭제는 개발자 인증이 필요해.</p>
+  </section>
+
+  <!-- 배포 -->
+  <section class="card" aria-labelledby="deployTitle">
+    <div class="card-head">
+      <h2 id="deployTitle">🚀 새 가상 서버 배포</h2>
+      <span class="state" style="background:#13273e;color:var(--blue);border-color:#204b78">크레딧 보호 모드</span>
+    </div>
+    <p class="muted" style="margin:0 0 12px">OS만 고르고 한 번 누르면 리눅스 서버가 바로 만들어져. 사양·디스크·리전은 요금 보호를 위해 고정이야.</p>
+
+    <div class="field" style="margin-bottom:10px">
+      <label>1. 운영체제(OS) 템플릿</label>
+      <div class="os-grid">
+        <div class="os-choice selected" data-os="ubuntu" role="button" tabindex="0">
+          <div class="os-icon">🐧</div><div class="os-title">Ubuntu 26.04 LTS</div><div class="os-desc">안정적인 최신 표준</div>
+        </div>
+        <div class="os-choice" data-os="debian" role="button" tabindex="0">
+          <div class="os-icon">🌀</div><div class="os-title">Debian 12 Bookworm</div><div class="os-desc">가볍고 단단한 서버</div>
+        </div>
+        <div class="os-choice" data-os="alpine" role="button" tabindex="0">
+          <div class="os-icon">🏔️</div><div class="os-title">Alpine Linux</div><div class="os-desc">초경량 고속 부팅</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label for="server-name">2. 서버 이름 <span id="nameLock" style="color:#ffd98a;font-weight:600">🔒</span></label>
+        <input id="server-name" type="text" value="NeoOS Worker 02" maxlength="32">
+      </div>
+      <div class="field">
+        <label for="server-spec">3. 사양 (고정)</label>
+        <select id="server-spec" disabled title="요금 보호를 위해 t3.micro로 고정돼 있어">
+          <option value="t3.micro" selected>t3.micro (2 vCPU · 1GB RAM) · 고정</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="server-disk">4. SSD (고정)</label>
+        <select id="server-disk" disabled>
+          <option value="8" selected>8GB gp3 (고정)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="server-region">5. 리전 (고정)</label>
+        <select id="server-region" disabled>
+          <option value="ap-southeast-2" selected>호주 시드니 · 고정</option>
+        </select>
+      </div>
+    </div>
+
+    <button type="button" class="btn primary" id="deploy-btn" style="width:100%;margin-top:14px;padding:13px;font-size:.92rem">⚡ 가상 서버 즉시 배포하기</button>
+    <p class="hint" id="deployHint">🔒 개발자 인증 후 배포할 수 있어. 버튼을 누르면 비밀번호를 물어볼게.</p>
+    <p class="hint">⏳ 워커 인스턴스는 생성 후 <b>24시간</b>이 지나면 만료로 표시돼. 만료 전에 중지·삭제해서 크레딧을 지켜 줘. (타이머는 안내용이고, 실제 요금은 켜져 있는 동안 발생해.)</p>
+
+    <div class="status-log" id="status-log" role="status">NeoOS Cloud Engine 대기 중 · 준비 완료.</div>
+
+    <details style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px">
+      <summary style="color:var(--muted);cursor:pointer;font-size:.8rem">⚙️ 고급 엔드포인트 및 API 토큰 (개발자 전용)</summary>
+      <div class="form-grid" style="margin-top:10px">
+        <div class="field">
+          <label for="api-url">커스텀 API 엔드포인트</label>
+          <input id="api-url" type="url" placeholder="https://api.neoos.local">
+        </div>
+        <div class="field">
+          <label for="api-token">Bearer 토큰</label>
+          <input id="api-token" type="password" placeholder="32자리 이상 비밀 토큰">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:9px">
+        <button type="button" class="btn sm" id="saveEndpoint">설정 저장</button>
+        <button type="button" class="btn sm" id="resetEndpoint">기본값 복원</button>
+      </div>
+    </details>
+  </section>
+
+  <!-- 크레딧 가드레일 -->
+  <section class="card" aria-labelledby="guardTitle">
+    <div class="card-head"><h2 id="guardTitle">🛡️ 크레딧 보호 가드레일</h2><span class="pill" style="color:#bcdcff;border-color:#1c5a91;background:#0d1e31">자동 적용</span></div>
+    <ul class="glist">
+      <li><b>인스턴스 쿼터 2대</b><small>계정당 최대 2대 · 서버 API가 강제로 거절</small></li>
+      <li><b>사양 고정 t3.micro</b><small>2 vCPU · 1GB RAM · 8GB gp3 디스크</small></li>
+      <li><b>24시간 만료 안내</b><small>워커는 생성 24시간 뒤 만료 표시 · 중지 유도</small></li>
+      <li><b>컨트롤 플레인 보호</b><small>neoos 인스턴스는 중지·삭제 불가</small></li>
+      <li><b>개발자 잠금</b><small>배포·중지·삭제·API 변경에 비밀번호 필요</small></li>
+      <li><b>리전 고정</b><small>시드니(ap-southeast-2)에서만 배포</small></li>
+    </ul>
+    <p class="hint">이 화면의 잠금·타이머는 실수 방지용 가드레일이야. 실제 비용과 권한은 서버 API의 토큰·쿼터·IAM이 막고 있어.</p>
+  </section>
+
+  <!-- 빠른 시작: Railway / ask-cli -->
+  <section class="card" aria-labelledby="qsTitle">
+    <div class="card-head"><h2 id="qsTitle">⚡ 빠른 시작 — AI 샌드박스</h2></div>
+    <div class="qs-tabs" role="tablist">
+      <button type="button" role="tab" data-qs="railway" aria-selected="true">🛤️ Railway 무료 샌드박스</button>
+      <button type="button" role="tab" data-qs="askcli" aria-selected="false">🤖 ask-cli 내장 가이드</button>
+    </div>
+
+    <div class="qs-panel" id="qs-railway">
+      <p style="margin-top:0">설치도, 계정도, 카드도 없이 SSH 한 줄로 2 vCPU · 2GB 리눅스 샌드박스를 받아. Codex·Claude Code·Grok 같은 코딩 에이전트가 미리 깔려 있어.</p>
+      <div class="code"><span>ssh railway.new</span><button type="button" data-copy="ssh railway.new">복사</button></div>
+      <div class="specrow"><span class="spec">2 vCPU</span><span class="spec">2GB RAM</span><span class="spec">약 1.4초 준비</span><span class="spec">무료</span></div>
+      <ul>
+        <li>SSH 키가 없으면 먼저 <code>ssh-keygen -t ed25519</code> 실행 (Termux에서도 그대로 돼).</li>
+        <li>기본 탑재: Railway Agent, Claude Code, Codex, OpenCode, Cursor CLI, Grok, pi + Node·Python·gh·mise·Chromium.</li>
+        <li>빌드 60분 → 이후 24시간 안에 claim 링크로 계정에 옮기면 계속 유지돼. 안 옮기면 파일과 함께 삭제돼.</li>
+        <li>IP당 하루 3대까지. 혼잡하면 "Anonymous trials are temporarily disabled"가 뜨는데, 그 시도는 횟수에 안 세.</li>
+        <li>계정이 있으면 <code>railway code --claude</code> · <code>railway ca</code>로 클라우드 에이전트를 쓸 수 있어.</li>
+      </ul>
+      <p class="hint">출처: railway.com/free-vm (2026-09-25 무계정 무료 VM 출시).</p>
+    </div>
+
+    <div class="qs-panel" id="qs-askcli" hidden>
+      <p style="margin-top:0">NeoOS 인스턴스에 건우의 <b>ask-cli</b>를 한 줄로 깔면 터미널에서 한국어로 AI에게 물어보고 명령까지 실행할 수 있어. 의존성 0개(python3만 필요).</p>
+      <div class="code"><span>curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh | bash</span><button type="button" data-copy="curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh | bash">복사</button></div>
+      <h3>설치 후 3단계</h3>
+      <ul>
+        <li><code>ask --config</code> — 무료 API 키 등록 (Groq 무료 키를 넣으면 0.3초 응답).</li>
+        <li><code>ask "도커 안 쓰는 이미지 정리해줘"</code> — 명령을 제안하고 <code>[y/N]</code> 확인 후 실행.</li>
+        <li><code>export PATH="$HOME/.local/bin:$PATH"</code> — 설치 직후 <code>ask</code>가 안 잡히면 한 번 실행.</li>
+      </ul>
+      <p class="hint">Ubuntu/Debian/Alpine 모두 python3만 있으면 돼. 설치 스크립트는 python3가 없으면 먼저 설치하라고 알려 줘.</p>
+    </div>
+  </section>
+
+  <!-- 개발자 설정 -->
+  <section class="card" id="adminPanel" aria-labelledby="adminTitle">
+    <div class="card-head">
+      <h2 id="adminTitle">👨‍💻 개발자 설정 (어드민)</h2>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button type="button" class="btn sm" id="adminLoginBtn">🔐 인증</button>
+        <button type="button" class="btn sm" id="adminLockBtn" hidden>잠그기</button>
+      </div>
+    </div>
+
+    <div id="adminLockedNote">
+      <p class="muted" style="margin-top:0">🔒 잠겨 있어. 인스턴스 조회는 누구나 가능하지만, 서버 운영 상태 변경·배포·중지·삭제·API 변경에는 개발자 비밀번호가 필요해.</p>
+      <button type="button" class="btn primary" id="adminUnlockCta">🔐 개발자 로그인</button>
+    </div>
+
+    <div id="adminControls" hidden>
+      <p class="muted" style="margin-top:0">🟢 서비스 상태를 원클릭으로 바꿔. 종료(점검 모드)로 두면 이 콘솔에 들어온 방문자에게 전면 점검 화면이 보여.</p>
+      <div class="svc-grid">
+        <button type="button" class="svc-btn on" id="svcOn" aria-pressed="true">🟢 서버 켜기<small>서비스 재개 · 정상 운영</small></button>
+        <button type="button" class="svc-btn off" id="svcOff" aria-pressed="false">🛑 서버 종료<small>점검 모드 · 방문자 차단</small></button>
+      </div>
+      <p class="hint" id="svcSince"></p>
+
+      <div class="adminbox">
+        <div style="font-weight:800;font-size:.84rem;margin-bottom:6px">🔑 비밀번호 변경 (선택)</div>
+        <div class="form-grid">
+          <div class="field"><label for="newPass">새 비밀번호</label><input id="newPass" type="password" autocomplete="new-password" placeholder="4자 이상"></div>
+          <div class="field"><label for="newPass2">한 번 더</label><input id="newPass2" type="password" autocomplete="new-password" placeholder="같은 값"></div>
+        </div>
+        <button type="button" class="btn sm" id="changePassBtn" style="margin-top:8px">비밀번호 저장</button>
+        <p class="hint">기본 비밀번호는 <code>neoos2026!</code>. 바꾼 비밀번호는 이 브라우저에 해시로만 저장돼.</p>
+      </div>
+      <p class="hint">이 잠금은 실수 방지용 UI 잠금이야. 같은 브라우저에서만 유지되고, 실제 요금·권한 보호는 서버 API가 담당해. 점검 모드도 이 브라우저에 저장되는 상태라, 모든 방문자에게 전면 적용하려면 서버 측 게이트가 필요해.</p>
+    </div>
+  </section>
+
+  <footer style="text-align:center;color:#5f718c;font-size:.74rem;padding:18px 0 0">
+    NeoOS Cloud · AI 샌드박스 &amp; VPS · <a href="/" style="color:#7fb6e6;text-decoration:none">NeoOS 홈</a> · <a href="/editor" style="color:#7fb6e6;text-decoration:none">캡컷 스튜디오</a> · <a href="/game" style="color:#7fb6e6;text-decoration:none">콩밥 감옥</a>
+  </footer>
+</main>
+
+<!-- 관리자 인증 -->
+<div class="modal" id="gateModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
+    <h3 id="gateTitle">🔐 개발자 인증</h3>
+    <p id="gateReason">이 작업은 개발자(건우)만 할 수 있어. 비밀번호를 입력해 줘.</p>
+    <div class="field" style="margin-top:10px">
+      <label for="gateInput">어드민 비밀번호</label>
+      <input id="gateInput" type="password" autocomplete="current-password" placeholder="비밀번호">
+    </div>
+    <div class="field-err" id="gateError"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="gateCancel">취소</button>
+      <button type="button" class="btn primary" id="gateSubmit">인증하고 계속</button>
+    </div>
+  </div>
+</div>
+
+<!-- 터미널 정보 -->
+<div class="modal" id="termModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="termTitle">
+    <h3 id="termTitle">💻 터미널 연결 정보</h3>
+    <p><b id="modalInstName">neoos</b> · SSH 비밀번호 접속이 켜져 있어.</p>
+    <p style="margin-top:12px">SSH 명령어</p>
+    <div class="code"><span id="sshCmd">ssh ubuntu@3.27.117.86</span><button type="button" id="copySsh">복사</button></div>
+    <p>초기 비밀번호</p>
+    <div class="code"><span id="sshPwd">neoos2026!</span><button type="button" id="copyPwd">복사</button></div>
+    <p class="hint">부팅 직후 1~2분은 SSH가 늦게 열릴 수 있어. AI 도구는 ask-cli 탭의 한 줄 설치를 붙여 넣으면 돼.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn ghost" id="termClose">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 배포 완료 -->
+<div class="modal" id="doneModal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
+    <h3 id="doneTitle">🎉 배포 완료</h3>
+    <p id="doneText"></p>
+    <p style="margin-top:10px">다음 단계</p>
+    <ol style="font-size:.82rem;color:#c9d9ef;padding-left:20px;line-height:1.7">
+      <li>1~2분 뒤 [터미널 접속]으로 SSH 연결</li>
+      <li>ask-cli 한 줄 설치</li>
+      <li>24시간 안에 중지·삭제해서 크레딧 지키기</li>
+    </ol>
+    <div class="modal-actions">
+      <button type="button" class="btn" id="doneAskcli">ask-cli 명령 복사</button>
+      <button type="button" class="btn primary" id="doneClose">확인</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const MAX_INSTANCES=2;
+const TTL_MS=24*60*60*1000;
+const PROTECTED_ID='i-0c4a3985afb8d417b';
+const DEFAULT_PASSWORD='neoos2026!';
+const ASK_CLI_CMD='curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh | bash';
+const KEYS={
+  service:'neoos_cloud_service',
+  serviceAt:'neoos_cloud_service_at',
+  admin:'neoos_cloud_admin',
+  adminHash:'neoos_cloud_admin_hash',
+  ttl:'neoos_cloud_ttl',
+  url:'neoos_custom_url',
+  token:'neoos_custom_token'
+};
+const DEFAULT_INSTANCES=[{
+  id:PROTECTED_ID,name:'neoos',os:'Ubuntu 26.04 LTS',icon:'🐧',
+  spec:'t3.micro (2 vCPU / 1GB RAM)',ip:'3.27.117.86',region:'ap-southeast-2 (Sydney)',
+  storage:'8GB gp3 EBS',state:'running',uptime:'상시 운영'
+}];
+let instances=[];
+let selectedOs='ubuntu';
+let adminUnlocked=false;
+let gateCallback=null;
+let gateFails=0;
+let gateLockUntil=0;
+let gateTimer=null;
+let serviceTimer=null;
+
+/* ---------------- utilities ---------------- */
+function esc(value){
+  return String(value==null?'':value).replace(/[&<>"']/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+}
+function toast(msg){
+  const el=$('toast');
+  el.textContent=msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t=setTimeout(function(){el.classList.remove('show');},2600);
+}
+function log(msg){
+  const el=$('status-log');
+  const time=new Date().toLocaleTimeString('ko-KR');
+  el.textContent='['+time+'] '+msg+'\n'+el.textContent;
+}
+function readJson(key,fallback){
+  try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(e){return fallback;}
+}
+function writeJson(key,value){
+  try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){return false;}
+}
+function copyText(text,label){
+  const done=function(){toast((label||'내용')+' 복사 완료');};
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done).catch(function(){window.prompt('아래 내용을 복사해 줘',text);});
+  }else{
+    window.prompt('아래 내용을 복사해 줘',text);
+  }
+}
+
+/* ---------------- admin gate ---------------- */
+async function sha256(text){
+  if(window.crypto&&window.crypto.subtle&&window.TextEncoder){
+    try{
+      const buf=await window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
+      return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
+    }catch(e){return null;}
+  }
+  return null;
+}
+async function passwordMatches(input){
+  const stored=localStorage.getItem(KEYS.adminHash);
+  if(stored){
+    if(stored.indexOf('sha256:')===0){
+      const h=await sha256(input);
+      return h?('sha256:'+h)===stored:false;
+    }
+    if(stored.indexOf('plain:')===0)return ('plain:'+input)===stored;
+    return input===stored;
+  }
+  return input===DEFAULT_PASSWORD;
+}
+function openGate(reason,callback){
+  if(adminUnlocked){if(callback)callback();return;}
+  gateCallback=callback||null;
+  $('gateReason').textContent=reason||'이 작업은 개발자(건우)만 할 수 있어. 비밀번호를 입력해 줘.';
+  $('gateInput').value='';
+  $('gateError').textContent='';
+  $('gateModal').hidden=false;
+  setTimeout(function(){$('gateInput').focus();},40);
+}
+function closeGate(){
+  $('gateModal').hidden=true;
+  gateCallback=null;
+  $('gateInput').value='';
+}
+async function submitGate(){
+  if(Date.now()<gateLockUntil){
+    const left=Math.ceil((gateLockUntil-Date.now())/1000);
+    $('gateError').textContent='너무 많이 틀렸어. '+left+'초 뒤에 다시 시도해 줘.';
+    return;
+  }
+  const value=$('gateInput').value;
+  if(!value){$('gateError').textContent='비밀번호를 입력해 줘.';return;}
+  $('gateSubmit').disabled=true;
+  const ok=await passwordMatches(value);
+  $('gateSubmit').disabled=false;
+  if(ok){
+    gateFails=0;
+    unlockAdmin();
+    $('gateError').textContent='';
+    $('gateModal').hidden=true;
+    const cb=gateCallback;
+    gateCallback=null;
+    $('gateInput').value='';
+    log('개발자 인증 성공 · 관리자 모드 활성화');
+    toast('🔓 관리자 모드 활성화');
+    if(cb)cb();
+  }else{
+    gateFails++;
+    if(gateFails>=3){
+      gateLockUntil=Date.now()+30000;
+      startGateCountdown();
+      $('gateError').textContent='3회 실패 — 30초 동안 잠깐 잠글게.';
+    }else{
+      $('gateError').textContent='비밀번호가 틀렸어. ('+gateFails+'/3)';
+      $('gateInput').select();
+    }
+  }
+}
+function startGateCountdown(){
+  clearInterval(gateTimer);
+  const tick=function(){
+    if(Date.now()>=gateLockUntil){
+      clearInterval(gateTimer);
+      gateFails=0;
+      if(!$('gateModal').hidden)$('gateError').textContent='다시 시도할 수 있어.';
+      return;
+    }
+    if(!$('gateModal').hidden){
+      $('gateError').textContent='잠시 잠금 — '+Math.ceil((gateLockUntil-Date.now())/1000)+'초 후 다시 시도.';
+    }
+  };
+  tick();
+  gateTimer=setInterval(tick,500);
+}
+function unlockAdmin(){
+  adminUnlocked=true;
+  try{sessionStorage.setItem(KEYS.admin,'1');}catch(e){}
+  renderAdmin();
+}
+function lockAdmin(){
+  adminUnlocked=false;
+  try{sessionStorage.removeItem(KEYS.admin);}catch(e){}
+  renderAdmin();
+  renderMaintenance();
+  toast('🔒 관리자를 잠갔어.');
+}
+function requireAdmin(reason,fn){
+  if(adminUnlocked){return fn();}
+  openGate(reason,fn);
+  return undefined;
+}
+
+/* ---------------- service (maintenance) state ---------------- */
+function serviceState(){
+  try{return localStorage.getItem(KEYS.service)==='offline'?'offline':'online';}catch(e){return 'online';}
+}
+function setService(next){
+  const state=next==='offline'?'offline':'online';
+  try{
+    localStorage.setItem(KEYS.service,state);
+    localStorage.setItem(KEYS.serviceAt,new Date().toISOString());
+  }catch(e){}
+  log('서버 운영 상태 변경 → '+(state==='online'?'온라인 (서비스 재개)':'점검 오프라인'));
+  renderService();
+  toast(state==='online'?'🟢 서버를 켰어. 서비스 재개!':'🛑 서버를 종료했어. 점검 모드로 전환!');
+}
+function serviceChangedAt(){
+  try{
+    const at=localStorage.getItem(KEYS.serviceAt);
+    return at?new Date(at):null;
+  }catch(e){return null;}
+}
+function renderMaintenance(){
+  const offline=serviceState()==='offline';
+  const overlay=$('maintenanceOverlay');
+  overlay.hidden=!offline;
+  document.body.style.overflow=offline?'hidden':'';
+  if(!offline)return;
+  const at=serviceChangedAt();
+  $('maintMeta').textContent=at?('점검 시작: '+at.toLocaleString('ko-KR')):'';
+  $('maintLoginBtn').hidden=adminUnlocked;
+  $('maintAdminBox').hidden=!adminUnlocked;
+  $('maintLockBtn').hidden=!adminUnlocked;
+}
+function renderService(){
+  const offline=serviceState()==='offline';
+  const pill=$('servicePill');
+  pill.innerHTML='<span class="pill-dot"></span> '+(offline?'점검 모드 (오프라인)':'서비스 온라인');
+  pill.className='pill'+(offline?' off':'');
+  $('svcOn').setAttribute('aria-pressed',offline?'false':'true');
+  $('svcOff').setAttribute('aria-pressed',offline?'true':'false');
+  const at=serviceChangedAt();
+  $('svcSince').textContent=at?('마지막 상태 변경: '+at.toLocaleString('ko-KR')):'아직 상태를 바꾼 적이 없어.';
+  renderMaintenance();
+}
+function toggleService(next){
+  if(!adminUnlocked){
+    requireAdmin('서버 운영 상태(켜기/종료)는 개발자만 바꿀 수 있어.',function(){toggleService(next);});
+    return;
+  }
+  const offline=serviceState()==='offline';
+  if(next==='offline'&&!offline){
+    const go=window.confirm('서버를 종료하고 점검 모드로 전환할까?\n\n이 콘솔에 들어온 방문자는 전면 점검 화면을 보게 돼.\n실행 중인 인스턴스는 자동으로 꺼지지 않아(요금은 계속 발생할 수 있어).');
+    if(!go)return;
+  }
+  setService(next);
+}
+
+/* ---------------- instances / TTL ---------------- */
+function loadInstances(){
+  const stored=readJson('neoos_vps_instances',null);
+  if(Array.isArray(stored)&&stored.length)return stored;
+  return DEFAULT_INSTANCES.slice();
+}
+function saveInstances(list){
+  try{localStorage.setItem('neoos_vps_instances',JSON.stringify(list));}catch(e){}
+}
+function ttlMap(){return readJson(KEYS.ttl,{})||{};}
+function ttlFor(instanceId){return ttlMap()[instanceId]||null;}
+function rememberTtl(instanceId,iso){
+  const map=ttlMap();
+  map[instanceId]=iso||new Date().toISOString();
+  writeJson(KEYS.ttl,map);
+}
+function instanceLaunchMs(inst){
+  const parsed=Date.parse(inst.uptime||'');
+  if(!Number.isNaN(parsed))return parsed;
+  const stored=ttlFor(inst.id);
+  if(stored){const t=Date.parse(stored);if(!Number.isNaN(t))return t;}
+  return null;
+}
+function expiryInfo(inst){
+  if(inst.id===PROTECTED_ID)return {kind:'protected',label:'♾️ 상시 운영 · 컨트롤 플레인',cls:'ok'};
+  const launched=instanceLaunchMs(inst);
+  if(!launched)return {kind:'unknown',label:'⏳ 만료 시각 확인 중',cls:''};
+  const left=launched+TTL_MS-Date.now();
+  if(left<=0)return {kind:'expired',left:left,label:'⚠️ 24시간 만료 — 지금 중지해 줘',cls:'bad'};
+  const h=Math.floor(left/3600000);
+  const m=Math.floor((left%3600000)/60000);
+  return {kind:left<2*3600000?'soon':'active',left:left,label:'⏳ '+h+'시간 '+m+'분 남음',cls:left<2*3600000?'warn':'ok'};
+}
+function renderInstances(){
+  const box=$('instances-list');
+  box.replaceChildren();
+  $('total-count').textContent=instances.length+' / '+MAX_INSTANCES+'대';
+  $('quotaBar').style.width=Math.min(100,instances.length/MAX_INSTANCES*100)+'%';
+  const running=instances.filter(function(i){return i.state==='running';}).length;
+  $('running-count').textContent=running+'대';
+  const firstRunning=instances.find(function(i){return i.state==='running'&&i.ip&&i.ip.indexOf('할당')<0;});
+  if(firstRunning)$('primary-ip').textContent=firstRunning.ip;
+
+  if(!instances.length){
+    const empty=document.createElement('p');
+    empty.className='muted';
+    empty.textContent='아직 인스턴스가 없어. 아래에서 첫 서버를 배포해 봐.';
+    box.append(empty);
+  }
+
+  instances.forEach(function(inst){
+    const expiry=expiryInfo(inst);
+    const card=document.createElement('div');
+    card.className='instance'+(expiry.kind==='expired'?' expired':'');
+
+    const main=document.createElement('div');
+    main.className='inst-main';
+    const icon=document.createElement('div');
+    icon.className='inst-icon';
+    icon.textContent=inst.icon||'🖥️';
+    const info=document.createElement('div');
+    info.style.minWidth='0';
+    const nameRow=document.createElement('div');
+    nameRow.style.cssText='display:flex;align-items:center;gap:8px;flex-wrap:wrap';
+    const name=document.createElement('span');
+    name.className='inst-name';
+    name.textContent=inst.name||inst.id;
+    const state=document.createElement('span');
+    state.className='state'+(inst.state==='stopped'?' stopped':(inst.state==='running'?'':' pending'));
+    state.textContent='● '+String(inst.state||'unknown').toUpperCase();
+    nameRow.append(name,state);
+    const sub=document.createElement('div');
+    sub.className='inst-sub';
+    sub.textContent=(inst.id||'')+' · '+(inst.spec||'t3.micro')+' · IP: '+(inst.ip||'할당 중...');
+    const sub2=document.createElement('div');
+    sub2.className='inst-sub';
+    sub2.style.color='#5d7699';
+    sub2.textContent=(inst.os||'Linux')+' · '+(inst.region||'ap-southeast-2')+' · '+(inst.storage||'8GB gp3');
+    const expiryEl=document.createElement('span');
+    expiryEl.className='expiry '+expiry.cls;
+    expiryEl.textContent=expiry.label;
+    info.append(nameRow,sub,sub2,expiryEl);
+    main.append(icon,info);
+
+    const actions=document.createElement('div');
+    actions.className='inst-actions';
+    const addBtn=function(label,cls,fn){
+      const b=document.createElement('button');
+      b.type='button';
+      b.className='btn '+(cls||'');
+      b.textContent=label;
+      b.addEventListener('click',fn);
+      actions.append(b);
+    };
+    if(inst.state==='running'){
+      addBtn('터미널 접속','primary',function(){openTerminal(inst);});
+      addBtn('재부팅','',function(){rebootInstance(inst);});
+      if(inst.id!==PROTECTED_ID)addBtn('중지','',function(){stopInstance(inst);});
+    }else if(inst.state==='stopped'){
+      addBtn('시작','primary',function(){startInstance(inst);});
+      if(inst.id!==PROTECTED_ID)addBtn('삭제','danger',function(){terminateInstance(inst);});
+    }else{
+      const b=document.createElement('button');
+      b.type='button';b.className='btn';b.disabled=true;b.textContent='상태 변경 중...';
+      actions.append(b);
+    }
+    if(expiry.kind==='expired'&&inst.state==='running'){
+      addBtn('⏱ 만료 · 중지','danger',function(){stopInstance(inst);});
+    }
+    card.append(main,actions);
+    box.append(card);
+  });
+  renderTtlBanner();
+  renderDeployState();
+}
+function renderTtlBanner(){
+  const banner=$('ttlBanner');
+  banner.replaceChildren();
+  const workers=instances.filter(function(i){return i.id!==PROTECTED_ID;});
+  const expired=workers.filter(function(i){return expiryInfo(i).kind==='expired';});
+  const soon=workers.filter(function(i){const e=expiryInfo(i);return e.kind==='soon';});
+  if(!expired.length&&!soon.length){banner.hidden=true;return;}
+  banner.hidden=false;
+  banner.className='banner '+(expired.length?'bad':'warn');
+  const text=document.createElement('span');
+  if(expired.length){
+    text.innerHTML='<strong>크레딧 보호:</strong> '+esc(expired.map(function(i){return i.name;}).join(', '))+' 인스턴스가 24시간을 넘겼어. 중지하면 컴퓨팅 요금이 멈춰.';
+  }else{
+    text.innerHTML='<strong>만료 임박:</strong> '+esc(soon.map(function(i){return i.name;}).join(', '))+' 인스턴스의 24시간이 2시간 안에 끝나. 작업을 저장해 두고 중지할 준비를 해 줘.';
+  }
+  const spacer=document.createElement('span');
+  spacer.className='spacer';
+  const btn=document.createElement('button');
+  btn.type='button';btn.className='btn sm';
+  btn.textContent=expired.length?'만료 인스턴스 중지':'지금 중지';
+  btn.addEventListener('click',function(){
+    const targets=expired.length?expired:soon;
+    requireAdmin('크레딧 보호를 위해 인스턴스를 중지하려면 개발자 인증이 필요해.',function(){
+      targets.forEach(function(inst){stopInstance(inst,true);});
+    });
+  });
+  banner.append(text,spacer,btn);
+}
+function renderDeployState(){
+  const btn=$('deploy-btn');
+  const full=instances.length>=MAX_INSTANCES;
+  btn.classList.toggle('locked',!adminUnlocked);
+  if(!adminUnlocked){
+    btn.textContent='🔒 개발자 인증 후 배포하기';
+    btn.disabled=false;
+    $('deployHint').hidden=false;
+    $('server-name').disabled=true;
+    $('nameLock').hidden=false;
+  }else if(full){
+    btn.textContent='쿼터 초과 · 기존 인스턴스 삭제 필요';
+    btn.disabled=true;
+    $('deployHint').hidden=true;
+    $('server-name').disabled=false;
+    $('nameLock').hidden=true;
+  }else{
+    btn.textContent='⚡ 가상 서버 즉시 배포하기';
+    btn.disabled=false;
+    $('deployHint').hidden=true;
+    $('server-name').disabled=false;
+    $('nameLock').hidden=true;
+  }
+}
+function renderAdmin(){
+  const badge=$('adminBadge');
+  badge.textContent=adminUnlocked?'🔓 관리자 모드':'🔒 관리자 잠금';
+  badge.classList.toggle('unlocked',adminUnlocked);
+  $('adminLoginBtn').hidden=adminUnlocked;
+  $('adminLockBtn').hidden=!adminUnlocked;
+  $('adminLockedNote').hidden=adminUnlocked;
+  $('adminControls').hidden=!adminUnlocked;
+  renderDeployState();
+  renderService();
+  renderMaintenance();
+}
+
+/* ---------------- API sync ---------------- */
+async function syncInstances(silent){
+  if(serviceState()==='offline')return;
+  const customUrl=localStorage.getItem(KEYS.url);
+  const customToken=sessionStorage.getItem(KEYS.token);
+  const targetUrl=customUrl?(customUrl.replace(/\/+$/,'')+'/api/instances'):'/api/instances';
+  if(!silent)$('refreshBtn').textContent='🔄 동기화 중...';
+  try{
+    const headers={};
+    if(customToken)headers.Authorization='Bearer '+customToken;
+    const res=await fetch(targetUrl,{headers:headers});
+    if(res.ok){
+      const data=await res.json();
+      if(Array.isArray(data.instances)){
+        instances=data.instances;
+        saveInstances(instances);
+        renderInstances();
+        if(!silent)log('[NeoOS Cloud 동기화] 실시간 인스턴스 '+instances.length+'대 확인 ('+(data.region||'ap-southeast-2')+')');
+        $('refreshBtn').textContent='🔄 새로고침';
+        return;
+      }
+    }
+    if(!silent)log('[알림] API 대기 중 ('+res.status+') · 저장된 목록을 보여 줄게.');
+  }catch(err){
+    if(!silent)log('[네트워크] 백엔드 확인 중 ('+err.message+')');
+  }
+  $('refreshBtn').textContent='🔄 새로고침';
+  renderInstances();
+}
+
+/* ---------------- instance actions ---------------- */
+function openTerminal(inst){
+  requireAdmin('터미널 접속 정보는 개발자만 볼 수 있어. 비밀번호를 입력해 줘.',function(){
+    $('modalInstName').textContent=inst.name||inst.id;
+    const ip=(inst.ip&&inst.ip.indexOf('할당')<0)?inst.ip:'3.27.117.86';
+    $('sshCmd').textContent='ssh ubuntu@'+ip;
+    $('sshPwd').textContent=DEFAULT_PASSWORD;
+    $('termModal').hidden=false;
+    log('터미널 접속 모달 열림: '+(inst.name||inst.id)+' ('+ip+')');
+  });
+}
+async function rebootInstance(inst){
+  requireAdmin('인스턴스 재부팅은 개발자만 할 수 있어.',async function(){
+    if(!window.confirm(inst.name+' ('+inst.id+') 인스턴스를 재부팅할까?'))return;
+    inst.state='rebooting';
+    renderInstances();
+    log('[재부팅 요청] '+inst.name+' ('+inst.id+')');
+    try{
+      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/reboot',{method:'POST'});
+      log(res.ok?'[재부팅 완료] 신호 접수됨':'[재부팅 실패] 상태 코드: '+res.status);
+      if(!res.ok)inst.state='running';
+    }catch(e){
+      log('[재부팅 오류] '+e.message);
+      inst.state='running';
+    }
+    renderInstances();
+    setTimeout(function(){syncInstances(true);},3000);
+  });
+}
+async function stopInstance(inst,quiet){
+  requireAdmin('인스턴스를 중지하려면 개발자 인증이 필요해.',async function(){
+    if(!quiet&&!window.confirm(inst.name+' ('+inst.id+') 인스턴스를 중지할까?\n중지하면 컴퓨팅 요금이 멈춰.'))return;
+    inst.state='stopped';
+    saveInstances(instances);
+    renderInstances();
+    log('[중지 요청] '+inst.name+' ('+inst.id+')');
+    try{
+      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/stop',{method:'POST'});
+      log(res.ok?'[중지 완료] 인스턴스 전원 차단 진행 중':'[중지 실패] 상태 코드: '+res.status);
+      if(!res.ok)inst.state='running';
+    }catch(e){
+      log('[중지 오류] '+e.message);
+      inst.state='running';
+    }
+    renderInstances();
+    setTimeout(function(){syncInstances(true);},3000);
+  });
+}
+async function startInstance(inst){
+  requireAdmin('인스턴스를 시작하려면 개발자 인증이 필요해.',async function(){
+    inst.state='rebooting';
+    renderInstances();
+    log('[시작 요청] '+inst.name+' ('+inst.id+')');
+    try{
+      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/start',{method:'POST'});
+      log(res.ok?'[시작 완료] 인스턴스 부팅 중':'[시작 실패] 상태 코드: '+res.status);
+      if(!res.ok)inst.state='stopped';
+    }catch(e){
+      log('[시작 오류] '+e.message);
+      inst.state='stopped';
+    }
+    renderInstances();
+    setTimeout(function(){syncInstances(true);},3000);
+  });
+}
+async function terminateInstance(inst){
+  requireAdmin('인스턴스 영구 삭제는 개발자만 할 수 있어.',async function(){
+    if(inst.id===PROTECTED_ID){window.alert('neoos 컨트롤 플레인 인스턴스는 보호되어 있어 삭제할 수 없어.');return;}
+    if(!window.confirm('[영구 삭제]\n\n'+inst.name+' ('+inst.id+') 인스턴스를 삭제할까?\n가상머신과 모든 데이터가 완전히 사라져.'))return;
+    log('[삭제 요청] '+inst.name+' ('+inst.id+')');
+    try{
+      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id),{method:'DELETE'});
+      if(res.ok){
+        log('[삭제 완료] 인스턴스 영구 종료됨');
+        instances=instances.filter(function(i){return i.id!==inst.id;});
+        saveInstances(instances);
+        const map=ttlMap();delete map[inst.id];writeJson(KEYS.ttl,map);
+        renderInstances();
+      }else{
+        const err=await res.json().catch(function(){return {};});
+        log('[삭제 실패] '+(err.error||res.status));
+        window.alert('삭제 실패: '+(err.error||res.statusText));
+      }
+    }catch(e){
+      log('[삭제 오류] '+e.message);
+    }
+    setTimeout(function(){syncInstances(true);},3000);
+  });
+}
+
+/* ---------------- deploy ---------------- */
+async function deploy(){
+  if(!adminUnlocked){
+    openGate('새 서버 배포는 개발자만 할 수 있어. 비밀번호를 입력해 줘.',deploy);
+    return;
+  }
+  if(instances.length>=MAX_INSTANCES){
+    window.alert('쿼터 초과! NeoOS Cloud는 최대 '+MAX_INSTANCES+'대까지만 운영할 수 있어.\n기존 인스턴스를 삭제한 뒤 다시 시도해 줘.');
+    return;
+  }
+  const name=$('server-name').value.trim()||'NeoOS-Cloud-Worker';
+  const spec=$('server-spec').value;
+  const disk=$('server-disk').value;
+  const region=$('server-region').value;
+  const osMap={
+    ubuntu:{name:'Ubuntu 26.04 LTS',icon:'🐧'},
+    debian:{name:'Debian 12 Bookworm',icon:'🌀'},
+    alpine:{name:'Alpine Linux',icon:'🏔️'}
+  };
+  const osData=osMap[selectedOs]||osMap.ubuntu;
+  if(!window.confirm('[NeoOS Cloud 배포]\n\n서버명: '+name+'\nOS: '+osData.name+'\n사양: '+spec+' ('+disk+'GB SSD)\n리전: '+region+'\n\n지금 실제 서버를 생성할까?'))return;
+
+  const btn=$('deploy-btn');
+  btn.disabled=true;
+  btn.textContent='⏳ 인스턴스 프로비저닝 중...';
+  log('[배포 요청] '+name+' ('+osData.name+')');
+  try{
+    const res=await fetch('/api/instances',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({name:name,os:selectedOs,instance_type:spec,volume_gb:parseInt(disk,10)||8})
+    });
+    if(res.ok){
+      const data=await res.json();
+      const inst=data.instance||{};
+      const launchedAt=new Date().toISOString();
+      if(inst.id){
+        rememberTtl(inst.id,launchedAt);
+        const exists=instances.some(function(i){return i.id===inst.id;});
+        if(!exists){
+          inst.os=inst.os||osData.name;
+          inst.icon=inst.icon||osData.icon;
+          instances.push(inst);
+          saveInstances(instances);
+        }
+      }
+      log('[배포 성공] '+(inst.name||name)+' ('+(inst.id||'id 대기')+') 상태: '+(inst.state||'pending'));
+      $('doneText').textContent=(inst.name||name)+' 인스턴스가 생성됐어. ID: '+(inst.id||'확인 중')+' · IP: '+(inst.ip||'할당 중');
+      $('doneModal').hidden=false;
+      renderInstances();
+      await syncInstances(true);
+    }else{
+      const err=await res.json().catch(function(){return {};});
+      log('[배포 실패] '+(err.message||err.error||res.status));
+      window.alert('배포 실패: '+(err.message||err.detail||err.error||res.statusText));
+    }
+  }catch(err){
+    log('[배포 오류] '+err.message);
+    window.alert('통신 오류: '+err.message);
+  }finally{
+    btn.disabled=false;
+    renderDeployState();
+  }
+}
+
+/* ---------------- endpoints ---------------- */
+function saveCustomEndpoint(){
+  requireAdmin('API 엔드포인트 변경은 개발자만 할 수 있어.',function(){
+    const url=$('api-url').value.trim();
+    const token=$('api-token').value.trim();
+    localStorage.setItem(KEYS.url,url);
+    sessionStorage.setItem(KEYS.token,token);
+    log('커스텀 API 엔드포인트 저장 완료.');
+    toast('엔드포인트 설정 저장 완료');
+  });
+}
+function resetCustomEndpoint(){
+  requireAdmin('API 설정 복원은 개발자만 할 수 있어.',function(){
+    localStorage.removeItem(KEYS.url);
+    sessionStorage.removeItem(KEYS.token);
+    $('api-url').value='';
+    $('api-token').value='';
+    log('기본 내장 NeoOS Cloud 엔진으로 복원 완료.');
+    toast('기본 설정으로 복원');
+  });
+}
+
+/* ---------------- password change ---------------- */
+async function changePassword(){
+  const a=$('newPass').value;
+  const b=$('newPass2').value;
+  if(a.length<4){toast('비밀번호는 4자 이상으로 해 줘.');return;}
+  if(a!==b){toast('두 비밀번호가 서로 달라.');return;}
+  const hashed=await sha256(a);
+  try{
+    localStorage.setItem(KEYS.adminHash,hashed?('sha256:'+hashed):('plain:'+a));
+    $('newPass').value='';$('newPass2').value='';
+    toast(hashed?'🔑 비밀번호를 안전하게 저장했어.':'🔑 비밀번호를 저장했어.');
+    log('어드민 비밀번호 변경됨');
+  }catch(e){
+    toast('비밀번호를 저장하지 못했어: '+e.message);
+  }
+}
+
+/* ---------------- UI wiring ---------------- */
+document.querySelectorAll('.os-choice').forEach(function(el){
+  const choose=function(){
+    document.querySelectorAll('.os-choice').forEach(function(c){c.classList.remove('selected');});
+    el.classList.add('selected');
+    selectedOs=el.dataset.os;
+    log('OS 템플릿 선택: '+selectedOs.toUpperCase());
+  };
+  el.addEventListener('click',choose);
+  el.addEventListener('keydown',function(e){
+    if(e.key==='Enter'||e.key===' '){e.preventDefault();choose();}
+  });
+});
+$('deploy-btn').addEventListener('click',deploy);
+$('refreshBtn').addEventListener('click',function(){syncInstances(false);});
+$('adminBadge').addEventListener('click',function(){
+  if(adminUnlocked)lockAdmin();
+  else openGate('개발자 설정을 열려면 비밀번호가 필요해.',function(){toast('🔓 관리자 모드 활성화');});
+});
+$('adminLoginBtn').addEventListener('click',function(){openGate('개발자 설정을 열려면 비밀번호가 필요해.');});
+$('adminUnlockCta').addEventListener('click',function(){openGate('개발자 설정을 열려면 비밀번호가 필요해.');});
+$('adminLockBtn').addEventListener('click',lockAdmin);
+$('svcOn').addEventListener('click',function(){toggleService('online');});
+$('svcOff').addEventListener('click',function(){toggleService('offline');});
+$('maintLoginBtn').addEventListener('click',function(){
+  openGate('점검 모드를 해제하려면 개발자 인증이 필요해.',function(){renderMaintenance();});
+});
+$('maintResumeBtn').addEventListener('click',function(){toggleService('online');});
+$('maintLockBtn').addEventListener('click',function(){lockAdmin();});
+$('saveEndpoint').addEventListener('click',saveCustomEndpoint);
+$('resetEndpoint').addEventListener('click',resetCustomEndpoint);
+$('changePassBtn').addEventListener('click',changePassword);
+$('gateSubmit').addEventListener('click',submitGate);
+$('gateCancel').addEventListener('click',closeGate);
+$('gateInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitGate();}});
+$('termClose').addEventListener('click',function(){$('termModal').hidden=true;});
+$('copySsh').addEventListener('click',function(){copyText($('sshCmd').textContent,'SSH 명령어');});
+$('copyPwd').addEventListener('click',function(){copyText($('sshPwd').textContent,'비밀번호');});
+$('doneClose').addEventListener('click',function(){$('doneModal').hidden=true;});
+$('doneAskcli').addEventListener('click',function(){copyText(ASK_CLI_CMD,'ask-cli 설치 명령');});
+document.querySelectorAll('[data-copy]').forEach(function(b){
+  b.addEventListener('click',function(){copyText(b.dataset.copy,'명령어');});
+});
+document.querySelectorAll('[data-qs]').forEach(function(b){
+  b.addEventListener('click',function(){
+    document.querySelectorAll('[data-qs]').forEach(function(x){x.setAttribute('aria-selected',x===b?'true':'false');});
+    $('qs-railway').hidden=b.dataset.qs!=='railway';
+    $('qs-askcli').hidden=b.dataset.qs!=='askcli';
+  });
+});
+[ 'gateModal','termModal','doneModal' ].forEach(function(id){
+  $(id).addEventListener('click',function(e){if(e.target===$(id))$(id).hidden=true;});
+});
+document.addEventListener('keydown',function(e){
+  if(e.key==='Escape'){
+    if(!$('gateModal').hidden)closeGate();
+    if(!$('termModal').hidden)$('termModal').hidden=true;
+    if(!$('doneModal').hidden)$('doneModal').hidden=true;
+  }
+});
+
+/* ---------------- init ---------------- */
+try{adminUnlocked=sessionStorage.getItem(KEYS.admin)==='1';}catch(e){adminUnlocked=false;}
+instances=loadInstances();
+$('api-url').value=localStorage.getItem(KEYS.url)||'';
+$('api-token').value=sessionStorage.getItem(KEYS.token)||'';
+renderAdmin();
+renderInstances();
+renderService();
+syncInstances(true);
+setInterval(function(){syncInstances(true);},12000);
+setInterval(function(){
+  if(serviceState()==='offline')return;
+  renderInstances();
+},30000);
+})();
+</script>
+</body>
+</html>

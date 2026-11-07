@@ -46,10 +46,17 @@ For AWS EC2, store the database on the EBS-backed path `/var/lib/neoos/neoos.sql
 
 The existing `vps_server.py` endpoint is a separate authenticated, read-only Docker status API. It does not create/delete containers or execute terminal commands.
 
-## VPS dashboards
+## NeoOS apps
 
-- **AWS EC2 dashboard:** [docs/vps/aws.html](docs/vps/aws.html); setup and IAM requirements: [docs/vps/AWS.md](docs/vps/AWS.md). The AWS backend uses an attached IAM role and only manages instances tagged for NeoOS.
-- **Podroid dashboard:** [docs/vps/](docs/vps/), authenticated read-only Docker status.
+One portal, three apps (`docs/index.html`):
+
+- **NeoOS Cloud** — [docs/cloud/index.html](docs/cloud/index.html), served at `/cloud`. Unified AI-sandbox and VPS console: one-click deploy, admin password gate (default `neoos2026!`), 2-instance / t3.micro credit guardrails, 24-hour expiry timers, service on/off (maintenance) switch, `ask-cli` install guide, and the Railway free-sandbox quick start. Backend setup and IAM requirements: [docs/vps/AWS.md](docs/vps/AWS.md); the EC2 backend uses an attached IAM role and only manages instances tagged for NeoOS.
+- **NeoOS CapCut Studio** — [docs/editor/index.html](docs/editor/index.html), served at `/editor`. Browser video editor: canvas preview, timeline, text overlays, filters, speed control, and MediaRecorder export.
+- **콩밥 먹기: 감옥 생존기 v1.1** — [docs/bean-jail/index.html](docs/bean-jail/index.html), served at `/game`. Retro-sound survival mini game with new events and a hidden ending.
+
+`/vps`, `/vps/aws.html` and `docs/vps/index.html` are redirects to `/cloud`; the old Podroid dashboard was folded into NeoOS Cloud. Routing lives in `vercel.json` (root and `docs/`).
+
+> The admin password gate and maintenance switch are client-side UX guardrails stored in the browser. Real cost and permission protection comes from the server API token, the hard instance quota, and the IAM role.
 
 ## Safety and persistence
 

@@ -1,8 +1,42 @@
 {
   "rewrites": [
     {
+      "source": "/cloud",
+      "destination": "/cloud/index.html"
+    },
+    {
+      "source": "/editor",
+      "destination": "/editor/index.html"
+    },
+    {
+      "source": "/game",
+      "destination": "/bean-jail/index.html"
+    },
+    {
       "source": "/api/instances/:match*",
       "destination": "/api/instances"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/vps/aws.html",
+      "destination": "/cloud",
+      "permanent": false
+    },
+    {
+      "source": "/vps/aws",
+      "destination": "/cloud",
+      "permanent": false
+    },
+    {
+      "source": "/vps",
+      "destination": "/cloud",
+      "permanent": false
+    },
+    {
+      "source": "/vps/(.*)",
+      "destination": "/cloud",
+      "permanent": false
     }
   ]
 }
