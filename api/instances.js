@@ -1,5 +1,5 @@
 export default async function handler(req, res) {
-  const BACKEND_URL = (process.env.NEOOS_BACKEND_URL || '').replace(/\\/+$/, '');
+  const BACKEND_URL = (process.env.NEOOS_BACKEND_URL || '').replace(/\/+$/, '');
   const TOKEN = (process.env.NEOOS_API_TOKEN || '').trim();
 
   if (!BACKEND_URL || TOKEN.length < 32) {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       }
     };
 
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
+    if (['POST', 'DELETE'].includes(method) && req.body) {
       fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
     }
 
