@@ -158,24 +158,23 @@ input:disabled,select:disabled{opacity:.55}
 <!-- ⛔ 점검/종료 전면 화면 -->
 <div class="maint" id="maintenanceOverlay" hidden role="alertdialog" aria-modal="true" aria-labelledby="maintTitle">
   <div class="maint-card">
-    <div class="maint-icon" aria-hidden="true">🛑</div>
-    <h1 id="maintTitle">서버가 종료되었습니다.</h1>
-    <p class="lead">관리자(개발자)가 점검을 위해 서비스를 일시 중지했습니다.</p>
-    <p>점검이 끝나면 다시 이용할 수 있어. 급한 일이면 개발자에게 알려 줘.</p>
+    <div class="maint-icon" id="maintSecretIcon" aria-hidden="true" style="cursor:pointer;user-select:none" title="Tap 5 times">🛑</div>
+    <h1 id="maintTitle">서버 운영이 일시 종료되었습니다</h1>
+    <p class="lead">개발자(건우)가 시스템 점검 및 서버 종료 작업을 진행 중입니다.</p>
+    <p>현재 모든 가상 서버 접근 및 서비스 이용이 중단되었습니다. 작업이 완료될 때까지 잠시만 기다려 주세요.</p>
     <p class="maint-meta" id="maintMeta"></p>
-    <button type="button" class="btn primary" id="maintLoginBtn">🔐 개발자 로그인</button>
 
-    <div class="maint-admin" id="maintAdminBox" hidden>
-      <p style="color:#9ff0d2">🔓 관리자 인증됨 — 서비스를 다시 켤 수 있어.</p>
-      <button type="button" class="btn" id="maintResumeBtn" style="border-color:#1b634c;background:#07211a;color:#9ff0d2">🟢 서버 켜기 (서비스 재개)</button>
-      <button type="button" class="btn ghost" id="maintLockBtn">잠금</button>
+    <!-- 비밀 5탭 시 나타나는 복구 버튼 -->
+    <div class="maint-admin" id="maintAdminBox" hidden style="margin-top:18px;padding:16px;background:#0d1829;border:1px solid #1f3554;border-radius:14px">
+      <p style="color:#9ff0d2;font-weight:700;margin:0 0 10px">🛠️ [개발자 복구 제어] 서버를 다시 켤 수 있습니다.</p>
+      <button type="button" class="btn" id="maintResumeBtn" style="border-color:#1b634c;background:#07211a;color:#9ff0d2;font-weight:800">🟢 서버 켜기 (서비스 즉시 재개)</button>
     </div>
   </div>
 </div>
 
 <main>
   <header class="top">
-    <div class="brand">
+    <div class="brand" id="secretLogoTrigger" style="cursor:pointer;user-select:none" title="NeoOS Cloud">
       <div class="brand-mark" aria-hidden="true">☁</div>
       <div>
         <h1>NeoOS Cloud <span class="beta">CLOUD CONSOLE</span></h1>
@@ -184,7 +183,6 @@ input:disabled,select:disabled{opacity:.55}
     </div>
     <div class="head-pills">
       <span class="pill" id="servicePill"><span class="pill-dot"></span> 서비스 온라인</span>
-      <button type="button" class="adminbtn" id="adminBadge">🔒 관리자 잠금</button>
     </div>
   </header>
 
@@ -357,39 +355,20 @@ input:disabled,select:disabled{opacity:.55}
     </div>
   </section>
 
-  <!-- 개발자 설정 -->
-  <section class="card" id="adminPanel" aria-labelledby="adminTitle">
+  <!-- 개발자 설정 (평소엔 완전히 숨겨짐, 상단 구름 로고 5회 연타 시에만 등장) -->
+  <section class="card" id="adminPanel" style="display:none;" aria-labelledby="adminTitle">
     <div class="card-head">
-      <h2 id="adminTitle">👨‍💻 개발자 설정 (어드민)</h2>
-      <div style="display:flex;gap:7px;flex-wrap:wrap">
-        <button type="button" class="btn sm" id="adminLoginBtn">🔐 인증</button>
-        <button type="button" class="btn sm" id="adminLockBtn" hidden>잠그기</button>
-      </div>
+      <h2 id="adminTitle">👨‍💻 개발자 전용 제어판 (시크릿 모드)</h2>
+      <button type="button" class="btn sm ghost" id="adminHideBtn">🔒 패널 숨기기</button>
     </div>
 
-    <div id="adminLockedNote">
-      <p class="muted" style="margin-top:0">🔒 잠겨 있어. 인스턴스 조회는 누구나 가능하지만, 서버 운영 상태 변경·배포·중지·삭제·API 변경에는 개발자 비밀번호가 필요해.</p>
-      <button type="button" class="btn primary" id="adminUnlockCta">🔐 개발자 로그인</button>
-    </div>
-
-    <div id="adminControls" hidden>
-      <p class="muted" style="margin-top:0">🟢 서비스 상태를 원클릭으로 바꿔. 종료(점검 모드)로 두면 이 콘솔에 들어온 방문자에게 전면 점검 화면이 보여.</p>
+    <div id="adminControls">
+      <p class="muted" style="margin-top:0">서버 운영 상태를 원클릭으로 변경합니다. [🛑 서버 종료]를 누르면 사이트 전체에 전면 점검 화면이 표시됩니다.</p>
       <div class="svc-grid">
         <button type="button" class="svc-btn on" id="svcOn" aria-pressed="true">🟢 서버 켜기<small>서비스 재개 · 정상 운영</small></button>
-        <button type="button" class="svc-btn off" id="svcOff" aria-pressed="false">🛑 서버 종료<small>점검 모드 · 방문자 차단</small></button>
+        <button type="button" class="svc-btn off" id="svcOff" aria-pressed="false">🛑 서버 종료<small>점검 모드 · 사이트 전체 차단</small></button>
       </div>
       <p class="hint" id="svcSince"></p>
-
-      <div class="adminbox">
-        <div style="font-weight:800;font-size:.84rem;margin-bottom:6px">🔑 비밀번호 변경 (선택)</div>
-        <div class="form-grid">
-          <div class="field"><label for="newPass">새 비밀번호</label><input id="newPass" type="password" autocomplete="new-password" placeholder="4자 이상"></div>
-          <div class="field"><label for="newPass2">한 번 더</label><input id="newPass2" type="password" autocomplete="new-password" placeholder="같은 값"></div>
-        </div>
-        <button type="button" class="btn sm" id="changePassBtn" style="margin-top:8px">비밀번호 저장</button>
-        <p class="hint">기본 비밀번호는 <code>neoos2026!</code>. 바꾼 비밀번호는 이 브라우저에 해시로만 저장돼.</p>
-      </div>
-      <p class="hint">이 잠금은 실수 방지용 UI 잠금이야. 같은 브라우저에서만 유지되고, 실제 요금·권한 보호는 서버 API가 담당해. 점검 모드도 이 브라우저에 저장되는 상태라, 모든 방문자에게 전면 적용하려면 서버 측 게이트가 필요해.</p>
     </div>
   </section>
 
@@ -397,23 +376,6 @@ input:disabled,select:disabled{opacity:.55}
     NeoOS Cloud · AI 샌드박스 &amp; VPS · <a href="/" style="color:#7fb6e6;text-decoration:none">NeoOS 홈</a> · <a href="/editor" style="color:#7fb6e6;text-decoration:none">캡컷 스튜디오</a> · <a href="/game" style="color:#7fb6e6;text-decoration:none">콩밥 감옥</a>
   </footer>
 </main>
-
-<!-- 관리자 인증 -->
-<div class="modal" id="gateModal" hidden>
-  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="gateTitle">
-    <h3 id="gateTitle">🔐 개발자 인증</h3>
-    <p id="gateReason">이 작업은 개발자(건우)만 할 수 있어. 비밀번호를 입력해 줘.</p>
-    <div class="field" style="margin-top:10px">
-      <label for="gateInput">어드민 비밀번호</label>
-      <input id="gateInput" type="password" autocomplete="current-password" placeholder="비밀번호">
-    </div>
-    <div class="field-err" id="gateError"></div>
-    <div class="modal-actions">
-      <button type="button" class="btn ghost" id="gateCancel">취소</button>
-      <button type="button" class="btn primary" id="gateSubmit">인증하고 계속</button>
-    </div>
-  </div>
-</div>
 
 <!-- 터미널 정보 -->
 <div class="modal" id="termModal" hidden>
@@ -516,107 +478,56 @@ function copyText(text,label){
   }
 }
 
-/* ---------------- admin gate ---------------- */
-async function sha256(text){
-  if(window.crypto&&window.crypto.subtle&&window.TextEncoder){
-    try{
-      const buf=await window.crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));
-      return Array.from(new Uint8Array(buf)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');
-    }catch(e){return null;}
-  }
-  return null;
+/* ---------------- secret developer gesture & chime ---------------- */
+function playSecretChime(){
+  try{
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  }catch(e){}
 }
-async function passwordMatches(input){
-  const stored=localStorage.getItem(KEYS.adminHash);
-  if(stored){
-    if(stored.indexOf('sha256:')===0){
-      const h=await sha256(input);
-      return h?('sha256:'+h)===stored:false;
-    }
-    if(stored.indexOf('plain:')===0)return ('plain:'+input)===stored;
-    return input===stored;
-  }
-  return input===DEFAULT_PASSWORD;
-}
-function openGate(reason,callback){
-  if(adminUnlocked){if(callback)callback();return;}
-  gateCallback=callback||null;
-  $('gateReason').textContent=reason||'이 작업은 개발자(건우)만 할 수 있어. 비밀번호를 입력해 줘.';
-  $('gateInput').value='';
-  $('gateError').textContent='';
-  $('gateModal').hidden=false;
-  setTimeout(function(){$('gateInput').focus();},40);
-}
-function closeGate(){
-  $('gateModal').hidden=true;
-  gateCallback=null;
-  $('gateInput').value='';
-}
-async function submitGate(){
-  if(Date.now()<gateLockUntil){
-    const left=Math.ceil((gateLockUntil-Date.now())/1000);
-    $('gateError').textContent='너무 많이 틀렸어. '+left+'초 뒤에 다시 시도해 줘.';
-    return;
-  }
-  const value=$('gateInput').value;
-  if(!value){$('gateError').textContent='비밀번호를 입력해 줘.';return;}
-  $('gateSubmit').disabled=true;
-  const ok=await passwordMatches(value);
-  $('gateSubmit').disabled=false;
-  if(ok){
-    gateFails=0;
-    unlockAdmin();
-    $('gateError').textContent='';
-    $('gateModal').hidden=true;
-    const cb=gateCallback;
-    gateCallback=null;
-    $('gateInput').value='';
-    log('개발자 인증 성공 · 관리자 모드 활성화');
-    toast('🔓 관리자 모드 활성화');
-    if(cb)cb();
-  }else{
-    gateFails++;
-    if(gateFails>=3){
-      gateLockUntil=Date.now()+30000;
-      startGateCountdown();
-      $('gateError').textContent='3회 실패 — 30초 동안 잠깐 잠글게.';
-    }else{
-      $('gateError').textContent='비밀번호가 틀렸어. ('+gateFails+'/3)';
-      $('gateInput').select();
-    }
-  }
-}
-function startGateCountdown(){
-  clearInterval(gateTimer);
-  const tick=function(){
-    if(Date.now()>=gateLockUntil){
-      clearInterval(gateTimer);
-      gateFails=0;
-      if(!$('gateModal').hidden)$('gateError').textContent='다시 시도할 수 있어.';
-      return;
-    }
-    if(!$('gateModal').hidden){
-      $('gateError').textContent='잠시 잠금 — '+Math.ceil((gateLockUntil-Date.now())/1000)+'초 후 다시 시도.';
-    }
-  };
-  tick();
-  gateTimer=setInterval(tick,500);
-}
+
 function unlockAdmin(){
   adminUnlocked=true;
-  try{sessionStorage.setItem(KEYS.admin,'1');}catch(e){}
+  try{
+    localStorage.setItem('neoos_dev_mode','1');
+    sessionStorage.setItem(KEYS.admin,'1');
+  }catch(e){}
   renderAdmin();
+  toast('🛠️ [개발자 모드 활성화] 관리자 설정이 열렸습니다.');
+  log('로고 5회 연타 이스터에그: 개발자 모드 활성화');
+  playSecretChime();
 }
+
 function lockAdmin(){
   adminUnlocked=false;
-  try{sessionStorage.removeItem(KEYS.admin);}catch(e){}
+  try{
+    localStorage.removeItem('neoos_dev_mode');
+    sessionStorage.removeItem(KEYS.admin);
+  }catch(e){}
   renderAdmin();
   renderMaintenance();
-  toast('🔒 관리자를 잠갔어.');
+  toast('🔒 [개발자 모드 비활성화] 관리자 설정이 숨겨졌습니다.');
+  log('개발자 모드 비활성화 및 패널 숨김');
 }
+
+function toggleDevMode(){
+  if(adminUnlocked)lockAdmin();
+  else unlockAdmin();
+}
+
 function requireAdmin(reason,fn){
   if(adminUnlocked){return fn();}
-  openGate(reason,fn);
+  toast('🔒 개발자 전용입니다. 상단 구름 로고를 5회 연속 탭하세요.');
   return undefined;
 }
 
@@ -824,7 +735,7 @@ function renderDeployState(){
   const full=instances.length>=MAX_INSTANCES;
   btn.classList.toggle('locked',!adminUnlocked);
   if(!adminUnlocked){
-    btn.textContent='🔒 개발자 인증 후 배포하기';
+    btn.textContent='🔒 상단 로고 5회 탭 후 배포하기';
     btn.disabled=false;
     $('deployHint').hidden=false;
     $('server-name').disabled=true;
@@ -844,13 +755,10 @@ function renderDeployState(){
   }
 }
 function renderAdmin(){
-  const badge=$('adminBadge');
-  badge.textContent=adminUnlocked?'🔓 관리자 모드':'🔒 관리자 잠금';
-  badge.classList.toggle('unlocked',adminUnlocked);
-  $('adminLoginBtn').hidden=adminUnlocked;
-  $('adminLockBtn').hidden=!adminUnlocked;
-  $('adminLockedNote').hidden=adminUnlocked;
-  $('adminControls').hidden=!adminUnlocked;
+  const panel=$('adminPanel');
+  if(panel){
+    panel.style.display=adminUnlocked?'block':'none';
+  }
   renderDeployState();
   renderService();
   renderMaintenance();
@@ -861,29 +769,47 @@ async function syncInstances(silent){
   if(serviceState()==='offline')return;
   const customUrl=localStorage.getItem(KEYS.url);
   const customToken=sessionStorage.getItem(KEYS.token);
-  const targetUrl=customUrl?(customUrl.replace(/\/+$/,'')+'/api/instances'):'/api/instances';
-  if(!silent)$('refreshBtn').textContent='🔄 동기화 중...';
-  try{
-    const headers={};
-    if(customToken)headers.Authorization='Bearer '+customToken;
-    const res=await fetch(targetUrl,{headers:headers});
-    if(res.ok){
-      const data=await res.json();
-      if(Array.isArray(data.instances)){
-        instances=data.instances;
-        saveInstances(instances);
-        renderInstances();
-        if(!silent)log('[NeoOS Cloud 동기화] 실시간 인스턴스 '+instances.length+'대 확인 ('+(data.region||'ap-southeast-2')+')');
-        $('refreshBtn').textContent='🔄 새로고침';
-        return;
-      }
-    }
-    if(!silent)log('[알림] API 대기 중 ('+res.status+') · 저장된 목록을 보여 줄게.');
-  }catch(err){
-    if(!silent)log('[네트워크] 백엔드 확인 중 ('+err.message+')');
+  
+  const endpoints=[];
+  if(customUrl)endpoints.push(customUrl.replace(/\/+$/,'')+'/api/instances');
+  endpoints.push('/api/instances');
+  if(!location.hostname.includes('vercel.app')){
+    endpoints.push('https://neoos-2.vercel.app/api/instances');
   }
-  $('refreshBtn').textContent='🔄 새로고침';
-  renderInstances();
+
+  if(!silent)$('refreshBtn').textContent='🔄 동기화 중...';
+  
+  let success=false;
+  for(const targetUrl of endpoints){
+    try{
+      const headers={};
+      if(customToken)headers.Authorization='Bearer '+customToken;
+      const controller=new AbortController();
+      const timeoutId=setTimeout(function(){controller.abort();},6000);
+      const res=await fetch(targetUrl,{headers:headers,signal:controller.signal});
+      clearTimeout(timeoutId);
+      if(res.ok){
+        const data=await res.json();
+        if(Array.isArray(data.instances)){
+          instances=data.instances;
+          saveInstances(instances);
+          renderInstances();
+          if(!silent)log('[NeoOS Cloud 동기화] 실시간 인스턴스 '+instances.length+'대 확인 ('+(data.region||'ap-southeast-2')+')');
+          $('refreshBtn').textContent='🔄 새로고침';
+          success=true;
+          break;
+        }
+      }
+    }catch(err){
+      // continue to next endpoint
+    }
+  }
+
+  if(!success){
+    if(!silent)log('[네트워크] 백엔드 응답 대기 중 · 저장된 인스턴스 목록 표시');
+    $('refreshBtn').textContent='🔄 새로고침';
+    renderInstances();
+  }
 }
 
 /* ---------------- instance actions ---------------- */
@@ -1063,23 +989,6 @@ function resetCustomEndpoint(){
   });
 }
 
-/* ---------------- password change ---------------- */
-async function changePassword(){
-  const a=$('newPass').value;
-  const b=$('newPass2').value;
-  if(a.length<4){toast('비밀번호는 4자 이상으로 해 줘.');return;}
-  if(a!==b){toast('두 비밀번호가 서로 달라.');return;}
-  const hashed=await sha256(a);
-  try{
-    localStorage.setItem(KEYS.adminHash,hashed?('sha256:'+hashed):('plain:'+a));
-    $('newPass').value='';$('newPass2').value='';
-    toast(hashed?'🔑 비밀번호를 안전하게 저장했어.':'🔑 비밀번호를 저장했어.');
-    log('어드민 비밀번호 변경됨');
-  }catch(e){
-    toast('비밀번호를 저장하지 못했어: '+e.message);
-  }
-}
-
 /* ---------------- UI wiring ---------------- */
 document.querySelectorAll('.os-choice').forEach(function(el){
   const choose=function(){
@@ -1095,26 +1004,48 @@ document.querySelectorAll('.os-choice').forEach(function(el){
 });
 $('deploy-btn').addEventListener('click',deploy);
 $('refreshBtn').addEventListener('click',function(){syncInstances(false);});
-$('adminBadge').addEventListener('click',function(){
-  if(adminUnlocked)lockAdmin();
-  else openGate('개발자 설정을 열려면 비밀번호가 필요해.',function(){toast('🔓 관리자 모드 활성화');});
-});
-$('adminLoginBtn').addEventListener('click',function(){openGate('개발자 설정을 열려면 비밀번호가 필요해.');});
-$('adminUnlockCta').addEventListener('click',function(){openGate('개발자 설정을 열려면 비밀번호가 필요해.');});
-$('adminLockBtn').addEventListener('click',lockAdmin);
+
+/* ☁️ 상단 구름 로고 5회 연타 이스터에그 제스처로 개발자 모드 토글 */
+let logoTaps=0, logoTapTimer=null;
+const brandTrigger=$('secretLogoTrigger');
+if(brandTrigger){
+  brandTrigger.addEventListener('click',function(){
+    logoTaps++;
+    clearTimeout(logoTapTimer);
+    logoTapTimer=setTimeout(function(){logoTaps=0;},2000);
+    if(logoTaps>=5){
+      logoTaps=0;
+      toggleDevMode();
+    }
+  });
+}
+
+/* 🛑 점검 화면 아이콘 5회 연타 시 개발자 복구 버튼 표시 */
+let maintTaps=0, maintTapTimer=null;
+const maintIcon=$('maintSecretIcon');
+if(maintIcon){
+  maintIcon.addEventListener('click',function(e){
+    e.stopPropagation();
+    maintTaps++;
+    clearTimeout(maintTapTimer);
+    maintTapTimer=setTimeout(function(){maintTaps=0;},2000);
+    if(maintTaps>=5){
+      maintTaps=0;
+      unlockAdmin();
+      $('maintAdminBox').hidden=false;
+    }
+  });
+}
+
+const hideBtn=$('adminHideBtn');
+if(hideBtn)hideBtn.addEventListener('click',lockAdmin);
+
 $('svcOn').addEventListener('click',function(){toggleService('online');});
 $('svcOff').addEventListener('click',function(){toggleService('offline');});
-$('maintLoginBtn').addEventListener('click',function(){
-  openGate('점검 모드를 해제하려면 개발자 인증이 필요해.',function(){renderMaintenance();});
-});
 $('maintResumeBtn').addEventListener('click',function(){toggleService('online');});
-$('maintLockBtn').addEventListener('click',function(){lockAdmin();});
+
 $('saveEndpoint').addEventListener('click',saveCustomEndpoint);
 $('resetEndpoint').addEventListener('click',resetCustomEndpoint);
-$('changePassBtn').addEventListener('click',changePassword);
-$('gateSubmit').addEventListener('click',submitGate);
-$('gateCancel').addEventListener('click',closeGate);
-$('gateInput').addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();submitGate();}});
 $('termClose').addEventListener('click',function(){$('termModal').hidden=true;});
 $('copySsh').addEventListener('click',function(){copyText($('sshCmd').textContent,'SSH 명령어');});
 $('copyPwd').addEventListener('click',function(){copyText($('sshPwd').textContent,'비밀번호');});
@@ -1130,19 +1061,23 @@ document.querySelectorAll('[data-qs]').forEach(function(b){
     $('qs-askcli').hidden=b.dataset.qs!=='askcli';
   });
 });
-[ 'gateModal','termModal','doneModal' ].forEach(function(id){
-  $(id).addEventListener('click',function(e){if(e.target===$(id))$(id).hidden=true;});
+[ 'termModal','doneModal' ].forEach(function(id){
+  const el=$(id);
+  if(el)el.addEventListener('click',function(e){if(e.target===el)el.hidden=true;});
 });
 document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
-    if(!$('gateModal').hidden)closeGate();
     if(!$('termModal').hidden)$('termModal').hidden=true;
     if(!$('doneModal').hidden)$('doneModal').hidden=true;
   }
 });
 
 /* ---------------- init ---------------- */
-try{adminUnlocked=sessionStorage.getItem(KEYS.admin)==='1';}catch(e){adminUnlocked=false;}
+try{
+  adminUnlocked=(localStorage.getItem('neoos_dev_mode')==='1')||(sessionStorage.getItem(KEYS.admin)==='1');
+}catch(e){
+  adminUnlocked=false;
+}
 instances=loadInstances();
 $('api-url').value=localStorage.getItem(KEYS.url)||'';
 $('api-token').value=sessionStorage.getItem(KEYS.token)||'';

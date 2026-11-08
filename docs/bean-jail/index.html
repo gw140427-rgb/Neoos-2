@@ -627,7 +627,58 @@ $('resetGame').addEventListener('click',function(){
 if(state.pendingEvent)eventReadyAt=Date.now()+700;
 save();
 render();
+
+/* 사이트 전체 서버 점검/종료 감지 */
+function checkMaint(){
+  var offline = localStorage.getItem('neoos_cloud_service') === 'offline';
+  var el = document.getElementById('portalMaintenanceOverlay');
+  if (el) {
+    el.style.display = offline ? 'flex' : 'none';
+    document.body.style.overflow = offline ? 'hidden' : '';
+  }
+}
+checkMaint();
+window.addEventListener('storage', checkMaint);
+var taps = 0, tapTimer = null;
+var icon = document.getElementById('portalSecretIcon');
+if (icon) {
+  icon.addEventListener('click', function(e){
+    e.stopPropagation();
+    taps++;
+    clearTimeout(tapTimer);
+    tapTimer = setTimeout(function(){ taps = 0; }, 2000);
+    if (taps >= 5) {
+      taps = 0;
+      var box = document.getElementById('portalDevBox');
+      if (box) box.style.display = (box.style.display === 'none' ? 'block' : 'none');
+    }
+  });
+}
+var resumeBtn = document.getElementById('portalResumeBtn');
+if (resumeBtn) {
+  resumeBtn.addEventListener('click', function(){
+    localStorage.setItem('neoos_cloud_service', 'online');
+    localStorage.setItem('neoos_cloud_service_at', new Date().toISOString());
+    checkMaint();
+    alert('🟢 서버가 다시 켜졌습니다. 정상 운영 모드로 전환됩니다.');
+  });
+}
 })();
 </script>
+
+<!-- 🛑 사이트 전체 서버 종료 / 점검 모드 오버레이 -->
+<div id="portalMaintenanceOverlay" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(5,6,12,0.96);backdrop-filter:blur(18px);align-items:center;justify-content:center;padding:20px;text-align:center;">
+  <div style="max-width:480px;background:#0c1020;border:1px solid #232a44;border-radius:24px;padding:36px 24px;box-shadow:0 24px 60px rgba(0,0,0,0.8);">
+    <div id="portalSecretIcon" style="font-size:54px;margin-bottom:14px;cursor:pointer;user-select:none;display:inline-block;" title="Tap 5 times">🛑</div>
+    <h2 style="font-size:1.5rem;font-weight:900;color:#f2f5ff;margin:0 0 10px;">서버 운영이 일시 종료되었습니다</h2>
+    <div style="display:inline-block;padding:4px 12px;border-radius:999px;background:#3b1115;border:1px solid #781d24;color:#fca5a5;font-size:0.78rem;font-weight:800;margin-bottom:14px;">● 점검 모드 가동 중</div>
+    <p style="color:#9aa6c6;font-size:0.92rem;line-height:1.6;margin:0 0 18px;">개발자(건우)가 시스템 점검 및 서버 전원 종료 작업을 진행하고 있습니다. 작업이 완료될 때까지 모든 앱 이용이 잠시 중단됩니다.</p>
+    
+    <div id="portalDevBox" style="display:none;margin-top:16px;padding:14px;background:#071c14;border:1px solid #166534;border-radius:12px;">
+      <p style="color:#86efac;font-size:0.84rem;font-weight:700;margin:0 0 10px;">🛠️ [개발자 복구 모드] 서버를 다시 켤 수 있습니다.</p>
+      <button type="button" id="portalResumeBtn" style="padding:10px 18px;border-radius:10px;background:#22c55e;color:#04060d;font-weight:800;border:none;cursor:pointer;font-size:0.9rem;">🟢 서버 켜기 (서비스 즉시 재개)</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
