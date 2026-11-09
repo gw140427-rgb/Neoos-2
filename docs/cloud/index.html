@@ -381,11 +381,11 @@ input:disabled,select:disabled{opacity:.55}
 <div class="modal" id="termModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="termTitle">
     <h3 id="termTitle">💻 터미널 연결 정보</h3>
-    <p><b id="modalInstName">neoos</b> · SSH 비밀번호 접속이 켜져 있어.</p>
+    <p><b id="modalInstName">neoos</b> · SSH 키 기반 접속은 보안 점검 후 제공돼.</p>
     <p style="margin-top:12px">SSH 명령어</p>
     <div class="code"><span id="sshCmd">ssh ubuntu@3.27.117.86</span><button type="button" id="copySsh">복사</button></div>
-    <p>초기 비밀번호</p>
-    <div class="code"><span id="sshPwd">neoos2026!</span><button type="button" id="copyPwd">복사</button></div>
+    <p>비밀번호 접속</p>
+    <div class="code"><span id="sshPwd">비밀번호 인증 비활성화</span><button type="button" id="copyPwd" disabled>복사 안 됨</button></div>
     <p class="hint">부팅 직후 1~2분은 SSH가 늦게 열릴 수 있어. AI 도구는 ask-cli 탭의 한 줄 설치를 붙여 넣으면 돼.</p>
     <div class="modal-actions">
       <button type="button" class="btn ghost" id="termClose">닫기</button>
@@ -400,7 +400,7 @@ input:disabled,select:disabled{opacity:.55}
     <p id="doneText"></p>
     <p style="margin-top:10px">다음 단계</p>
     <ol style="font-size:.82rem;color:#c9d9ef;padding-left:20px;line-height:1.7">
-      <li>1~2분 뒤 [터미널 접속]으로 SSH 연결</li>
+      <li>보안 점검 후 SSH 키 또는 SSM으로 접속</li>
       <li>ask-cli 한 줄 설치</li>
       <li>24시간 안에 중지·삭제해서 크레딧 지키기</li>
     </ol>
@@ -421,7 +421,6 @@ const MAX_INSTANCES=2;
 const CONTROL_ACTIONS_ENABLED=false;
 const TTL_MS=24*60*60*1000;
 const PROTECTED_ID='i-0c4a3985afb8d417b';
-const DEFAULT_PASSWORD='neoos2026!';
 const ASK_CLI_CMD='curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh | bash';
 const KEYS={
   service:'neoos_cloud_service',
@@ -790,7 +789,7 @@ function openTerminal(inst){
     $('modalInstName').textContent=inst.name||inst.id;
     const ip=(inst.ip&&inst.ip.indexOf('할당')<0)?inst.ip:'3.27.117.86';
     $('sshCmd').textContent='ssh ubuntu@'+ip;
-    $('sshPwd').textContent=DEFAULT_PASSWORD;
+    $('sshPwd').textContent='비밀번호 인증 비활성화';
     $('termModal').hidden=false;
     log('터미널 접속 모달 열림: '+(inst.name||inst.id)+' ('+ip+')');
   });
