@@ -230,7 +230,7 @@ input:disabled,select:disabled{opacity:.55}
       </div>
     </div>
     <div id="instances-list"></div>
-    <p class="hint">목록과 상태는 잠금 없이 누구나 볼 수 있어. 터미널·재부팅·중지·삭제는 개발자 인증이 필요해.</p>
+    <p class="hint">현재는 실제 AWS 인스턴스 상태를 읽기 전용으로 확인할 수 있어. 보안 점검이 끝날 때까지 터미널·재부팅·중지·삭제·새 서버 배포는 잠시 비활성화했어.</p>
   </section>
 
   <!-- 배포 -->
@@ -239,7 +239,7 @@ input:disabled,select:disabled{opacity:.55}
       <h2 id="deployTitle">🚀 새 가상 서버 배포</h2>
       <span class="state" style="background:#13273e;color:var(--blue);border-color:#204b78">크레딧 보호 모드</span>
     </div>
-    <p class="muted" style="margin:0 0 12px">OS만 고르고 한 번 누르면 리눅스 서버가 바로 만들어져. 사양·디스크·리전은 요금 보호를 위해 고정이야.</p>
+    <p class="muted" style="margin:0 0 12px">현재 배포 기능은 보안 점검을 위해 일시 중지했어. 기존 AWS 인스턴스와 데이터는 유지돼.</p>
 
     <div class="field" style="margin-bottom:10px">
       <label>1. 운영체제(OS) 템플릿</label>
@@ -314,10 +314,10 @@ input:disabled,select:disabled{opacity:.55}
       <li><b>사양 고정 t3.micro</b><small>2 vCPU · 1GB RAM · 8GB gp3 디스크</small></li>
       <li><b>24시간 만료 안내</b><small>워커는 생성 24시간 뒤 만료 표시 · 중지 유도</small></li>
       <li><b>컨트롤 플레인 보호</b><small>neoos 인스턴스는 중지·삭제 불가</small></li>
-      <li><b>개발자 잠금</b><small>배포·중지·삭제·API 변경에 비밀번호 필요</small></li>
+      <li><b>개발자 잠금</b><small>관리자 인증 보안 작업 진행 중 · 제어 기능은 임시 비활성화</small></li>
       <li><b>리전 고정</b><small>시드니(ap-southeast-2)에서만 배포</small></li>
     </ul>
-    <p class="hint">이 화면의 잠금·타이머는 실수 방지용 가드레일이야. 실제 비용과 권한은 서버 API의 토큰·쿼터·IAM이 막고 있어.</p>
+    <p class="hint">현재 콘솔은 읽기 전용이야. AWS 인스턴스와 저장 데이터는 보존되며, 제어 기능은 별도의 안전한 관리자 인증을 적용한 뒤 다시 열 예정이야.</p>
   </section>
 
   <!-- 빠른 시작: Railway / ask-cli -->
@@ -418,6 +418,7 @@ input:disabled,select:disabled{opacity:.55}
 'use strict';
 const $=id=>document.getElementById(id);
 const MAX_INSTANCES=2;
+const CONTROL_ACTIONS_ENABLED=false;
 const TTL_MS=24*60*60*1000;
 const PROTECTED_ID='i-0c4a3985afb8d417b';
 const DEFAULT_PASSWORD='neoos2026!';
@@ -681,21 +682,12 @@ function renderInstances(){
       b.addEventListener('click',fn);
       actions.append(b);
     };
-    if(inst.state==='running'){
-      addBtn('터미널 접속','primary',function(){openTerminal(inst);});
-      addBtn('재부팅','',function(){rebootInstance(inst);});
-      if(inst.id!==PROTECTED_ID)addBtn('중지','',function(){stopInstance(inst);});
-    }else if(inst.state==='stopped'){
-      addBtn('시작','primary',function(){startInstance(inst);});
-      if(inst.id!==PROTECTED_ID)addBtn('삭제','danger',function(){terminateInstance(inst);});
-    }else{
-      const b=document.createElement('button');
-      b.type='button';b.className='btn';b.disabled=true;b.textContent='상태 변경 중...';
-      actions.append(b);
-    }
-    if(expiry.kind==='expired'&&inst.state==='running'){
-      addBtn('⏱ 만료 · 중지','danger',function(){stopInstance(inst);});
-    }
+    const controlNotice=document.createElement('button');
+    controlNotice.type='button';
+    controlNotice.className='btn';
+    controlNotice.disabled=true;
+    controlNotice.textContent='제어 기능 보안 점검 중';
+    actions.append(controlNotice);
     card.append(main,actions);
     box.append(card);
   });
@@ -732,27 +724,12 @@ function renderTtlBanner(){
 }
 function renderDeployState(){
   const btn=$('deploy-btn');
-  const full=instances.length>=MAX_INSTANCES;
-  btn.classList.toggle('locked',!adminUnlocked);
-  if(!adminUnlocked){
-    btn.textContent='🔒 상단 로고 5회 탭 후 배포하기';
-    btn.disabled=false;
-    $('deployHint').hidden=false;
-    $('server-name').disabled=true;
-    $('nameLock').hidden=false;
-  }else if(full){
-    btn.textContent='쿼터 초과 · 기존 인스턴스 삭제 필요';
-    btn.disabled=true;
-    $('deployHint').hidden=true;
-    $('server-name').disabled=false;
-    $('nameLock').hidden=true;
-  }else{
-    btn.textContent='⚡ 가상 서버 즉시 배포하기';
-    btn.disabled=false;
-    $('deployHint').hidden=true;
-    $('server-name').disabled=false;
-    $('nameLock').hidden=true;
-  }
+  btn.classList.add('locked');
+  btn.textContent='🔒 보안 점검 중 · 배포 일시 중지';
+  btn.disabled=true;
+  $('deployHint').hidden=false;
+  $('server-name').disabled=true;
+  $('nameLock').hidden=false;
 }
 function renderAdmin(){
   const panel=$('adminPanel');
@@ -904,6 +881,7 @@ async function terminateInstance(inst){
 
 /* ---------------- deploy ---------------- */
 async function deploy(){
+  if(!CONTROL_ACTIONS_ENABLED){window.alert('보안 점검 중이야. 현재는 인스턴스 상태 조회만 가능해.');return;}
   if(!adminUnlocked){
     openGate('새 서버 배포는 개발자만 할 수 있어. 비밀번호를 입력해 줘.',deploy);
     return;
