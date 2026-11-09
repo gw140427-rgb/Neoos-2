@@ -11,6 +11,12 @@ export default async function handler(req, res) {
     return res.status(503).json({ error: 'backend_token_not_configured' });
   }
 
+  // Temporarily expose read-only listing only; control routes require a secure admin flow.
+  if (req.method !== 'GET') {
+    res.setHeader('Allow', 'GET');
+    return res.status(405).json({ error: 'method_not_allowed' });
+  }
+
   // Construct target URL
   const targetUrl = `${BACKEND_URL}${req.url}`;
 
