@@ -237,14 +237,7 @@ class Handler(BaseHTTPRequestHandler):
         instance_type = FIXED_INSTANCE_TYPE
         volume_gb = FIXED_VOLUME_GB
 
-        user_data_script = """#!/bin/bash
-echo "ubuntu:neoos2026!" | chpasswd
-echo "root:neoos2026!" | chpasswd
-sed -i -E "s/^#?PasswordAuthentication .*/PasswordAuthentication yes/" /etc/ssh/sshd_config
-sed -i -E "s/^#?KbdInteractiveAuthentication .*/KbdInteractiveAuthentication yes/" /etc/ssh/sshd_config
-echo -e "PasswordAuthentication yes\nKbdInteractiveAuthentication yes\nAuthenticationMethods password publickey" > /etc/ssh/sshd_config.d/01-permit-pwd.conf
-systemctl restart ssh
-"""
+        user_data_script = """#!/bin/bash\nset -eu\n# Require EC2 key-pair authentication; never set a shared default password.\nif [ -f /etc/ssh/sshd_config ]; then\n  sed -i -E "s/^#?PasswordAuthentication .*/PasswordAuthentication no/" /etc/ssh/sshd_config\n  sed -i -E "s/^#?KbdInteractiveAuthentication .*/KbdInteractiveAuthentication no/" /etc/ssh/sshd_config\n  printf "PasswordAuthentication no\\nKbdInteractiveAuthentication no\\n" > /etc/ssh/sshd_config.d/01-neoos-key-only.conf\n  systemctl restart ssh || systemctl restart sshd || true\nfi\n"""
 
         params = {
             "ImageId": ami_id,
