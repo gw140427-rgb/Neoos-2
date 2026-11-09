@@ -79,17 +79,18 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertNotIn("Podroid", self.html)
         self.assertNotIn("AWS EC2", self.html)
 
-    def test_admin_gate_default_password_and_session_memory(self):
-        self.assertIn("DEFAULT_PASSWORD='neoos2026!'", self.html)
+    def test_admin_gate_has_no_embedded_ssh_password(self):
+        self.assertNotIn("DEFAULT_PASSWORD", self.html)
+        self.assertNotIn("neoos2026!", self.html)
         self.assertIn("sessionStorage.setItem(KEYS.admin", self.html)
         self.assertIn('id="gateInput"', self.html)
         self.assertIn("passwordMatches", self.html)
 
     def test_maintenance_mode_overlay(self):
         self.assertIn('id="maintenanceOverlay"', self.html)
-        self.assertIn("서버가 종료되었습니다.", self.html)
-        self.assertIn("관리자(개발자)가 점검을 위해 서비스를 일시 중지했습니다.", self.html)
-        self.assertIn("개발자 로그인", self.html)
+        self.assertIn("서버 운영이 일시 종료되었습니다", self.html)
+        self.assertIn("개발자(건우)가 시스템 점검 및 서버 종료 작업을 진행 중입니다.", self.html)
+        self.assertIn("개발자 복구 제어", self.html)
         self.assertIn("localStorage.setItem(KEYS.service", self.html)
         self.assertIn('id="svcOn"', self.html)
         self.assertIn('id="svcOff"', self.html)
@@ -115,6 +116,12 @@ class CloudConsoleTests(unittest.TestCase):
         for action in ("rebootInstance", "stopInstance", "startInstance", "terminateInstance"):
             self.assertIn("requireAdmin(", self.html)
             self.assertIn("async function %s(" % action, self.html)
+
+    def test_cloud_console_is_read_only_until_admin_auth_is_secure(self):
+        self.assertIn("CONTROL_ACTIONS_ENABLED=false", self.html)
+        self.assertIn("제어 기능 보안 점검 중", self.html)
+        self.assertIn("현재 콘솔은 읽기 전용이야", self.html)
+        self.assertNotIn("neoos2026!", self.html)
 
     def test_no_remote_script_tags(self):
         self.assertNotRegex(self.html, r"<script[^>]+src=")
