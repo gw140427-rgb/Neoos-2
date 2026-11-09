@@ -83,8 +83,8 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertNotIn("DEFAULT_PASSWORD", self.html)
         self.assertNotIn("neoos2026!", self.html)
         self.assertIn("sessionStorage.setItem(KEYS.admin", self.html)
-        self.assertIn('id="gateInput"', self.html)
-        self.assertIn("passwordMatches", self.html)
+        self.assertIn("function unlockAdmin()", self.html)
+        self.assertIn("로고 5회 연속 탭", self.html)
 
     def test_maintenance_mode_overlay(self):
         self.assertIn('id="maintenanceOverlay"', self.html)
