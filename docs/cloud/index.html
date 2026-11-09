@@ -713,13 +713,8 @@ function renderTtlBanner(){
   spacer.className='spacer';
   const btn=document.createElement('button');
   btn.type='button';btn.className='btn sm';
-  btn.textContent=expired.length?'만료 인스턴스 중지':'지금 중지';
-  btn.addEventListener('click',function(){
-    const targets=expired.length?expired:soon;
-    requireAdmin('크레딧 보호를 위해 인스턴스를 중지하려면 개발자 인증이 필요해.',function(){
-      targets.forEach(function(inst){stopInstance(inst,true);});
-    });
-  });
+  btn.textContent='상태 확인 전용';
+  btn.disabled=true;
   banner.append(text,spacer,btn);
 }
 function renderDeployState(){
