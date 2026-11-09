@@ -23,8 +23,7 @@ except ImportError:
     class ClientError(Exception): pass
 
 REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
-DEFAULT_TOKEN = "neoos-vps-api-token-2026-sydney-secure-production-gw"
-TOKEN = os.environ.get("NEOOS_VPS_API_TOKEN", DEFAULT_TOKEN).strip()
+TOKEN = ""
 ORIGINS = {x.strip().rstrip("/") for x in os.environ.get("NEOOS_ALLOWED_ORIGINS", "*").split(",") if x.strip()}
 
 SUBNET_ID = os.environ.get("NEOOS_EC2_SUBNET_ID", "subnet-00aabf5e5f73895da").strip()
@@ -170,8 +169,6 @@ class Handler(BaseHTTPRequestHandler):
             return
         if path != "/api/instances":
             self.send_json(404, {"error": "not_found"})
-            return
-        if not self.authorized():
             return
         try:
             response = ec2.describe_instances(Filters=MANAGED_FILTERS)
