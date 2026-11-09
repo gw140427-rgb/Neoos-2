@@ -1,6 +1,5 @@
-"""Cost guardrail tests: the shared demo token must never be able to run up a bill."""
+"""Read-only safety tests for the NeoOS AWS VPS API."""
 import json
-import os
 import threading
 import time
 import unittest
@@ -10,7 +9,6 @@ from unittest import mock
 
 import aws_vps_server
 
-AUTH = {"Authorization": "Bearer test-token-1234567890-secure-testing-token", "Content-Type": "application/json"}
 PROTECTED = "i-0c4a3985afb8d417b"
 
 
@@ -32,29 +30,13 @@ class FakeEc2:
         self.calls = []
 
     def describe_instances(self, **kwargs):
+        self.calls.append(("describe_instances", kwargs))
         return {"Reservations": [{"Instances": self.instances}]}
 
-    def run_instances(self, **kwargs):
-        self.calls.append(("run_instances", kwargs))
-        return {"Instances": [instance("i-0123456789abcdef0", "pending")]}
 
-    def start_instances(self, InstanceIds):
-        self.calls.append(("start_instances", InstanceIds))
-
-    def stop_instances(self, InstanceIds):
-        self.calls.append(("stop_instances", InstanceIds))
-
-    def reboot_instances(self, InstanceIds):
-        self.calls.append(("reboot_instances", InstanceIds))
-
-    def terminate_instances(self, InstanceIds):
-        self.calls.append(("terminate_instances", InstanceIds))
-
-
-class TestAwsVpsGuardrails(unittest.TestCase):
+class TestAwsVpsReadOnlySafety(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        aws_vps_server.TOKEN = "test-token-1234567890-secure-testing-token"
         cls.server = aws_vps_server.ThreadingHTTPServer(("127.0.0.1", 18089), aws_vps_server.Handler)
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
@@ -67,65 +49,52 @@ class TestAwsVpsGuardrails(unittest.TestCase):
 
     def request(self, path, method="GET", body=None):
         data = json.dumps(body).encode() if body is not None else None
-        req = urllib.request.Request("http://127.0.0.1:18089" + path, data=data, headers=AUTH, method=method)
+        req = urllib.request.Request("http://127.0.0.1:18089" + path, data=data, method=method)
         try:
             with urllib.request.urlopen(req) as res:
                 return res.status, res.read()
         except urllib.error.HTTPError as exc:
             return exc.code, exc.read()
 
-    def test_cap_allows_second_instance_and_blocks_third(self):
-        self.assertEqual(aws_vps_server.MAX_INSTANCES, 2)
+    def test_instance_listing_is_read_only_and_does_not_require_client_secret(self):
+        fake = FakeEc2([instance(PROTECTED), instance("i-0123456789abcdef0", "stopped")])
+        with mock.patch.object(aws_vps_server, "ec2", fake):
+            status, body = self.request("/api/instances")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual({item["id"] for item in data["instances"]}, {PROTECTED, "i-0123456789abcdef0"})
+        self.assertEqual([call[0] for call in fake.calls], ["describe_instances"])
+
+    def test_create_is_disabled_without_calling_aws(self):
+        fake = FakeEc2([instance(PROTECTED)])
+        with mock.patch.object(aws_vps_server, "ec2", fake):
+            status, body = self.request("/api/instances", "POST", {"name": "worker"})
+        self.assertEqual(status, 405)
+        self.assertEqual(json.loads(body)["error"], "control_actions_temporarily_disabled")
+        self.assertEqual(fake.calls, [])
+
+    def test_start_stop_reboot_are_disabled(self):
+        fake = FakeEc2([instance("i-0123456789abcdef0")])
+        with mock.patch.object(aws_vps_server, "ec2", fake):
+            for action in ("start", "stop", "reboot"):
+                status, body = self.request(f"/api/instances/i-0123456789abcdef0/{action}", "POST", {})
+                self.assertEqual(status, 405)
+                self.assertEqual(json.loads(body)["error"], "control_actions_temporarily_disabled")
+        self.assertEqual(fake.calls, [])
+
+    def test_delete_is_disabled(self):
+        fake = FakeEc2([instance("i-0123456789abcdef0")])
+        with mock.patch.object(aws_vps_server, "ec2", fake):
+            status, body = self.request("/api/instances/i-0123456789abcdef0", "DELETE")
+        self.assertEqual(status, 405)
+        self.assertEqual(json.loads(body)["error"], "control_actions_temporarily_disabled")
+        self.assertEqual(fake.calls, [])
+
+    def test_quota_guardrail_still_caps_at_two(self):
         self.assertFalse(aws_vps_server.quota_blocks_creation(0))
         self.assertFalse(aws_vps_server.quota_blocks_creation(1))
         self.assertTrue(aws_vps_server.quota_blocks_creation(2))
         self.assertTrue(aws_vps_server.quota_blocks_creation(5))
-
-    def test_creation_rejected_when_cap_reached(self):
-        fake = FakeEc2([instance(PROTECTED), instance("i-0123456789abcdef0")])
-        with mock.patch.object(aws_vps_server, "ec2", fake):
-            status, body = self.request("/api/instances", "POST", {"name": "extra"})
-        self.assertEqual(status, 409)
-        self.assertEqual(json.loads(body)["error"], "instance_quota_exceeded")
-        self.assertEqual(fake.calls, [])
-
-    def test_creation_forces_cheap_spec_and_small_disk(self):
-        fake = FakeEc2([instance(PROTECTED)])
-        with mock.patch.object(aws_vps_server, "ec2", fake):
-            status, _ = self.request(
-                "/api/instances",
-                "POST",
-                {"name": "worker", "instance_type": "t3.xlarge", "volume_gb": 500},
-            )
-        self.assertEqual(status, 202)
-        params = fake.calls[0][1]
-        self.assertEqual(params["InstanceType"], "t3.micro")
-        self.assertEqual(params["BlockDeviceMappings"][0]["Ebs"]["VolumeSize"], 8)
-
-    def test_control_plane_cannot_be_stopped(self):
-        fake = FakeEc2([instance(PROTECTED)])
-        with mock.patch.object(aws_vps_server, "ec2", fake):
-            status, body = self.request(f"/api/instances/{PROTECTED}/stop", "POST", {})
-        self.assertEqual(status, 403)
-        self.assertEqual(json.loads(body)["error"], "cannot_stop_primary_neoos_control_plane")
-        self.assertEqual(fake.calls, [])
-
-    def test_control_plane_cannot_be_terminated(self):
-        fake = FakeEc2([instance(PROTECTED)])
-        with mock.patch.object(aws_vps_server, "ec2", fake):
-            status, _ = self.request(f"/api/instances/{PROTECTED}", "DELETE")
-        self.assertEqual(status, 403)
-        self.assertEqual(fake.calls, [])
-
-    def test_worker_can_still_be_stopped_and_terminated(self):
-        worker = "i-0123456789abcdef0"
-        fake = FakeEc2([instance(worker)])
-        with mock.patch.object(aws_vps_server, "ec2", fake):
-            status, _ = self.request(f"/api/instances/{worker}/stop", "POST", {})
-            self.assertEqual(status, 202)
-            status, _ = self.request(f"/api/instances/{worker}", "DELETE")
-            self.assertEqual(status, 202)
-        self.assertEqual([c[0] for c in fake.calls], ["stop_instances", "terminate_instances"])
 
 
 if __name__ == "__main__":
