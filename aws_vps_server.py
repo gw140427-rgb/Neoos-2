@@ -186,6 +186,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(502, {"error": "aws_api_error", "message": type(exc).__name__, "detail": str(exc)})
 
     def do_POST(self) -> None:
+        self.send_json(405, {"error": "control_actions_temporarily_disabled"})
+        return
         if not self.authorized():
             return
         path = urlsplit(self.path).path
@@ -275,6 +277,8 @@ systemctl restart ssh
         self.send_json(202, {"accepted": True, "instance": self.instance_view(instance)})
 
     def do_DELETE(self) -> None:
+        self.send_json(405, {"error": "control_actions_temporarily_disabled"})
+        return
         if not self.authorized():
             return
         match = re.fullmatch(r"/api/instances/(i-[0-9a-f]{8,17})", urlsplit(self.path).path)
