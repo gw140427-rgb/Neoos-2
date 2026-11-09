@@ -1,15 +1,14 @@
 import unittest
 import urllib.request
+import urllib.error
 import threading
 import time
-import os
 import aws_vps_server
+
 
 class TestAwsVpsServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        os.environ["NEOOS_VPS_API_TOKEN"] = "test-token-1234567890-secure-testing-token"
-        aws_vps_server.TOKEN = "test-token-1234567890-secure-testing-token"
         cls.server = aws_vps_server.ThreadingHTTPServer(("127.0.0.1", 18088), aws_vps_server.Handler)
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
@@ -25,13 +24,14 @@ class TestAwsVpsServer(unittest.TestCase):
         with urllib.request.urlopen(req) as res:
             self.assertEqual(res.status, 200)
 
-    def test_instances_unauthorized(self):
-        req = urllib.request.Request("http://127.0.0.1:18088/api/instances")
+    def test_instance_mutation_is_disabled(self):
+        req = urllib.request.Request("http://127.0.0.1:18088/api/instances", data=b"{}", method="POST")
         try:
             urllib.request.urlopen(req)
-            self.fail("Expected 401")
-        except urllib.error.HTTPError as e:
-            self.assertEqual(e.code, 401)
+            self.fail("Expected 405")
+        except urllib.error.HTTPError as exc:
+            self.assertEqual(exc.code, 405)
+
 
 if __name__ == "__main__":
     unittest.main()
