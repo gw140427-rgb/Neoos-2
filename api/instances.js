@@ -1,17 +1,7 @@
 export default async function handler(req, res) {
   const BACKEND_URL = process.env.NEOOS_BACKEND_URL || 'http://3.27.117.86:8080';
-  const TOKEN = process.env.NEOOS_API_TOKEN;
 
-  // Keep public listing read-only until a separately authenticated admin flow exists.
-  if (req.method !== 'GET') {
-    res.setHeader('Allow', 'GET');
-    return res.status(405).json({ error: 'method_not_allowed', message: 'VPS control actions are temporarily disabled while admin authentication is secured.' });
-  }
-  if (!TOKEN) {
-    return res.status(503).json({ error: 'backend_token_not_configured' });
-  }
-
-  // Temporarily expose read-only listing only; control routes require a secure admin flow.
+  // This gateway exposes read-only instance status. Mutations are blocked in both layers.
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return res.status(405).json({ error: 'method_not_allowed' });
@@ -23,10 +13,7 @@ export default async function handler(req, res) {
   try {
     const fetchOptions = {
       method: req.method,
-      headers: {
-        'Authorization': `Bearer ${TOKEN}`,
-        'Content-Type': 'application/json'
-      }
+      headers: {}
     };
 
     if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.body) {
