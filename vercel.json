@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/pricing",
+      "destination": "/pricing/index.html"
+    },
+    {
       "source": "/cloud",
       "destination": "/cloud/index.html"
     },
