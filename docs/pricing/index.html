@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07101d">
+<meta name="description" content="NeoOS 요금 정책 — 기본 기능은 무료, 실제 클라우드 자원 비용은 투명하게.">
+<title>NeoOS 요금 정책 · Free-first</title>
+<style>
+:root{color-scheme:dark;--bg:#07101d;--panel:#0d1a2b;--line:#243a55;--text:#edf5ff;--muted:#9db0c9;--cyan:#54d7ee;--green:#69e6b1;--gold:#ffd27a}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at 15% 0%,#123c5b 0,transparent 42%),radial-gradient(ellipse at 95% 15%,#25305a 0,transparent 38%),var(--bg);color:var(--text);font:16px/1.65 system-ui,-apple-system,"Noto Sans KR",sans-serif;padding:22px 16px 56px}
+main{max-width:920px;margin:auto}a{color:inherit}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:42px}.brand{text-decoration:none;font-weight:900;font-size:1.15rem}.nav{display:flex;gap:8px;flex-wrap:wrap}.nav a{padding:7px 12px;border:1px solid var(--line);border-radius:999px;text-decoration:none;color:var(--muted);font-size:.82rem}
+.hero{text-align:center;margin:30px auto 28px}.eyebrow{display:inline-block;border:1px solid #1e6071;background:#0b2b38;color:#9deafa;border-radius:999px;padding:5px 12px;font-size:.74rem;font-weight:800;letter-spacing:.08em}.hero h1{font-size:clamp(2.1rem,7vw,3.5rem);line-height:1.12;letter-spacing:-.04em;margin:18px 0 12px}.hero h1 span{color:var(--cyan)}.hero p{max-width:650px;margin:auto;color:var(--muted)}
+.panel{background:linear-gradient(160deg,#10233a,#0b1727);border:1px solid var(--line);border-radius:20px;padding:22px;margin:16px 0}.panel h2{margin:0 0 8px;font-size:1.18rem}.lead{color:var(--muted);margin:0 0 16px;font-size:.9rem}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.item{background:#091525;border:1px solid #263c56;border-radius:15px;padding:16px}.item h3{margin:0 0 6px;font-size:1rem}.item p{margin:0;color:var(--muted);font-size:.86rem}.free{color:var(--green);font-weight:900;font-size:.78rem}.usage{color:var(--gold);font-weight:900;font-size:.78rem}
+ul{padding-left:20px;color:var(--muted);margin:10px 0 0}li{margin:6px 0}.notice{border-left:3px solid var(--cyan);padding:10px 14px;background:#0b2633;border-radius:0 10px 10px 0;color:#cbeef5;font-size:.88rem}.status{display:inline-block;padding:4px 9px;border-radius:999px;border:1px solid #72551d;color:var(--gold);font-size:.72rem;font-weight:800}.foot{color:#7287a4;font-size:.78rem;text-align:center;margin-top:34px}
+</style>
+</head>
+<body><main>
+<header class="top"><a class="brand" href="/">◈ NeoOS</a><nav class="nav"><a href="/">홈</a><a href="/cloud">Cloud</a><a href="/pricing">요금 정책</a></nav></header>
+<section class="hero"><span class="eyebrow">FREE-FIRST · 투명한 비용</span><h1>기본은 무료.<br><span>실제 사용 비용은 투명하게.</span></h1><p>NeoOS는 기본 관리 기능을 유료 구독으로 잠그지 않습니다. 서버처럼 실제 자원이 필요한 기능은 공급자 비용을 먼저 확인하고, 사용자가 이해하고 승인한 뒤에만 이용하도록 하는 것이 원칙입니다.</p></section>
+<section class="panel"><h2>무료로 제공하는 기본 기능</h2><p class="lead">아래는 NeoOS가 지향하는 기본 무료 정책입니다.</p><div class="grid">
+<article class="item"><span class="free">무료 정책</span><h3>계정과 기본 대시보드</h3><p>서비스 상태와 기본 설정을 확인하는 기능.</p></article>
+<article class="item"><span class="free">무료 정책</span><h3>GitHub 연동</h3><p>저장소 연결과 기본 개발 워크플로.</p></article>
+<article class="item"><span class="free">무료 정책</span><h3>기본 모니터링</h3><p>서버 상태와 사용량을 확인하는 기본 정보.</p></article>
+<article class="item"><span class="free">무료 정책</span><h3>기본 서버 관리 UI</h3><p>서버 목록과 설정을 관리하는 인터페이스.</p></article>
+</div></section>
+<section class="panel"><h2>실제 자원 비용은 별도</h2><p class="lead">NeoOS가 대신 부담한다고 약속하지 않습니다. 클라우드 공급자에서 실제로 발생하는 비용을 기준으로 안내합니다.</p><div class="grid">
+<article class="item"><span class="usage">사용량 기반</span><h3>VPS 컴퓨팅</h3><p>인스턴스 종류, 실행 시간, 리전 등 공급자 청구 기준에 따릅니다.</p></article>
+<article class="item"><span class="usage">사용량 기반</span><h3>추가 저장 공간</h3><p>디스크와 오브젝트 스토리지의 실제 용량·요금 기준을 따릅니다.</p></article>
+<article class="item"><span class="usage">선택형 검토</span><h3>고급 백업·팀 기능</h3><p>추후 필요성이 확인되면 선택 기능으로 검토합니다. 기본 기능을 막지 않습니다.</p></article>
+</div></section>
+<section class="panel"><h2>결제와 가격 공개 원칙</h2><ul>
+<li>현재 이 페이지는 요금 정책 안내이며, 결제·자동 청구 기능이 활성화됐다는 뜻이 아닙니다.</li>
+<li>확인되지 않은 가격이나 무료 한도를 임의로 표시하지 않습니다.</li>
+<li>유료 기능을 출시한다면 가격, 과금 단위, 예상 월 비용, 초과 시 동작을 먼저 공개합니다.</li>
+<li>서버 생성 전 예상 비용과 공급자 청구 가능성을 안내하고, 사용자 확인 없이는 유료 자원을 시작하지 않는 방향으로 설계합니다.</li>
+<li>비용 한도·중지 기능은 실제 백엔드에서 검증되기 전까지 보장된 기능으로 표시하지 않습니다.</li>
+<li>광고로 기본 화면을 도배하거나 필수 기능을 광고 시청 뒤에 숨기지 않습니다.</li>
+</ul></section>
+<section class="panel"><span class="status">현재 상태: 정책 안내 페이지</span><h2 style="margin-top:12px">중요한 안내</h2><p class="lead" style="margin-bottom:0">NeoOS Cloud는 외부 클라우드 공급자의 자원을 사용할 수 있습니다. 서버를 실행하면 공급자 계정에 비용이 발생할 수 있으므로, 실제 요금은 해당 공급자의 공식 가격표와 계정의 청구 화면에서 확인해야 합니다. 이 페이지는 가격 견적이나 결제 약관이 아닙니다.</p></section>
+<p class="foot">© 2026 NeoOS · Free-first, transparent-by-design</p>
+</main></body></html>
