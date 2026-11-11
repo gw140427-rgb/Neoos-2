@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070d18">
-<meta name="description" content="NeoOS Cloud — 독립형 AI 샌드박스 & 고속 VPS 클라우드 콘솔. 원클릭 배포, 24시간 크레딧 가드레일, ask-cli 내장.">
+<meta name="description" content="NeoOS Cloud — 독립형 AI 샌드박스 & VPS 클라우드 콘솔. 서버 상태 조회와 비용 안내.">
 <title>NeoOS Cloud · AI 샌드박스 & VPS 콘솔</title>
 <style>
 :root{color-scheme:dark;--bg:#060b14;--panel:#0c1626;--panel2:#0a1220;--line:#1b2c45;--text:#eef5ff;--muted:#8ea5c4;--blue:#46b5ff;--cyan:#22d3ee;--green:#4eebb5;--amber:#ffcf70;--red:#ff7b7b;--violet:#8b5cf6}
@@ -219,9 +219,6 @@ input:disabled,select:disabled{opacity:.55}
     </div>
   </section>
 
-  <!-- 24시간 만료 배너 -->
-  <div class="banner warn" id="ttlBanner" hidden></div>
-
   <!-- 인스턴스 -->
   <section class="card" aria-labelledby="instTitle">
     <div class="card-head">
@@ -284,7 +281,7 @@ input:disabled,select:disabled{opacity:.55}
 
     <button type="button" class="btn primary" id="deploy-btn" style="width:100%;margin-top:14px;padding:13px;font-size:.92rem">⚡ 가상 서버 즉시 배포하기</button>
     <p class="hint" id="deployHint">🔒 개발자 인증 후 배포할 수 있어. 버튼을 누르면 비밀번호를 물어볼게.</p>
-    <p class="hint">⏳ 워커 인스턴스는 생성 후 <b>24시간</b>이 지나면 만료로 표시돼. 만료 전에 중지·삭제해서 크레딧을 지켜 줘. (타이머는 안내용이고, 실제 요금은 켜져 있는 동안 발생해.)</p>
+    <p class="hint">♾️ 워커 인스턴스에는 NeoOS 자체의 24시간 만료 타이머가 없어. 서버가 실행되는 동안 클라우드 공급자 요금이 발생할 수 있으니 사용량과 청구 내역을 확인해 줘.</p>
 
     <div class="status-log" id="status-log" role="status">NeoOS Cloud Engine 대기 중 · 준비 완료.</div>
 
@@ -313,7 +310,7 @@ input:disabled,select:disabled{opacity:.55}
     <ul class="glist">
       <li><b>인스턴스 쿼터 2대</b><small>계정당 최대 2대 · 서버 API가 강제로 거절</small></li>
       <li><b>사양 고정 t3.micro</b><small>2 vCPU · 1GB RAM · 8GB gp3 디스크</small></li>
-      <li><b>24시간 만료 안내</b><small>워커는 생성 24시간 뒤 만료 표시 · 중지 유도</small></li>
+      <li><b>운영 시간 제한 없음</b><small>NeoOS의 24시간 만료 타이머를 사용하지 않음 · 공급자 요금은 별도</small></li>
       <li><b>컨트롤 플레인 보호</b><small>neoos 인스턴스는 중지·삭제 불가</small></li>
       <li><b>개발자 잠금</b><small>관리자 인증 보안 작업 진행 중 · 제어 기능은 임시 비활성화</small></li>
       <li><b>리전 고정</b><small>시드니(ap-southeast-2)에서만 배포</small></li>
@@ -403,7 +400,7 @@ input:disabled,select:disabled{opacity:.55}
     <ol style="font-size:.82rem;color:#c9d9ef;padding-left:20px;line-height:1.7">
       <li>보안 점검 후 SSH 키 또는 SSM으로 접속</li>
       <li>ask-cli 한 줄 설치</li>
-      <li>24시간 안에 중지·삭제해서 크레딧 지키기</li>
+      <li>클라우드 공급자 청구 화면에서 실제 사용량과 비용 확인</li>
     </ol>
     <div class="modal-actions">
       <button type="button" class="btn" id="doneAskcli">ask-cli 명령 복사</button>
@@ -420,7 +417,6 @@ input:disabled,select:disabled{opacity:.55}
 const $=id=>document.getElementById(id);
 const MAX_INSTANCES=2;
 const CONTROL_ACTIONS_ENABLED=false;
-const TTL_MS=24*60*60*1000;
 const PROTECTED_ID='i-0c4a3985afb8d417b';
 const ASK_CLI_CMD='curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh | bash';
 const KEYS={
@@ -428,7 +424,6 @@ const KEYS={
   serviceAt:'neoos_cloud_service_at',
   admin:'neoos_cloud_admin',
   adminHash:'neoos_cloud_admin_hash',
-  ttl:'neoos_cloud_ttl',
   url:'neoos_custom_url',
   token:'neoos_custom_token'
 };
@@ -597,30 +592,6 @@ function loadInstances(){
 function saveInstances(list){
   try{localStorage.setItem('neoos_vps_instances',JSON.stringify(list));}catch(e){}
 }
-function ttlMap(){return readJson(KEYS.ttl,{})||{};}
-function ttlFor(instanceId){return ttlMap()[instanceId]||null;}
-function rememberTtl(instanceId,iso){
-  const map=ttlMap();
-  map[instanceId]=iso||new Date().toISOString();
-  writeJson(KEYS.ttl,map);
-}
-function instanceLaunchMs(inst){
-  const parsed=Date.parse(inst.uptime||'');
-  if(!Number.isNaN(parsed))return parsed;
-  const stored=ttlFor(inst.id);
-  if(stored){const t=Date.parse(stored);if(!Number.isNaN(t))return t;}
-  return null;
-}
-function expiryInfo(inst){
-  if(inst.id===PROTECTED_ID)return {kind:'protected',label:'♾️ 상시 운영 · 컨트롤 플레인',cls:'ok'};
-  const launched=instanceLaunchMs(inst);
-  if(!launched)return {kind:'unknown',label:'⏳ 만료 시각 확인 중',cls:''};
-  const left=launched+TTL_MS-Date.now();
-  if(left<=0)return {kind:'expired',left:left,label:'⚠️ 24시간 만료 — 지금 중지해 줘',cls:'bad'};
-  const h=Math.floor(left/3600000);
-  const m=Math.floor((left%3600000)/60000);
-  return {kind:left<2*3600000?'soon':'active',left:left,label:'⏳ '+h+'시간 '+m+'분 남음',cls:left<2*3600000?'warn':'ok'};
-}
 function renderInstances(){
   const box=$('instances-list');
   box.replaceChildren();
@@ -639,9 +610,8 @@ function renderInstances(){
   }
 
   instances.forEach(function(inst){
-    const expiry=expiryInfo(inst);
     const card=document.createElement('div');
-    card.className='instance'+(expiry.kind==='expired'?' expired':'');
+    card.className='instance';
 
     const main=document.createElement('div');
     main.className='inst-main';
@@ -666,10 +636,7 @@ function renderInstances(){
     sub2.className='inst-sub';
     sub2.style.color='#5d7699';
     sub2.textContent=(inst.os||'Linux')+' · '+(inst.region||'ap-southeast-2')+' · '+(inst.storage||'8GB gp3');
-    const expiryEl=document.createElement('span');
-    expiryEl.className='expiry '+expiry.cls;
-    expiryEl.textContent=expiry.label;
-    info.append(nameRow,sub,sub2,expiryEl);
+    info.append(nameRow,sub,sub2);
     main.append(icon,info);
 
     const actions=document.createElement('div');
@@ -691,31 +658,7 @@ function renderInstances(){
     card.append(main,actions);
     box.append(card);
   });
-  renderTtlBanner();
   renderDeployState();
-}
-function renderTtlBanner(){
-  const banner=$('ttlBanner');
-  banner.replaceChildren();
-  const workers=instances.filter(function(i){return i.id!==PROTECTED_ID;});
-  const expired=workers.filter(function(i){return expiryInfo(i).kind==='expired';});
-  const soon=workers.filter(function(i){const e=expiryInfo(i);return e.kind==='soon';});
-  if(!expired.length&&!soon.length){banner.hidden=true;return;}
-  banner.hidden=false;
-  banner.className='banner '+(expired.length?'bad':'warn');
-  const text=document.createElement('span');
-  if(expired.length){
-    text.innerHTML='<strong>크레딧 보호:</strong> '+esc(expired.map(function(i){return i.name;}).join(', '))+' 인스턴스가 24시간을 넘겼어. 중지하면 컴퓨팅 요금이 멈춰.';
-  }else{
-    text.innerHTML='<strong>만료 임박:</strong> '+esc(soon.map(function(i){return i.name;}).join(', '))+' 인스턴스의 24시간이 2시간 안에 끝나. 작업을 저장해 두고 중지할 준비를 해 줘.';
-  }
-  const spacer=document.createElement('span');
-  spacer.className='spacer';
-  const btn=document.createElement('button');
-  btn.type='button';btn.className='btn sm';
-  btn.textContent='상태 확인 전용';
-  btn.disabled=true;
-  banner.append(text,spacer,btn);
 }
 function renderDeployState(){
   const btn=$('deploy-btn');
@@ -860,7 +803,6 @@ async function terminateInstance(inst){
         log('[삭제 완료] 인스턴스 영구 종료됨');
         instances=instances.filter(function(i){return i.id!==inst.id;});
         saveInstances(instances);
-        const map=ttlMap();delete map[inst.id];writeJson(KEYS.ttl,map);
         renderInstances();
       }else{
         const err=await res.json().catch(function(){return {};});
@@ -910,9 +852,7 @@ async function deploy(){
     if(res.ok){
       const data=await res.json();
       const inst=data.instance||{};
-      const launchedAt=new Date().toISOString();
       if(inst.id){
-        rememberTtl(inst.id,launchedAt);
         const exists=instances.some(function(i){return i.id===inst.id;});
         if(!exists){
           inst.os=inst.os||osData.name;
