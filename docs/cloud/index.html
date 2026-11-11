@@ -228,7 +228,7 @@ input:disabled,select:disabled{opacity:.55}
       </div>
     </div>
     <div id="instances-list"></div>
-    <p class="hint">현재는 실제 AWS 인스턴스 상태를 읽기 전용으로 확인할 수 있어. 보안 점검이 끝날 때까지 터미널·재부팅·중지·삭제·새 서버 배포는 잠시 비활성화했어.</p>
+    <p class="hint">기존 제어 버튼 화면을 복원했어. 실제 서버 조작은 안전한 서버 측 관리자 인증이 연결될 때까지 비활성화돼. 인스턴스와 데이터는 유지돼.</p>
   </section>
 
   <!-- 배포 -->
@@ -646,15 +646,20 @@ function renderInstances(){
       b.type='button';
       b.className='btn '+(cls||'');
       b.textContent=label;
-      b.addEventListener('click',fn);
+      b.disabled=true;
+      b.title='서버 측 관리자 인증 연결 전까지 실제 조작은 비활성화돼 있어.';
+      b.setAttribute('aria-label',label+' (현재 비활성화)');
+      if(fn)b.addEventListener('click',fn);
       actions.append(b);
     };
-    const controlNotice=document.createElement('button');
-    controlNotice.type='button';
-    controlNotice.className='btn';
-    controlNotice.disabled=true;
-    controlNotice.textContent='제어 기능 보안 점검 중';
-    actions.append(controlNotice);
+    addBtn('💻 터미널 접속','',function(){openTerminal(inst);});
+    addBtn('🔄 재부팅','',function(){rebootInstance(inst);});
+    if(inst.state==='stopped'){
+      addBtn('▶️ 시작','',function(){startInstance(inst);});
+    }else{
+      addBtn('⏹️ 중지','',function(){stopInstance(inst,false);});
+    }
+    addBtn('🗑️ 삭제','danger',function(){terminateInstance(inst);});
     card.append(main,actions);
     box.append(card);
   });
