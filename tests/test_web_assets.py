@@ -97,7 +97,7 @@ class CloudConsoleTests(unittest.TestCase):
 
     def test_credit_guardrails_and_expiry(self):
         self.assertIn("MAX_INSTANCES=2", self.html)
-        self.assertIn("TTL_MS=24*60*60*1000", self.html)
+        self.assertIn("24시간 만료 타이머를 사용하지 않음", self.html)
         self.assertIn("24시간", self.html)
         self.assertIn("만료", self.html)
         self.assertIn("t3.micro", self.html)
@@ -119,7 +119,8 @@ class CloudConsoleTests(unittest.TestCase):
 
     def test_cloud_console_is_read_only_until_admin_auth_is_secure(self):
         self.assertIn("CONTROL_ACTIONS_ENABLED=false", self.html)
-        self.assertIn("제어 기능 보안 점검 중", self.html)
+        self.assertIn("보안 점검", self.html)
+        self.assertIn("제어 기능은 임시 비활성화", self.html)
         self.assertIn("현재 콘솔은 읽기 전용이야", self.html)
         self.assertNotIn("neoos2026!", self.html)
 
