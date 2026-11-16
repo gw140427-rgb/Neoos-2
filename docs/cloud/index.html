@@ -209,7 +209,7 @@ input:disabled,select:disabled{opacity:.55}
     </div>
     <div class="stat">
       <div class="stat-label">기본 공인 IP</div>
-      <div class="stat-val" id="primary-ip" style="font-size:.95rem;font-family:ui-monospace,monospace">3.27.117.86</div>
+      <div class="stat-val" id="primary-ip" style="font-size:.95rem;font-family:ui-monospace,monospace">—</div>
       <div class="stat-sub">ap-southeast-2 · Sydney</div>
     </div>
     <div class="stat">
@@ -381,7 +381,7 @@ input:disabled,select:disabled{opacity:.55}
     <h3 id="termTitle">💻 터미널 연결 정보</h3>
     <p><b id="modalInstName">neoos</b> · SSH 키 기반 접속은 보안 점검 후 제공돼.</p>
     <p style="margin-top:12px">SSH 명령어</p>
-    <div class="code"><span id="sshCmd">ssh ubuntu@3.27.117.86</span><button type="button" id="copySsh">복사</button></div>
+    <div class="code"><span id="sshCmd">ssh ubuntu@&lt;서버 IP&gt;</span><button type="button" id="copySsh">복사</button></div>
     <p>비밀번호 접속</p>
     <div class="code"><span id="sshPwd">비밀번호 인증 비활성화</span><button type="button" id="copyPwd" disabled>복사 안 됨</button></div>
     <p class="hint">부팅 직후 1~2분은 SSH가 늦게 열릴 수 있어. AI 도구는 ask-cli 탭의 한 줄 설치를 붙여 넣으면 돼.</p>
@@ -417,7 +417,9 @@ input:disabled,select:disabled{opacity:.55}
 const $=id=>document.getElementById(id);
 const MAX_INSTANCES=2;
 const CONTROL_ACTIONS_ENABLED=false;
-const PROTECTED_ID='i-0c4a3985afb8d417b';
+// 서버 ID/IP는 화면에 박아 두지 않는다. 보호할 인스턴스가 있으면
+// window.NEOOS_PROTECTED_ID 로 주입하고, 실제 보호는 백엔드가 한다.
+const PROTECTED_ID=(typeof window!=='undefined'&&window.NEOOS_PROTECTED_ID)||'';
 const ASK_CLI_CMD='curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh | bash';
 const KEYS={
   service:'neoos_cloud_service',
@@ -427,11 +429,8 @@ const KEYS={
   url:'neoos_custom_url',
   token:'neoos_custom_token'
 };
-const DEFAULT_INSTANCES=[{
-  id:PROTECTED_ID,name:'neoos',os:'Ubuntu 26.04 LTS',icon:'🐧',
-  spec:'t3.micro (2 vCPU / 1GB RAM)',ip:'3.27.117.86',region:'ap-southeast-2 (Sydney)',
-  storage:'8GB gp3 EBS',state:'running',uptime:'상시 운영'
-}];
+// 실제 인스턴스는 /api/instances 응답으로만 채운다(하드코딩된 기본값 없음).
+const DEFAULT_INSTANCES=[];
 let instances=[];
 let selectedOs='ubuntu';
 let adminUnlocked=false;
@@ -736,8 +735,8 @@ async function syncInstances(silent){
 function openTerminal(inst){
   requireAdmin('터미널 접속 정보는 개발자만 볼 수 있어. 비밀번호를 입력해 줘.',function(){
     $('modalInstName').textContent=inst.name||inst.id;
-    const ip=(inst.ip&&inst.ip.indexOf('할당')<0)?inst.ip:'3.27.117.86';
-    $('sshCmd').textContent='ssh ubuntu@'+ip;
+    const ip=(inst.ip&&String(inst.ip).indexOf('할당')<0)?inst.ip:'';
+    $('sshCmd').textContent=ip?('ssh ubuntu@'+ip):'ssh ubuntu@<서버 IP>';
     $('sshPwd').textContent='비밀번호 인증 비활성화';
     $('termModal').hidden=false;
     log('터미널 접속 모달 열림: '+(inst.name||inst.id)+' ('+ip+')');
@@ -799,7 +798,7 @@ async function startInstance(inst){
 }
 async function terminateInstance(inst){
   requireAdmin('인스턴스 영구 삭제는 개발자만 할 수 있어.',async function(){
-    if(inst.id===PROTECTED_ID){window.alert('neoos 컨트롤 플레인 인스턴스는 보호되어 있어 삭제할 수 없어.');return;}
+    if(PROTECTED_ID&&inst.id===PROTECTED_ID){window.alert('neoos 컨트롤 플레인 인스턴스는 보호되어 있어 삭제할 수 없어.');return;}
     if(!window.confirm('[영구 삭제]\n\n'+inst.name+' ('+inst.id+') 인스턴스를 삭제할까?\n가상머신과 모든 데이터가 완전히 사라져.'))return;
     log('[삭제 요청] '+inst.name+' ('+inst.id+')');
     try{

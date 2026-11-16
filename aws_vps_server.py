@@ -11,6 +11,7 @@ import hmac
 import json
 import os
 import re
+import sys
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
@@ -23,8 +24,11 @@ except ImportError:
     class ClientError(Exception): pass
 
 REGION = os.environ.get("AWS_REGION", "ap-southeast-2")
-TOKEN = ""
-ORIGINS = {x.strip().rstrip("/") for x in os.environ.get("NEOOS_ALLOWED_ORIGINS", "*").split(",") if x.strip()}
+# No shipped secret: the control plane only answers requests carrying this token.
+TOKEN = os.environ.get("NEOOS_VPS_API_TOKEN", "").strip()
+MIN_TOKEN_LENGTH = 32
+# No wildcard default: a browser origin is echoed back only when it is listed.
+ORIGINS = {x.strip().rstrip("/") for x in os.environ.get("NEOOS_ALLOWED_ORIGINS", "").split(",") if x.strip()}
 
 SUBNET_ID = os.environ.get("NEOOS_EC2_SUBNET_ID", "subnet-00aabf5e5f73895da").strip()
 SECURITY_GROUP_ID = os.environ.get("NEOOS_EC2_SECURITY_GROUP_ID", "sg-0716aa2cc0376be39").strip()
@@ -91,16 +95,17 @@ class Handler(BaseHTTPRequestHandler):
 
     def end_headers(self) -> None:
         origin = self.headers.get("Origin", "").rstrip("/")
-        if origin and (origin in ORIGINS or "*" in ORIGINS):
+        # Echo an allowed origin only; never answer with "*", and never widen
+        # the policy because the client sent no Origin at all.
+        if origin and origin in ORIGINS:
             self.send_header("Access-Control-Allow-Origin", origin)
-        elif "*" in ORIGINS or not ORIGINS:
-            self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
+            self.send_header("Vary", "Origin")
+            self.send_header("Access-Control-Allow-Methods", "GET, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Authorization, Content-Type")
         super().end_headers()
 
     def authorized(self) -> bool:
-        if len(TOKEN) < 16:
+        if len(TOKEN) < MIN_TOKEN_LENGTH:
             self.send_json(503, {"error": "server_token_not_configured"})
             return False
         scheme, sep, supplied = self.headers.get("Authorization", "").partition(" ")
@@ -108,6 +113,18 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(401, {"error": "unauthorized"})
             return False
         return True
+
+    def send_aws_error(self, exc: Exception) -> None:
+        """Log the AWS failure server-side and answer with a generic message.
+
+        boto3 messages can carry account ids, ARNs and request details, so the
+        client only learns that the call failed.
+        """
+        sys.stderr.write(f"[neoos] aws_api_error: {type(exc).__name__}: {exc}\n")
+        self.send_json(502, {
+            "error": "aws_api_error",
+            "message": "AWS 요청을 처리하지 못했어. 잠시 뒤 다시 시도해 줘.",
+        })
 
     def read_body(self) -> dict:
         try:
@@ -150,7 +167,6 @@ class Handler(BaseHTTPRequestHandler):
             "icon": icon,
             "spec": f"{item.get('InstanceType', 't3.micro')} (2 vCPU / 1GB RAM)",
             "ip": item.get("PublicIpAddress") or "할당 중...",
-            "private_ip": item.get("PrivateIpAddress"),
             "region": item.get("Placement", {}).get("AvailabilityZone") or REGION,
             "storage": f"{(item.get('BlockDeviceMappings') or [{}])[0].get('Ebs', {}).get('VolumeSize', 8) if (item.get('BlockDeviceMappings') or [{}]) else 8}GB gp3 EBS",
             "uptime": item.get("LaunchTime").isoformat() if item.get("LaunchTime") else "알 수 없음",
@@ -158,6 +174,10 @@ class Handler(BaseHTTPRequestHandler):
         }
 
     def do_OPTIONS(self) -> None:
+        origin = self.headers.get("Origin", "").rstrip("/")
+        if origin and origin not in ORIGINS:
+            self.send_json(403, {"error": "origin_not_allowed"})
+            return
         self.send_response(204)
         self.send_header("Content-Length", "0")
         self.end_headers()
@@ -170,6 +190,13 @@ class Handler(BaseHTTPRequestHandler):
         if path != "/api/instances":
             self.send_json(404, {"error": "not_found"})
             return
+        # The instance list is a management endpoint: names, public IPs and
+        # instance ids stay behind the bearer token, like every other call.
+        if not self.authorized():
+            return
+        if ec2 is None:
+            self.send_json(503, {"error": "aws_sdk_unavailable"})
+            return
         try:
             response = ec2.describe_instances(Filters=MANAGED_FILTERS)
             instances = [
@@ -180,7 +207,7 @@ class Handler(BaseHTTPRequestHandler):
             ]
             self.send_json(200, {"provider": "aws", "region": REGION, "instances": instances})
         except (ClientError, BotoCoreError) as exc:
-            self.send_json(502, {"error": "aws_api_error", "message": type(exc).__name__, "detail": str(exc)})
+            self.send_aws_error(exc)
 
     def do_POST(self) -> None:
         self.send_json(405, {"error": "control_actions_temporarily_disabled"})
@@ -210,7 +237,7 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as exc:
             self.send_json(400, {"error": str(exc)})
         except (ClientError, BotoCoreError) as exc:
-            self.send_json(502, {"error": "aws_api_error", "message": type(exc).__name__, "detail": str(exc)})
+            self.send_aws_error(exc)
 
     def create_instance(self, data: dict) -> None:
         name = str(data.get("name", "NeoOS Worker")).strip()
@@ -220,7 +247,7 @@ class Handler(BaseHTTPRequestHandler):
         try:
             active_count = len(active_managed_instances())
         except (ClientError, BotoCoreError) as exc:
-            self.send_json(502, {"error": "aws_api_error", "message": type(exc).__name__, "detail": str(exc)})
+            self.send_aws_error(exc)
             return
         if quota_blocks_creation(active_count):
             self.send_json(409, {
@@ -286,10 +313,17 @@ class Handler(BaseHTTPRequestHandler):
             ec2.terminate_instances(InstanceIds=[instance_id])
             self.send_json(202, {"accepted": True, "id": instance_id, "action": "terminate"})
         except (ClientError, BotoCoreError) as exc:
-            self.send_json(502, {"error": "aws_api_error", "message": type(exc).__name__, "detail": str(exc)})
+            self.send_aws_error(exc)
 
 
 def main() -> int:
+    if len(TOKEN) < MIN_TOKEN_LENGTH:
+        sys.stderr.write(
+            "[neoos] NEOOS_VPS_API_TOKEN is missing or shorter than "
+            f"{MIN_TOKEN_LENGTH} characters: management endpoints answer 503 until it is set.\n"
+        )
+    if not ORIGINS:
+        sys.stderr.write("[neoos] NEOOS_ALLOWED_ORIGINS is empty: no browser origin will be allowed (proxied server-to-server calls still work).\n")
     host = os.environ.get("HOST", "0.0.0.0")
     port = int(os.environ.get("PORT", "8080"))
     server = ThreadingHTTPServer((host, port), Handler)

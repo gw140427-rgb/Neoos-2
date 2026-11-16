@@ -50,7 +50,7 @@ The existing `vps_server.py` endpoint is a separate authenticated, read-only Doc
 
 One portal, three apps (`docs/index.html`):
 
-- **NeoOS Cloud** — [docs/cloud/index.html](docs/cloud/index.html), served at `/cloud`. Unified AI-sandbox and VPS console: one-click deploy, admin password gate (default `neoos2026!`), 2-instance / t3.micro credit guardrails, 24-hour expiry timers, service on/off (maintenance) switch, `ask-cli` install guide, and the Railway free-sandbox quick start. Backend setup and IAM requirements: [docs/vps/AWS.md](docs/vps/AWS.md); the EC2 backend uses an attached IAM role and only manages instances tagged for NeoOS.
+- **NeoOS Cloud** — [docs/cloud/index.html](docs/cloud/index.html), served at `/cloud`. Unified AI-sandbox and VPS console: one-click deploy, client-side admin gate (no shared default password), 2-instance / t3.micro credit guardrails, 24-hour expiry timers, service on/off (maintenance) switch, `ask-cli` install guide, and the Railway free-sandbox quick start. Backend setup and IAM requirements: [docs/vps/AWS.md](docs/vps/AWS.md); the EC2 backend uses an attached IAM role and only manages instances tagged for NeoOS.
 - **NeoOS CapCut Studio** — [docs/editor/index.html](docs/editor/index.html), served at `/editor`. Browser video editor: canvas preview, timeline, text overlays, filters, speed control, and MediaRecorder export.
 - **콩밥 먹기: 감옥 생존기 v1.1** — [docs/bean-jail/index.html](docs/bean-jail/index.html), served at `/game`. Retro-sound survival mini game with new events and a hidden ending.
 

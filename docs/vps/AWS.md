@@ -15,7 +15,7 @@ This is an opt-in AWS backend alongside the existing Podroid read-only dashboard
 Set these environment variables on the API host:
 
 - `AWS_REGION=ap-northeast-2`
-- `NEOOS_VPS_API_TOKEN`: random secret, at least 32 characters
+- `NEOOS_VPS_API_TOKEN`: random secret, at least 32 characters (management endpoints answer `503 server_token_not_configured` until it is set)
 - `NEOOS_ALLOWED_ORIGINS`: exact HTTPS origin of the dashboard
 - `NEOOS_EC2_AMI_ID`: verified Debian AMI ID in the selected region
 - `NEOOS_EC2_SUBNET_ID`: subnet in the selected VPC
@@ -37,7 +37,16 @@ Attach a narrowly scoped IAM role to the API host. It needs EC2 read access for 
 - `POST /api/instances/{instance-id}/start|stop|reboot`: lifecycle action
 - `DELETE /api/instances/{instance-id}`: terminate a managed instance
 
-All management endpoints require `Authorization: Bearer <token>`. Instance type and EBS size are allow-listed/bounded. The backend must be placed behind HTTPS; do not expose its HTTP port directly to the public internet.
+All management endpoints require `Authorization: Bearer <token>`, including `GET /api/instances`; only `/health` is open. Instance type and EBS size are allow-listed/bounded. The backend must be placed behind HTTPS; do not expose its HTTP port directly to the public internet. `GET /api/instances` returns the public address only — the private VPC address is not exposed.
+
+## Vercel / browser proxy
+
+The dashboard never calls the backend directly. `api/instances.js` (and its `docs/api/instances.js` copy) is the only bridge, and it fails closed:
+
+- `NEOOS_BACKEND_URL` (required): backend base URL, no trailing slash. Without it the proxy answers `503 backend_not_configured`.
+- `NEOOS_API_TOKEN` (optional): sent to the backend as `Authorization: Bearer <token>`. Leave it empty only if the backend does not require a token.
+
+Keep the proxy's token equal to the backend's `NEOOS_VPS_API_TOKEN`, otherwise the proxy forwards no usable credential and the console falls back to its cached list.
 
 ## Install and run
 
