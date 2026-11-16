@@ -48,6 +48,14 @@ The dashboard never calls the backend directly. `api/instances.js` (and its `doc
 
 Keep the proxy's token equal to the backend's `NEOOS_VPS_API_TOKEN`, otherwise the proxy forwards no usable credential and the console falls back to its cached list.
 
+## Rotating credentials that were already published
+
+This repository no longer contains a default API token or a shared SSH password, but removing them from source revokes nothing by itself:
+
+- Rotate every `NEOOS_VPS_API_TOKEN` value used before this change, then restart the backend; an already-running process keeps answering with the old token until it is restarted.
+- The old token, the old shared SSH password and the old public address may still live in Git history and on the running instance. Review SSH password authentication on existing instances and use the key pair or Session Manager instead.
+- `NEOOS_PROTECTED_INSTANCE_IDS` still ships a default control-plane instance id so the console cannot terminate it by mistake; override it for another deployment.
+
 ## Install and run
 
 ```sh
