@@ -1,6 +1,6 @@
 CC = aarch64-linux-gnu-gcc
 LD = aarch64-linux-gnu-ld
-CFLAGS = -ffreestanding -nostdlib -Wall -O2
+CFLAGS = -ffreestanding -nostdlib -Wall -O2 -mgeneral-regs-only
 
 all: kernel.elf
 

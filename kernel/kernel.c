@@ -53,6 +53,32 @@ static int fw_find_file(const char *want) {
 #define FB_H 768
 static unsigned int fb[FB_W * FB_H];
 
+/* fw_cfg DMA write: modern QEMU ignores data-port writes, so the ramfb
+   config must go through the DMA interface at fw_cfg base + 0x10. */
+static unsigned int bswap32(unsigned int v) {
+    return ((v & 0xFF) << 24) | ((v & 0xFF00) << 8) | ((v >> 8) & 0xFF00) | ((v >> 24) & 0xFF);
+}
+static unsigned long long bswap64(unsigned long long v) {
+    return ((unsigned long long)bswap32((unsigned int)v) << 32) | bswap32((unsigned int)(v >> 32));
+}
+struct fw_dma {
+    unsigned int control;       // big-endian on the wire
+    unsigned int length;        // big-endian
+    unsigned long long address; // big-endian
+};
+static volatile struct fw_dma dma __attribute__((aligned(16)));
+static volatile unsigned long long *const FW_DMA = (volatile unsigned long long *)0x09020010;
+
+static void fw_dma_write(int sel, const void *buf, unsigned int len) {
+    dma.control = bswap32(((unsigned int)sel << 16) | (1u << 3) | (1u << 4)); // SELECT | WRITE
+    dma.length = bswap32(len);
+    dma.address = bswap64((unsigned long long)(unsigned long)buf);
+    __asm__ volatile("dmb sy" ::: "memory");
+    *FW_DMA = bswap64((unsigned long long)(unsigned long)&dma);
+    while (bswap32(dma.control) != 0) {
+    }
+}
+
 static void screen_init(void) {
     int sel = fw_find_file("etc/ramfb");
     if (sel < 0) {
@@ -61,14 +87,13 @@ static void screen_init(void) {
     }
     // Build the config: every field big-endian on the wire (write MSB first).
     unsigned long long addr = (unsigned long long)(unsigned long)fb;
-    unsigned char cfg[28];
+    static unsigned char cfg[28];
     for (int i = 0; i < 8; i++) cfg[i] = (unsigned char)(addr >> (56 - 8 * i));
     unsigned int fields[5] = {0x34325258 /* XR24 = XRGB8888 */, 0, FB_W, FB_H, FB_W * 4};
     for (int f = 0; f < 5; f++)
         for (int i = 0; i < 4; i++)
             cfg[8 + f * 4 + i] = (unsigned char)(fields[f] >> (24 - 8 * i));
-    fw_select((unsigned short)sel);
-    for (int i = 0; i < 28; i++) *FW_DATA = cfg[i];
+    fw_dma_write(sel, cfg, 28);
     uart_puts("screen on\n");
 }
 
