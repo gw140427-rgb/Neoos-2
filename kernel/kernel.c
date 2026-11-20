@@ -57,7 +57,39 @@ static void irq_init(void) {
     __asm__ volatile("msr daifclr, #2");  // unmask IRQ at the CPU
 }
 
-void irq_dispatch(void) {
+/* ---------- milestone 6: preemptive multitasking (2 tasks, switch on tick) ---------- */
+struct task {
+    unsigned long saved_sp;
+};
+static struct task tasks[2];
+static int current_task = 0;
+static int sched_ready = 0;
+static unsigned char task_b_stack[16384] __attribute__((aligned(16)));
+
+static void task_b(void) {
+    unsigned long n = 0;
+    while (1) {
+        n++;
+        uart_puts("B: ");
+        uart_putnum(n);
+        uart_putc('\n');
+        for (volatile unsigned long i = 0; i < 20000000UL; i++) {
+        }
+    }
+}
+
+static void sched_init(void) {
+    unsigned long top = (unsigned long)task_b_stack + sizeof(task_b_stack);
+    unsigned long *frame = (unsigned long *)(top - 272);
+    for (int i = 0; i < 34; i++) frame[i] = 0;
+    frame[248 / 8] = (unsigned long)task_b; // ELR: start at task_b
+    frame[256 / 8] = 0x5;                   // SPSR: EL1h, exceptions unmasked
+    tasks[1].saved_sp = (unsigned long)frame;
+    sched_ready = 1;
+    uart_puts("sched on\n");
+}
+
+unsigned long irq_dispatch(unsigned long sp) {
     unsigned int iar = GICC[3];           // IAR (0x0C)
     unsigned int id = iar & 0x3FF;
     if (id == INTID_TIMER) {
@@ -66,8 +98,16 @@ void irq_dispatch(void) {
         uart_putnum(ticks);
         uart_putc('\n');
         write_cntp_tval(cntfrq);          // rearm for the next second
+        GICC[4] = iar;                    // EOIR (0x10)
+        if (sched_ready) {
+            tasks[current_task].saved_sp = sp;
+            current_task = (current_task + 1) % 2;
+            return tasks[current_task].saved_sp;
+        }
+        return sp;
     }
     GICC[4] = iar;                        // EOIR (0x10)
+    return sp;
 }
 
 void sync_exception_report(void) {
@@ -275,6 +315,7 @@ void kernel_main(void) {
     uart_puts("timer on\n");
     mem_init();
     mem_selftest();
+    sched_init();
     screen_init();
     draw_scene();
     uart_puts("Type something and press Enter.\n");
