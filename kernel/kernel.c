@@ -1,0 +1,120 @@
+// NeoOS kernel - milestone 3: draw on a real screen (QEMU ramfb framebuffer)
+// plus the milestone 2 serial echo. QEMU virt: UART 0x09000000, fw_cfg 0x09020000.
+volatile unsigned int *const UART0 = (unsigned int *)0x09000000;
+
+/* ---------- serial (UART) ---------- */
+static void uart_putc(char c) { UART0[0] = (unsigned int)c; }
+static void uart_puts(const char *s) {
+    while (*s) uart_putc(*s++);
+}
+static char uart_getc(void) {
+    while (UART0[6] & 0x10) { /* RXFE: wait for input */ }
+    return (char)(UART0[0] & 0xFF);
+}
+
+/* ---------- fw_cfg (find and write the ramfb config) ---------- */
+static volatile unsigned char *const FW_DATA = (volatile unsigned char *)0x09020000;
+static volatile unsigned short *const FW_SEL = (volatile unsigned short *)0x09020008;
+
+static unsigned short bswap16(unsigned short v) { return (unsigned short)((v >> 8) | (v << 8)); }
+static void fw_select(unsigned short sel) { *FW_SEL = bswap16(sel); }
+static unsigned char fw_read8(void) { return *FW_DATA; }
+static unsigned int fw_read32be(void) {
+    unsigned int v = 0;
+    for (int i = 0; i < 4; i++) v = (v << 8) | fw_read8();
+    return v;
+}
+static unsigned short fw_read16be(void) {
+    return (unsigned short)((fw_read8() << 8) | fw_read8());
+}
+static int name_eq(const char *a, const char *b) {
+    while (*a && *b && *a == *b) { a++; b++; }
+    return *a == *b;
+}
+
+// Returns the fw_cfg selector of the named file, or -1.
+static int fw_find_file(const char *want) {
+    fw_select(0x0019); // FW_CFG_FILE_DIR
+    unsigned int count = fw_read32be();
+    for (unsigned int i = 0; i < count; i++) {
+        unsigned int size = fw_read32be(); (void)size;
+        unsigned short sel = fw_read16be();
+        fw_read16be(); // reserved
+        char name[56];
+        for (int j = 0; j < 56; j++) name[j] = (char)fw_read8();
+        name[55] = 0;
+        if (name_eq(name, want)) return (int)sel;
+    }
+    return -1;
+}
+
+/* ---------- framebuffer ---------- */
+#define FB_W 1024
+#define FB_H 768
+static unsigned int fb[FB_W * FB_H];
+
+static void screen_init(void) {
+    int sel = fw_find_file("etc/ramfb");
+    if (sel < 0) {
+        uart_puts("ramfb not found\n");
+        return;
+    }
+    // Build the config: every field big-endian on the wire (write MSB first).
+    unsigned long long addr = (unsigned long long)(unsigned long)fb;
+    unsigned char cfg[28];
+    for (int i = 0; i < 8; i++) cfg[i] = (unsigned char)(addr >> (56 - 8 * i));
+    unsigned int fields[5] = {0x34325258 /* XR24 = XRGB8888 */, 0, FB_W, FB_H, FB_W * 4};
+    for (int f = 0; f < 5; f++)
+        for (int i = 0; i < 4; i++)
+            cfg[8 + f * 4 + i] = (unsigned char)(fields[f] >> (24 - 8 * i));
+    fw_select((unsigned short)sel);
+    for (int i = 0; i < 28; i++) *FW_DATA = cfg[i];
+    uart_puts("screen on\n");
+}
+
+static void draw_pixel(int x, int y, unsigned int color) {
+    if (x >= 0 && x < FB_W && y >= 0 && y < FB_H) fb[y * FB_W + x] = color;
+}
+static void fill_rect(int x, int y, int w, int h, unsigned int color) {
+    for (int j = y; j < y + h; j++)
+        for (int i = x; i < x + w; i++) draw_pixel(i, j, color);
+}
+
+/* Tiny 5x7 font: only the letters needed for "NeoOS" */
+static const unsigned char glyph_N[7] = {0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11};
+static const unsigned char glyph_e[7] = {0x00, 0x00, 0x0E, 0x11, 0x1F, 0x10, 0x0E};
+static const unsigned char glyph_o[7] = {0x00, 0x00, 0x0E, 0x11, 0x11, 0x11, 0x0E};
+static const unsigned char glyph_S[7] = {0x0F, 0x10, 0x10, 0x0E, 0x01, 0x01, 0x1E};
+
+static void draw_letter(const unsigned char g[7], int x, int y, int scale, unsigned int color) {
+    for (int row = 0; row < 7; row++)
+        for (int col = 0; col < 5; col++)
+            if (g[row] & (0x10 >> col))
+                fill_rect(x + col * scale, y + row * scale, scale, scale, color);
+}
+
+static void draw_scene(void) {
+    fill_rect(0, 0, FB_W, FB_H, 0x00101828);          // dark blue background
+    fill_rect(312, 284, 400, 200, 0x00203040);        // panel
+    int x = 352, y = 356, s = 10;
+    draw_letter(glyph_N, x, y, s, 0x00FFFFFF); x += 60;
+    draw_letter(glyph_e, x, y, s, 0x00FFFFFF); x += 60;
+    draw_letter(glyph_o, x, y, s, 0x00FFFFFF); x += 60;
+    draw_letter(glyph_o, x, y, s, 0x00FFFFFF); x += 60;
+    draw_letter(glyph_S, x, y, s, 0x00FFFFFF);
+}
+
+/* ---------- main ---------- */
+void kernel_main(void) {
+    uart_puts("NeoOS kernel: boot ok\n");
+    screen_init();
+    draw_scene();
+    uart_puts("Type something and press Enter.\n");
+    uart_puts("neo> ");
+    while (1) {
+        char c = uart_getc();
+        if (c == '\r') c = '\n';
+        uart_putc(c);
+        if (c == '\n') uart_puts("neo> ");
+    }
+}
