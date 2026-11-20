@@ -7,11 +7,14 @@ all: kernel.elf
 boot.o: boot.S
 	$(CC) $(CFLAGS) -c boot.S -o boot.o
 
+vectors.o: vectors.S
+	$(CC) $(CFLAGS) -c vectors.S -o vectors.o
+
 kernel.o: kernel.c
 	$(CC) $(CFLAGS) -c kernel.c -o kernel.o
 
-kernel.elf: boot.o kernel.o linker.ld
-	$(LD) -T linker.ld -o kernel.elf boot.o kernel.o
+kernel.elf: boot.o kernel.o vectors.o linker.ld
+	$(LD) -T linker.ld -o kernel.elf boot.o kernel.o vectors.o
 
 run: kernel.elf
 	qemu-system-aarch64 -machine virt -cpu cortex-a57 -nographic -kernel kernel.elf

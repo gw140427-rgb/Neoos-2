@@ -11,6 +11,75 @@ static char uart_getc(void) {
     while (UART0[6] & 0x10) { /* RXFE: wait for input */ }
     return (char)(UART0[0] & 0xFF);
 }
+static void uart_putnum(unsigned long v) {
+    char buf[24];
+    int i = 0;
+    if (v == 0) { uart_putc('0'); return; }
+    while (v) { buf[i++] = (char)('0' + (v % 10)); v /= 10; }
+    while (i) uart_putc(buf[--i]);
+}
+static void uart_puthex(unsigned long v) {
+    const char *h = "0123456789abcdef";
+    uart_puts("0x");
+    for (int i = 60; i >= 0; i -= 4) uart_putc(h[(v >> i) & 0xF]);
+}
+
+/* ---------- milestone 4: GIC + generic timer interrupts ---------- */
+static volatile unsigned int *const GICD = (volatile unsigned int *)0x08000000;
+static volatile unsigned int *const GICC = (volatile unsigned int *)0x08010000;
+static volatile unsigned char *const GICD_PRIO = (volatile unsigned char *)0x08000400;
+#define INTID_TIMER 30
+
+static unsigned long ticks = 0;
+static unsigned long cntfrq = 0;
+
+static inline unsigned long read_cntfrq(void) {
+    unsigned long v; __asm__ volatile("mrs %0, cntfrq_el0" : "=r"(v)); return v;
+}
+static inline void write_cntp_tval(unsigned long v) {
+    __asm__ volatile("msr cntp_tval_el0, %0" :: "r"(v));
+}
+static inline void write_cntp_ctl(unsigned long v) {
+    __asm__ volatile("msr cntp_ctl_el0, %0" :: "r"(v));
+}
+
+static void irq_init(void) {
+    extern char vectors[];
+    __asm__ volatile("msr vbar_el1, %0" :: "r"(vectors));
+    GICD[0] = 1;                          // distributor on
+    GICD_PRIO[INTID_TIMER] = 0x00;        // highest priority
+    GICD[0x100 / 4] |= (1u << INTID_TIMER); // enable INTID 30
+    GICC[0] = 1;                          // CPU interface on
+    GICC[1] = 0xFF;                       // priority mask: allow all
+    cntfrq = read_cntfrq();
+    write_cntp_tval(cntfrq);              // first tick in 1 second
+    write_cntp_ctl(1);                    // timer on, IRQ unmasked
+    __asm__ volatile("msr daifclr, #2");  // unmask IRQ at the CPU
+}
+
+void irq_dispatch(void) {
+    unsigned int iar = GICC[3];           // IAR (0x0C)
+    unsigned int id = iar & 0x3FF;
+    if (id == INTID_TIMER) {
+        ticks++;
+        uart_puts("tick ");
+        uart_putnum(ticks);
+        uart_putc('\n');
+        write_cntp_tval(cntfrq);          // rearm for the next second
+    }
+    GICC[4] = iar;                        // EOIR (0x10)
+}
+
+void sync_exception_report(void) {
+    unsigned long esr, elr;
+    __asm__ volatile("mrs %0, esr_el1" : "=r"(esr));
+    __asm__ volatile("mrs %0, elr_el1" : "=r"(elr));
+    uart_puts("\nSYNC EXCEPTION esr=");
+    uart_puthex(esr);
+    uart_puts(" elr=");
+    uart_puthex(elr);
+    uart_putc('\n');
+}
 
 /* ---------- fw_cfg (find and write the ramfb config) ---------- */
 static volatile unsigned char *const FW_DATA = (volatile unsigned char *)0x09020000;
@@ -132,6 +201,8 @@ static void draw_scene(void) {
 /* ---------- main ---------- */
 void kernel_main(void) {
     uart_puts("NeoOS kernel: boot ok\n");
+    irq_init();
+    uart_puts("timer on\n");
     screen_init();
     draw_scene();
     uart_puts("Type something and press Enter.\n");
