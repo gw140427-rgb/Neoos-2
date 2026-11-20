@@ -13,4 +13,5 @@ SECTIONS {
     .bss : { *(.bss) }
     . = . + 0x8000;
     _stack_top = .;
+    _kernel_end = .;
 }

@@ -198,11 +198,83 @@ static void draw_scene(void) {
     draw_letter(glyph_S, x, y, s, 0x00FFFFFF);
 }
 
+/* ---------- milestone 5: physical page allocator (4KB pages, bitmap) ---------- */
+extern char _kernel_end[];
+#define PAGE_SIZE 4096UL
+#define MEM_END 0x48000000UL /* QEMU virt default 128MB RAM end */
+static unsigned char page_bitmap[4096]; /* up to 32768 pages */
+static unsigned long mem_base = 0;
+static unsigned long mem_pages = 0;
+static unsigned long mem_free = 0;
+
+static void mem_init(void) {
+    mem_base = ((unsigned long)_kernel_end + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+    mem_pages = (MEM_END - mem_base) / PAGE_SIZE;
+    mem_free = mem_pages;
+    uart_puts("mem: ");
+    uart_putnum(mem_pages * PAGE_SIZE / (1024 * 1024));
+    uart_puts(" MB managed, ");
+    uart_putnum(mem_free);
+    uart_puts(" pages free\n");
+}
+
+static void *page_alloc(void) {
+    for (unsigned long i = 0; i < mem_pages; i++) {
+        if (!(page_bitmap[i / 8] & (1u << (i % 8)))) {
+            page_bitmap[i / 8] |= (unsigned char)(1u << (i % 8));
+            mem_free--;
+            unsigned long addr = mem_base + i * PAGE_SIZE;
+            unsigned long *p = (unsigned long *)addr;
+            for (unsigned long j = 0; j < PAGE_SIZE / 8; j++) p[j] = 0;
+            return (void *)addr;
+        }
+    }
+    return 0;
+}
+
+static void page_free(void *ptr) {
+    unsigned long i = ((unsigned long)ptr - mem_base) / PAGE_SIZE;
+    if (page_bitmap[i / 8] & (1u << (i % 8))) {
+        page_bitmap[i / 8] &= (unsigned char)~(1u << (i % 8));
+        mem_free++;
+    }
+}
+
+static void mem_selftest(void) {
+    void *a = page_alloc();
+    void *b = page_alloc();
+    void *c = page_alloc();
+    uart_puts("alloc a=");
+    uart_puthex((unsigned long)a);
+    uart_puts(" b=");
+    uart_puthex((unsigned long)b);
+    uart_puts(" c=");
+    uart_puthex((unsigned long)c);
+    uart_putc('\n');
+    unsigned int *w = (unsigned int *)a;
+    w[0] = 0xDEADBEEF;
+    w[1023] = 0x12345678;
+    page_free(b);
+    void *d = page_alloc();
+    uart_puts("freed b, realloc d=");
+    uart_puthex((unsigned long)d);
+    uart_puts(d == b ? " (reused)\n" : " (NOT reused)\n");
+    if (w[0] == 0xDEADBEEF && w[1023] == 0x12345678)
+        uart_puts("mem test ok\n");
+    else
+        uart_puts("mem test FAIL\n");
+    page_free(a);
+    page_free(c);
+    page_free(d);
+}
+
 /* ---------- main ---------- */
 void kernel_main(void) {
     uart_puts("NeoOS kernel: boot ok\n");
     irq_init();
     uart_puts("timer on\n");
+    mem_init();
+    mem_selftest();
     screen_init();
     draw_scene();
     uart_puts("Type something and press Enter.\n");
