@@ -308,6 +308,148 @@ static void mem_selftest(void) {
     page_free(d);
 }
 
+/* ---------- milestone 7: RAM filesystem + shell ---------- */
+static int streq(const char *a, const char *b) {
+    while (*a && *a == *b) { a++; b++; }
+    return *a == *b;
+}
+
+#define FS_MAX_FILES 16
+#define FS_MAX_PAGES 16
+#define FS_NAME_MAX 28
+struct fs_file {
+    int used;
+    char name[FS_NAME_MAX];
+    unsigned long size;
+    void *pages[FS_MAX_PAGES];
+};
+static struct fs_file fs_files[FS_MAX_FILES];
+
+static int fs_find(const char *name) {
+    for (int i = 0; i < FS_MAX_FILES; i++)
+        if (fs_files[i].used && streq(fs_files[i].name, name)) return i;
+    return -1;
+}
+static int fs_create(const char *name) {
+    int idx = fs_find(name);
+    if (idx >= 0) { /* truncate existing */
+        for (int p = 0; p < FS_MAX_PAGES; p++)
+            if (fs_files[idx].pages[p]) { page_free(fs_files[idx].pages[p]); fs_files[idx].pages[p] = 0; }
+        fs_files[idx].size = 0;
+        return idx;
+    }
+    for (int i = 0; i < FS_MAX_FILES; i++) {
+        if (!fs_files[i].used) {
+            fs_files[i].used = 1;
+            for (int j = 0; j < FS_NAME_MAX - 1 && name[j]; j++) fs_files[i].name[j] = name[j];
+            fs_files[i].name[FS_NAME_MAX - 1] = 0;
+            fs_files[i].size = 0;
+            for (int p = 0; p < FS_MAX_PAGES; p++) fs_files[i].pages[p] = 0;
+            return i;
+        }
+    }
+    return -1;
+}
+static int fs_append_byte(int idx, char ch) {
+    struct fs_file *f = &fs_files[idx];
+    unsigned long pi = f->size / PAGE_SIZE;
+    if (pi >= FS_MAX_PAGES) return -1;
+    if (!f->pages[pi]) {
+        f->pages[pi] = page_alloc();
+        if (!f->pages[pi]) return -1;
+    }
+    ((char *)f->pages[pi])[f->size % PAGE_SIZE] = ch;
+    f->size++;
+    return 0;
+}
+static void fs_delete(int idx) {
+    for (int p = 0; p < FS_MAX_PAGES; p++)
+        if (fs_files[idx].pages[p]) { page_free(fs_files[idx].pages[p]); fs_files[idx].pages[p] = 0; }
+    fs_files[idx].used = 0;
+    fs_files[idx].size = 0;
+}
+
+/* copy the next space-separated token from *cursor into buf; advance cursor */
+static void next_token(const char **cursor, char *buf, int bufsz) {
+    const char *s = *cursor;
+    while (*s == ' ') s++;
+    int i = 0;
+    while (*s && *s != ' ' && i < bufsz - 1) buf[i++] = *s++;
+    buf[i] = 0;
+    while (*s == ' ') s++;
+    *cursor = s;
+}
+
+static void shell(void) {
+    char line[128];
+    uart_puts("NeoOS shell. Type 'help'.\n");
+    while (1) {
+        uart_puts("neo> ");
+        int n = 0;
+        while (1) {
+            char c = uart_getc();
+            if (c == '\r') c = '\n';
+            uart_putc(c);
+            if (c == '\n') break;
+            if (n < 127) line[n++] = c;
+        }
+        line[n] = 0;
+        if (n == 0) continue;
+        const char *cur = line;
+        char cmd[32];
+        next_token(&cur, cmd, sizeof(cmd));
+        if (streq(cmd, "help")) {
+            uart_puts("commands: help ls write cat rm mem clear\n");
+        } else if (streq(cmd, "ls")) {
+            int any = 0;
+            for (int i = 0; i < FS_MAX_FILES; i++) {
+                if (fs_files[i].used) {
+                    uart_puts(fs_files[i].name);
+                    uart_puts("  ");
+                    uart_putnum(fs_files[i].size);
+                    uart_puts(" bytes\n");
+                    any = 1;
+                }
+            }
+            if (!any) uart_puts("(no files)\n");
+        } else if (streq(cmd, "write")) {
+            char name[FS_NAME_MAX];
+            next_token(&cur, name, sizeof(name));
+            if (!name[0]) { uart_puts("usage: write <name> <text>\n"); continue; }
+            int idx = fs_create(name);
+            if (idx < 0) { uart_puts("fs full\n"); continue; }
+            while (*cur) fs_append_byte(idx, *cur++);
+            uart_puts("ok\n");
+        } else if (streq(cmd, "cat")) {
+            char name[FS_NAME_MAX];
+            next_token(&cur, name, sizeof(name));
+            int idx = fs_find(name);
+            if (idx < 0) { uart_puts("no such file\n"); continue; }
+            struct fs_file *f = &fs_files[idx];
+            for (unsigned long i = 0; i < f->size; i++)
+                uart_putc(((char *)f->pages[i / PAGE_SIZE])[i % PAGE_SIZE]);
+            uart_putc('\n');
+        } else if (streq(cmd, "rm")) {
+            char name[FS_NAME_MAX];
+            next_token(&cur, name, sizeof(name));
+            int idx = fs_find(name);
+            if (idx < 0) { uart_puts("no such file\n"); continue; }
+            fs_delete(idx);
+            uart_puts("removed\n");
+        } else if (streq(cmd, "mem")) {
+            uart_putnum(mem_free);
+            uart_puts(" pages free\n");
+        } else if (streq(cmd, "clear")) {
+            draw_scene();
+            uart_puts("screen redrawn\n");
+        } else {
+            uart_puts("unknown command: ");
+            uart_puts(cmd);
+            uart_putc('\n');
+        }
+    }
+}
+
 /* ---------- main ---------- */
 void kernel_main(void) {
     uart_puts("NeoOS kernel: boot ok\n");
@@ -318,12 +460,5 @@ void kernel_main(void) {
     sched_init();
     screen_init();
     draw_scene();
-    uart_puts("Type something and press Enter.\n");
-    uart_puts("neo> ");
-    while (1) {
-        char c = uart_getc();
-        if (c == '\r') c = '\n';
-        uart_putc(c);
-        if (c == '\n') uart_puts("neo> ");
-    }
+    shell();
 }
