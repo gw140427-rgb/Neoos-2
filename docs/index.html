@@ -45,6 +45,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
 .app::after{content:"";position:absolute;right:-40px;top:-40px;width:170px;height:170px;border-radius:50%;background:var(--glow,#7c3aed22);filter:blur(30px);pointer-events:none}
 .app:hover{transform:translateY(-4px);border-color:#3c4a72;box-shadow:0 22px 50px #0008}
 .app.cloud{--accent:linear-gradient(90deg,#22d3ee,#3b82f6);--glow:#0ea5e933}
+.app.ai{--accent:linear-gradient(90deg,#8b5cf6,#22d3ee);--glow:#8b5cf633}
 .app.editor{--accent:linear-gradient(90deg,#8b5cf6,#f472b6);--glow:#8b5cf633}
 .app.game{--accent:linear-gradient(90deg,#fbbf24,#4ade80);--glow:#fbbf2433}
 .apphead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
@@ -78,6 +79,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
     </a>
     <nav class="toplinks" aria-label="앱 바로가기">
       <a href="/cloud" data-app="cloud">☁ Cloud</a>
+      <a href="/ai" data-app="ai">🤖 AI</a>
       <a href="/pricing">₩ 요금 정책</a>
       <a href="/editor" data-app="editor">🎬 Studio</a>
       <a href="/game" data-app="game">🍚 Game</a>
@@ -85,9 +87,9 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
   </header>
 
   <section class="hero">
-    <span class="kicker"><i></i> NEOOS PLATFORM · 3 APPS</span>
+    <span class="kicker"><i></i> NEOOS PLATFORM · 4 APPS</span>
     <h1>내 손안의 <span>AI 클라우드</span><br>그리고 크리에이티브 스튜디오</h1>
-    <p>서버를 띄우고, 영상을 자르고, 감옥에서 살아남기. 설치 없이 브라우저에서 바로 도는 건우의 3대 플랫폼.</p>
+    <p>서버를 띄우고, 영상을 자르고, 감옥에서 살아남기. 설치 없이 브라우저에서 바로 도는 건우의 4대 플랫폼.</p>
     <div class="chips">
       <span>⚡ 원클릭 VPS</span>
       <span>🎬 실시간 영상 편집</span>
@@ -97,6 +99,21 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
   </section>
 
   <main class="grid">
+    <a class="app ai" href="/ai" data-app="ai" aria-label="Neo-1 AI 채팅 열기">
+      <div class="apphead">
+        <span class="iconbox" aria-hidden="true">🤖</span>
+        <span class="tag live">● LIVE</span>
+      </div>
+      <h2>Neo-1 AI 채팅</h2>
+      <p class="sub">직접 학습시킨 내 AI 모델 · 실시간 대화</p>
+      <ul>
+        <li>EXAONE 4.0 1.2B를 직접 파인튜닝한 모델</li>
+        <li>VPS에서 실시간으로 답해요 (가짜 데모 아님)</li>
+        <li>Neo-1 Plus로 계속 업그레이드 중</li>
+      </ul>
+      <span class="cta">대화 시작 <span class="arrow">→</span></span>
+    </a>
+
     <a class="app cloud" href="/cloud" data-app="cloud" aria-label="NeoOS Cloud 콘솔 열기">
       <div class="apphead">
         <span class="iconbox" aria-hidden="true">☁</span>
@@ -151,7 +168,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
 
   <footer class="foot">
     <span>© 2026 NeoOS · made by <a href="https://github.com/gw140427-rgb" target="_blank" rel="noopener">@gw140427-rgb</a></span>
-    <span>3 apps · no install · <a href="https://github.com/gw140427-rgb/Neoos-2" target="_blank" rel="noopener">GitHub</a></span>
+    <span>4 apps · no install · <a href="https://github.com/gw140427-rgb/Neoos-2" target="_blank" rel="noopener">GitHub</a></span>
   </footer>
 </div>
 
@@ -175,7 +192,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
 /* GitHub Pages(하위 경로)에서도 /cloud·/editor·/game 링크가 열리도록 상대 경로로 바꿔 줘. */
 (function(){
   if(/(^|\.)github\.io$/i.test(location.hostname)){
-    var legacy={cloud:'./cloud/',editor:'./editor/',game:'./bean-jail/'};
+    var legacy={cloud:'./cloud/',editor:'./editor/',game:'./bean-jail/',ai:'./ai/'};
     document.querySelectorAll('a[data-app]').forEach(function(a){
       var app=a.dataset.app;
       a.setAttribute('href',app==='home'?'./':(legacy[app]||'./'+app+'/'));

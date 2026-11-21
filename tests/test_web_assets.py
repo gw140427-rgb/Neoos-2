@@ -37,14 +37,15 @@ class PortalTests(unittest.TestCase):
         self.html = read("index.html")
 
     def test_portal_links_the_three_apps(self):
-        for path in ("/cloud", "/editor", "/game"):
+        for path in ("/cloud", "/editor", "/game", "/ai"):
             self.assertIn('href="%s"' % path, self.html)
 
-    def test_portal_is_a_clean_three_card_hub(self):
+    def test_portal_is_a_clean_four_card_hub(self):
         self.assertIn("NeoOS Cloud", self.html)
         self.assertIn("CapCut Studio", self.html)
         self.assertIn("콩밥 먹기", self.html)
-        self.assertEqual(self.html.count('class="app '), 3)
+        self.assertIn("Neo-1 AI 채팅", self.html)
+        self.assertEqual(self.html.count('class="app '), 4)
 
     def test_removed_legacy_sections(self):
         lowered = self.html.lower()
@@ -187,6 +188,7 @@ class RouteRedirectTests(unittest.TestCase):
         self.assertEqual(rewrites["/cloud"], "/cloud/index.html")
         self.assertEqual(rewrites["/editor"], "/editor/index.html")
         self.assertEqual(rewrites["/game"], "/bean-jail/index.html")
+        self.assertEqual(rewrites["/ai"], "/ai/index.html")
         redirects = {item["source"]: item["destination"] for item in root["redirects"]}
         self.assertEqual(redirects["/vps/aws.html"], "/cloud")
         self.assertEqual(redirects["/vps"], "/cloud")

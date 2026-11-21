@@ -21,6 +21,10 @@
       "destination": "/bean-jail/index.html"
     },
     {
+      "source": "/ai",
+      "destination": "/ai/index.html"
+    },
+    {
       "source": "/api/instances/:match*",
       "destination": "/api/instances"
     }
