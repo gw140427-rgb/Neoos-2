@@ -54,7 +54,7 @@ class WorkerTests(unittest.TestCase):
             db_path = data / "neoos.sqlite3"
             with sqlite3.connect(db_path) as conn:
                 marker = conn.execute(
-                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json'"
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json_v2'"
                 ).fetchone()
                 events = conn.execute("SELECT event FROM journal ORDER BY id").fetchall()
             self.assertIsNone(marker)
@@ -77,12 +77,12 @@ class WorkerTests(unittest.TestCase):
             self.assertIsNotNone(marker)
             self.assertEqual(tasks_file.read_text(encoding="utf-8"), json.dumps(repaired_tasks))
 
-    def test_invalid_legacy_file_clears_stale_import_marker_and_retries(self):
+    def test_old_import_marker_does_not_block_repaired_legacy_file(self):
         with tempfile.TemporaryDirectory() as temp:
             data = Path(temp)
             tasks_file = data / "tasks.json"
-            original_content = '{"unexpected": true}'
-            tasks_file.write_text(original_content, encoding="utf-8")
+            repaired_tasks = [{"id": "legacyfix", "title": "Recovered after upgrade"}]
+            tasks_file.write_text(json.dumps(repaired_tasks), encoding="utf-8")
             db_path = data / "neoos.sqlite3"
             with sqlite3.connect(db_path) as conn:
                 conn.execute("CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
@@ -94,38 +94,33 @@ class WorkerTests(unittest.TestCase):
                     "INSERT INTO tasks(id,title,status,created_at,updated_at) VALUES (?,?,?,?,?)",
                     ("existing1", "Keep existing task", "queued", "before", "before"),
                 )
+                # Simulate a database marked imported by the older implementation.
                 conn.execute(
                     "INSERT INTO schema_meta(key,value) VALUES ('imported_tasks_json','old-marker')"
                 )
 
-            first_run = self.run_worker(temp)
+            result = self.run_worker(temp)
 
-            self.assertEqual(first_run.returncode, 0, first_run.stderr)
-            self.assertIn("must contain a JSON array", first_run.stdout)
-            self.assertEqual(tasks_file.read_text(encoding="utf-8"), original_content)
-            with sqlite3.connect(db_path) as conn:
-                marker = conn.execute(
-                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json'"
-                ).fetchone()
-                existing = conn.execute(
-                    "SELECT id,title FROM tasks WHERE id='existing1'"
-                ).fetchone()
-            self.assertIsNone(marker)
-            self.assertEqual(existing, ("existing1", "Keep existing task"))
-
-            repaired_tasks = [{"id": "legacyfix", "title": "Recovered after upgrade"}]
-            tasks_file.write_text(json.dumps(repaired_tasks), encoding="utf-8")
-            second_run = self.run_worker(temp)
-            self.assertEqual(second_run.returncode, 0, second_run.stderr)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertNotIn("must contain a JSON array", result.stdout)
+            self.assertEqual(tasks_file.read_text(encoding="utf-8"), json.dumps(repaired_tasks))
             with sqlite3.connect(db_path) as conn:
                 imported = conn.execute(
-                    "SELECT id,title FROM tasks WHERE id='legacyfix'"
+                    "SELECT id,title,status FROM tasks WHERE id='legacyfix'"
                 ).fetchone()
                 existing = conn.execute(
                     "SELECT id,title FROM tasks WHERE id='existing1'"
                 ).fetchone()
-            self.assertEqual(imported, ("legacyfix", "Recovered after upgrade"))
+                old_marker = conn.execute(
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json'"
+                ).fetchone()
+                new_marker = conn.execute(
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json_v2'"
+                ).fetchone()
+            self.assertEqual(imported, ("legacyfix", "Recovered after upgrade", "queued"))
             self.assertEqual(existing, ("existing1", "Keep existing task"))
+            self.assertEqual(old_marker, ("old-marker",))
+            self.assertIsNotNone(new_marker)
 
     def test_malformed_legacy_json_is_warned_and_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -172,6 +167,35 @@ class WorkerTests(unittest.TestCase):
                     "SELECT id,title,status FROM tasks WHERE id='odd01'"
                 ).fetchone()
             self.assertEqual(task, ("odd01", "Odd status", "queued"))
+
+
+    def test_missing_legacy_task_file_can_be_imported_when_added_later(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)
+            first_run = self.run_worker(temp)
+            self.assertEqual(first_run.returncode, 0, first_run.stderr)
+
+            db_path = data / "neoos.sqlite3"
+            with sqlite3.connect(db_path) as conn:
+                marker = conn.execute(
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json_v2'"
+                ).fetchone()
+            self.assertIsNone(marker)
+
+            tasks_file = data / "tasks.json"
+            late_tasks = [{"id": "late01", "title": "Added after first startup"}]
+            tasks_file.write_text(json.dumps(late_tasks), encoding="utf-8")
+            second_run = self.run_worker(temp)
+            self.assertEqual(second_run.returncode, 0, second_run.stderr)
+            with sqlite3.connect(db_path) as conn:
+                imported = conn.execute(
+                    "SELECT id,title FROM tasks WHERE id='late01'"
+                ).fetchone()
+                marker = conn.execute(
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json_v2'"
+                ).fetchone()
+            self.assertEqual(imported, ("late01", "Added after first startup"))
+            self.assertIsNotNone(marker)
 
 if __name__ == "__main__":
     unittest.main()
