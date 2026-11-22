@@ -32,6 +32,28 @@ def _legacy_data_dir() -> Path:
     return Path(os.environ.get("NEOOS_DATA_DIR", "data")).expanduser()
 
 
+def _read_legacy_tasks(path: Path) -> list[Any] | None:
+    """Read a legacy task array, returning None for unreadable or invalid data."""
+    try:
+        loaded = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    return loaded if isinstance(loaded, list) else None
+
+
+def legacy_tasks_import_warning() -> str | None:
+    """Describe invalid legacy task data without changing or deleting the file."""
+    legacy_tasks = _legacy_data_dir() / "tasks.json"
+    if not legacy_tasks.is_file():
+        return None
+    if _read_legacy_tasks(legacy_tasks) is None:
+        return (
+            "WARNING: legacy tasks.json must contain a JSON array and be readable; "
+            "the original file was preserved and import will retry."
+        )
+    return None
+
+
 def _initialize(conn: sqlite3.Connection) -> None:
     conn.execute("""
         CREATE TABLE IF NOT EXISTS tasks (
@@ -60,36 +82,45 @@ def _initialize(conn: sqlite3.Connection) -> None:
     conn.execute("BEGIN IMMEDIATE")
     try:
         legacy_dir = _legacy_data_dir()
+        legacy_tasks = legacy_dir / "tasks.json"
         tasks_marker = conn.execute(
             "SELECT value FROM schema_meta WHERE key = 'imported_tasks_json'"
         ).fetchone()
         if tasks_marker is None:
-            legacy_tasks = legacy_dir / "tasks.json"
+            tasks_imported = not legacy_tasks.is_file()
             if legacy_tasks.is_file():
-                try:
-                    loaded = json.loads(legacy_tasks.read_text(encoding="utf-8"))
-                    if isinstance(loaded, list):
-                        for item in loaded:
-                            if not isinstance(item, dict) or not item.get("id") or not item.get("title"):
-                                continue
-                            status = item.get("status", "queued")
-                            if status not in VALID_STATUSES:
-                                status = "queued"
-                            created = item.get("created_at") or now_iso()
-                            updated = item.get("updated_at") or created
-                            conn.execute(
-                                """INSERT OR IGNORE INTO tasks
-                                   (id,title,details,status,created_at,updated_at)
-                                   VALUES (?,?,?,?,?,?)""",
-                                (str(item["id"]), str(item["title"])[:160],
-                                 str(item.get("details", ""))[:2000], status,
-                                 str(created), str(updated)),
-                            )
-                except (OSError, json.JSONDecodeError):
-                    pass
+                loaded = _read_legacy_tasks(legacy_tasks)
+                if loaded is not None:
+                    for item in loaded:
+                        if not isinstance(item, dict) or not item.get("id") or not item.get("title"):
+                            continue
+                        status = item.get("status", "queued")
+                        if status not in VALID_STATUSES:
+                            status = "queued"
+                        created = item.get("created_at") or now_iso()
+                        updated = item.get("updated_at") or created
+                        conn.execute(
+                            """INSERT OR IGNORE INTO tasks
+                               (id,title,details,status,created_at,updated_at)
+                               VALUES (?,?,?,?,?,?)""",
+                            (str(item["id"]), str(item["title"])[:160],
+                             str(item.get("details", ""))[:2000], status,
+                             str(created), str(updated)),
+                        )
+                    tasks_imported = True
+
+            # Do not mark a bad legacy file as imported. If it is repaired later,
+            # the next database access can safely retry without losing its contents.
+            if tasks_imported:
+                conn.execute(
+                    "INSERT OR REPLACE INTO schema_meta(key,value) VALUES ('imported_tasks_json',?)",
+                    (now_iso(),),
+                )
+        elif legacy_tasks.is_file() and _read_legacy_tasks(legacy_tasks) is None:
+            # Older versions marked invalid JSON as imported; reset only that
+            # marker, leaving task rows and the original legacy file untouched.
             conn.execute(
-                "INSERT OR REPLACE INTO schema_meta(key,value) VALUES ('imported_tasks_json',?)",
-                (now_iso(),),
+                "DELETE FROM schema_meta WHERE key = 'imported_tasks_json'"
             )
 
         journal_marker = conn.execute(
