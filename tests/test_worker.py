@@ -218,8 +218,8 @@ class WorkerTests(unittest.TestCase):
             tasks_file = data / "tasks.json"
             original = [{
                 "id": "surrogate1",
-                "title": "Bad\\ud800title",
-                "details": "Details\\ud800",
+                "title": "Bad\ud800title",
+                "details": "Details\ud800",
             }]
             original_json = json.dumps(original)
             tasks_file.write_text(original_json, encoding="utf-8")
@@ -232,7 +232,7 @@ class WorkerTests(unittest.TestCase):
                 imported = conn.execute(
                     "SELECT id,title,details FROM tasks WHERE id='surrogate1'"
                 ).fetchone()
-            self.assertEqual(imported, ("surrogate1", "Bad\\ufffdtitle", "Details\\ufffd"))
+            self.assertEqual(imported, ("surrogate1", "Bad\ufffdtitle", "Details\ufffd"))
 
     def test_non_string_legacy_task_status_defaults_to_queued(self):
         with tempfile.TemporaryDirectory() as temp:
