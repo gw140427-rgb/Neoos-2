@@ -95,7 +95,7 @@ def _initialize(conn: sqlite3.Connection) -> None:
                         if not isinstance(item, dict) or not item.get("id") or not item.get("title"):
                             continue
                         status = item.get("status", "queued")
-                        if status not in VALID_STATUSES:
+                        if not isinstance(status, str) or status not in VALID_STATUSES:
                             status = "queued"
                         created = item.get("created_at") or now_iso()
                         updated = item.get("updated_at") or created
