@@ -131,6 +131,59 @@ class WorkerTests(unittest.TestCase):
                 task_count = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
             self.assertEqual(task_count, 2)
 
+    def test_old_marker_with_invalid_file_can_recover_later(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)
+            tasks_file = data / "tasks.json"
+            invalid_content = '{"tasks": "not-an-array"}'
+            tasks_file.write_text(invalid_content, encoding="utf-8")
+            db_path = data / "neoos.sqlite3"
+            with sqlite3.connect(db_path) as conn:
+                conn.execute("CREATE TABLE schema_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
+                conn.execute("""CREATE TABLE tasks (
+                    id TEXT PRIMARY KEY, title TEXT NOT NULL, details TEXT NOT NULL DEFAULT '',
+                    status TEXT NOT NULL, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+                )""")
+                conn.execute(
+                    "INSERT INTO tasks(id,title,status,created_at,updated_at) VALUES (?,?,?,?,?)",
+                    ("existing2", "Preserve old DB task", "queued", "before", "before"),
+                )
+                conn.execute(
+                    "INSERT INTO schema_meta(key,value) VALUES ('imported_tasks_json','old-marker')"
+                )
+
+            first_run = self.run_worker(temp)
+            self.assertEqual(first_run.returncode, 0, first_run.stderr)
+            self.assertIn("must contain a JSON array", first_run.stdout)
+            self.assertEqual(tasks_file.read_text(encoding="utf-8"), invalid_content)
+            with sqlite3.connect(db_path) as conn:
+                old_marker = conn.execute(
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json'"
+                ).fetchone()
+                new_marker = conn.execute(
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json_v2'"
+                ).fetchone()
+                existing = conn.execute(
+                    "SELECT id,title FROM tasks WHERE id='existing2'"
+                ).fetchone()
+            self.assertEqual(old_marker, ("old-marker",))
+            self.assertIsNone(new_marker)
+            self.assertEqual(existing, ("existing2", "Preserve old DB task"))
+
+            repaired_tasks = [{"id": "recovered2", "title": "Recovered after repair"}]
+            tasks_file.write_text(json.dumps(repaired_tasks), encoding="utf-8")
+            second_run = self.run_worker(temp)
+            self.assertEqual(second_run.returncode, 0, second_run.stderr)
+            with sqlite3.connect(db_path) as conn:
+                imported = conn.execute(
+                    "SELECT id,title FROM tasks WHERE id='recovered2'"
+                ).fetchone()
+                existing = conn.execute(
+                    "SELECT id,title FROM tasks WHERE id='existing2'"
+                ).fetchone()
+            self.assertEqual(imported, ("recovered2", "Recovered after repair"))
+            self.assertEqual(existing, ("existing2", "Preserve old DB task"))
+
     def test_malformed_legacy_json_is_warned_and_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
             data = Path(temp)
