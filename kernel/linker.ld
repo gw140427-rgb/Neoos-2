@@ -12,6 +12,7 @@ SECTIONS {
     .data : { *(.data) }
     .bss : { *(.bss) }
     . = . + 0x8000;
+    . = ALIGN(16);
     _stack_top = .;
     _kernel_end = .;
 }

@@ -91,15 +91,36 @@ EFI_STATUS EFIAPI efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable
         if (EFI_ERROR(status)) return status;
     }
 
-    // Firmware ran with the MMU on (identity-mapped on QEMU virt): turn it off
-    // so the kernel sees the same bare environment as QEMU -kernel boot.
+    // Firmware ran with the MMU on (identity-mapped on QEMU virt): turn it
+    // off so the kernel sees the same bare environment as QEMU -kernel boot.
+    // The handoff level matters: EDK2 runs at EL2 when the machine exposes
+    // EL2 (QEMU virt,virtualization=on; Vectras's ARM64 VM), and then the
+    // ACTIVE translation regime is EL2's. The old code only cleared
+    // SCTLR_EL1, leaving the EL2 MMU on with firmware page tables, and the
+    // kernel faulted on its first instruction. Clear SCTLR at the level we
+    // are actually running at. (The kernel's boot stub also normalizes the
+    // exception level itself; this keeps the loader's promise true too.)
     __asm__ volatile(
+        "mrs x0, CurrentEL\n"
+        "lsr x0, x0, #2\n"
+        "and x0, x0, #3\n"
+        "cmp x0, #2\n"
+        "b.eq 2f\n"
         "mrs x0, sctlr_el1\n"
         "bic x0, x0, #1\n"
         "bic x0, x0, #4\n"
         "bic x0, x0, #0x1000\n"
         "msr sctlr_el1, x0\n"
         "tlbi vmalle1\n"
+        "b 3f\n"
+        "2:\n"
+        "mrs x0, sctlr_el2\n"
+        "bic x0, x0, #1\n"
+        "bic x0, x0, #4\n"
+        "bic x0, x0, #0x1000\n"
+        "msr sctlr_el2, x0\n"
+        "tlbi alle2\n"
+        "3:\n"
         "dsb sy\n"
         "isb\n"
         ::: "x0", "memory");
