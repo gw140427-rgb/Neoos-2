@@ -19,5 +19,8 @@ kernel.elf: boot.o kernel.o vectors.o linker.ld
 run: kernel.elf
 	qemu-system-aarch64 -machine virt -cpu cortex-a57 -nographic -kernel kernel.elf
 
+run-gui: kernel.elf
+	qemu-system-aarch64 -machine virt -cpu cortex-a57 -m 128 -kernel kernel.elf -device ramfb -device virtio-tablet-device -device virtio-keyboard-device -display vnc=:99 -serial mon:stdio
+
 clean:
 	rm -f *.o kernel.elf

@@ -1,5 +1,6 @@
-// NeoOS kernel - milestone 3: draw on a real screen (QEMU ramfb framebuffer)
-// plus the milestone 2 serial echo. QEMU virt: UART 0x09000000, fw_cfg 0x09020000.
+// NeoOS kernel - milestone 8: GUI (window manager + system apps) on top of
+// milestones 1-7 (boot, serial shell, ramfb, timer IRQ, page allocator,
+// preemptive multitasking, RAM filesystem). QEMU virt platform.
 volatile unsigned int *const UART0 = (unsigned int *)0x09000000;
 
 /* ---------- serial (UART) ---------- */
@@ -188,6 +189,7 @@ static void fw_dma_write(int sel, const void *buf, unsigned int len) {
     }
 }
 
+static int fb_ready = 0;
 static void screen_init(void) {
     int sel = fw_find_file("etc/ramfb");
     if (sel < 0) {
@@ -203,6 +205,7 @@ static void screen_init(void) {
         for (int i = 0; i < 4; i++)
             cfg[8 + f * 4 + i] = (unsigned char)(fields[f] >> (24 - 8 * i));
     fw_dma_write(sel, cfg, 28);
+    fb_ready = 1;
     uart_puts("screen on\n");
 }
 
@@ -210,8 +213,12 @@ static void draw_pixel(int x, int y, unsigned int color) {
     if (x >= 0 && x < FB_W && y >= 0 && y < FB_H) fb[y * FB_W + x] = color;
 }
 static void fill_rect(int x, int y, int w, int h, unsigned int color) {
-    for (int j = y; j < y + h; j++)
-        for (int i = x; i < x + w; i++) draw_pixel(i, j, color);
+    int x0 = x < 0 ? 0 : x, y0 = y < 0 ? 0 : y;
+    int x1 = x + w > FB_W ? FB_W : x + w, y1 = y + h > FB_H ? FB_H : y + h;
+    for (int j = y0; j < y1; j++) {
+        unsigned int *row = &fb[j * FB_W];
+        for (int i = x0; i < x1; i++) row[i] = color;
+    }
 }
 
 /* Tiny 5x7 font: only the letters needed for "NeoOS" */
@@ -236,6 +243,140 @@ static void draw_scene(void) {
     draw_letter(glyph_o, x, y, s, 0x00FFFFFF); x += 60;
     draw_letter(glyph_o, x, y, s, 0x00FFFFFF); x += 60;
     draw_letter(glyph_S, x, y, s, 0x00FFFFFF);
+}
+
+/* ---------- milestone 8: full 8x8 font + text drawing ----------
+   Glyphs: public-domain IBM VGA 8x8 font (font8x8_basic, chars 32..126).
+   One byte per row, bit j (1<<j) is the pixel at column j. */
+static const unsigned char font8x8[95][8] = {
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    {0x18, 0x3C, 0x3C, 0x18, 0x18, 0x00, 0x18, 0x00},
+    {0x36, 0x36, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+    {0x36, 0x36, 0x7F, 0x36, 0x7F, 0x36, 0x36, 0x00},
+    {0x0C, 0x3E, 0x03, 0x1E, 0x30, 0x1F, 0x0C, 0x00},
+    {0x00, 0x63, 0x33, 0x18, 0x0C, 0x66, 0x63, 0x00},
+    {0x1C, 0x36, 0x1C, 0x6E, 0x3B, 0x33, 0x6E, 0x00},
+    {0x06, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00},
+    {0x18, 0x0C, 0x06, 0x06, 0x06, 0x0C, 0x18, 0x00},
+    {0x06, 0x0C, 0x18, 0x18, 0x18, 0x0C, 0x06, 0x00},
+    {0x00, 0x66, 0x3C, 0xFF, 0x3C, 0x66, 0x00, 0x00},
+    {0x00, 0x0C, 0x0C, 0x3F, 0x0C, 0x0C, 0x00, 0x00},
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C, 0x06},
+    {0x00, 0x00, 0x00, 0x3F, 0x00, 0x00, 0x00, 0x00},
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C, 0x00},
+    {0x60, 0x30, 0x18, 0x0C, 0x06, 0x03, 0x01, 0x00},
+    {0x3E, 0x63, 0x73, 0x7B, 0x6F, 0x67, 0x3E, 0x00},
+    {0x0C, 0x0E, 0x0C, 0x0C, 0x0C, 0x0C, 0x3F, 0x00},
+    {0x1E, 0x33, 0x30, 0x1C, 0x06, 0x33, 0x3F, 0x00},
+    {0x1E, 0x33, 0x30, 0x1C, 0x30, 0x33, 0x1E, 0x00},
+    {0x38, 0x3C, 0x36, 0x33, 0x7F, 0x30, 0x78, 0x00},
+    {0x3F, 0x03, 0x1F, 0x30, 0x30, 0x33, 0x1E, 0x00},
+    {0x1C, 0x06, 0x03, 0x1F, 0x33, 0x33, 0x1E, 0x00},
+    {0x3F, 0x33, 0x30, 0x18, 0x0C, 0x0C, 0x0C, 0x00},
+    {0x1E, 0x33, 0x33, 0x1E, 0x33, 0x33, 0x1E, 0x00},
+    {0x1E, 0x33, 0x33, 0x3E, 0x30, 0x18, 0x0E, 0x00},
+    {0x00, 0x0C, 0x0C, 0x00, 0x00, 0x0C, 0x0C, 0x00},
+    {0x00, 0x0C, 0x0C, 0x00, 0x00, 0x0C, 0x0C, 0x06},
+    {0x18, 0x0C, 0x06, 0x03, 0x06, 0x0C, 0x18, 0x00},
+    {0x00, 0x00, 0x3F, 0x00, 0x00, 0x3F, 0x00, 0x00},
+    {0x06, 0x0C, 0x18, 0x30, 0x18, 0x0C, 0x06, 0x00},
+    {0x1E, 0x33, 0x30, 0x18, 0x0C, 0x00, 0x0C, 0x00},
+    {0x3E, 0x63, 0x7B, 0x7B, 0x7B, 0x03, 0x1E, 0x00},
+    {0x0C, 0x1E, 0x33, 0x33, 0x3F, 0x33, 0x33, 0x00},
+    {0x3F, 0x66, 0x66, 0x3E, 0x66, 0x66, 0x3F, 0x00},
+    {0x3C, 0x66, 0x03, 0x03, 0x03, 0x66, 0x3C, 0x00},
+    {0x1F, 0x36, 0x66, 0x66, 0x66, 0x36, 0x1F, 0x00},
+    {0x7F, 0x46, 0x16, 0x1E, 0x16, 0x46, 0x7F, 0x00},
+    {0x7F, 0x46, 0x16, 0x1E, 0x16, 0x06, 0x0F, 0x00},
+    {0x3C, 0x66, 0x03, 0x03, 0x73, 0x66, 0x7C, 0x00},
+    {0x33, 0x33, 0x33, 0x3F, 0x33, 0x33, 0x33, 0x00},
+    {0x1E, 0x0C, 0x0C, 0x0C, 0x0C, 0x0C, 0x1E, 0x00},
+    {0x78, 0x30, 0x30, 0x30, 0x33, 0x33, 0x1E, 0x00},
+    {0x67, 0x66, 0x36, 0x1E, 0x36, 0x66, 0x67, 0x00},
+    {0x0F, 0x06, 0x06, 0x06, 0x46, 0x66, 0x7F, 0x00},
+    {0x63, 0x77, 0x7F, 0x7F, 0x6B, 0x63, 0x63, 0x00},
+    {0x63, 0x67, 0x6F, 0x7B, 0x73, 0x63, 0x63, 0x00},
+    {0x1C, 0x36, 0x63, 0x63, 0x63, 0x36, 0x1C, 0x00},
+    {0x3F, 0x66, 0x66, 0x3E, 0x06, 0x06, 0x0F, 0x00},
+    {0x1E, 0x33, 0x33, 0x33, 0x3B, 0x1E, 0x38, 0x00},
+    {0x3F, 0x66, 0x66, 0x3E, 0x36, 0x66, 0x67, 0x00},
+    {0x1E, 0x33, 0x07, 0x0E, 0x38, 0x33, 0x1E, 0x00},
+    {0x3F, 0x2D, 0x0C, 0x0C, 0x0C, 0x0C, 0x1E, 0x00},
+    {0x33, 0x33, 0x33, 0x33, 0x33, 0x33, 0x3F, 0x00},
+    {0x33, 0x33, 0x33, 0x33, 0x33, 0x1E, 0x0C, 0x00},
+    {0x63, 0x63, 0x63, 0x6B, 0x7F, 0x77, 0x63, 0x00},
+    {0x63, 0x63, 0x36, 0x1C, 0x1C, 0x36, 0x63, 0x00},
+    {0x33, 0x33, 0x33, 0x1E, 0x0C, 0x0C, 0x1E, 0x00},
+    {0x7F, 0x63, 0x31, 0x18, 0x4C, 0x66, 0x7F, 0x00},
+    {0x1E, 0x06, 0x06, 0x06, 0x06, 0x06, 0x1E, 0x00},
+    {0x03, 0x06, 0x0C, 0x18, 0x30, 0x60, 0x40, 0x00},
+    {0x1E, 0x18, 0x18, 0x18, 0x18, 0x18, 0x1E, 0x00},
+    {0x08, 0x1C, 0x36, 0x63, 0x00, 0x00, 0x00, 0x00},
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF},
+    {0x0C, 0x0C, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00},
+    {0x00, 0x00, 0x1E, 0x30, 0x3E, 0x33, 0x6E, 0x00},
+    {0x07, 0x06, 0x06, 0x3E, 0x66, 0x66, 0x3B, 0x00},
+    {0x00, 0x00, 0x1E, 0x33, 0x03, 0x33, 0x1E, 0x00},
+    {0x38, 0x30, 0x30, 0x3E, 0x33, 0x33, 0x6E, 0x00},
+    {0x00, 0x00, 0x1E, 0x33, 0x3F, 0x03, 0x1E, 0x00},
+    {0x1C, 0x36, 0x06, 0x0F, 0x06, 0x06, 0x0F, 0x00},
+    {0x00, 0x00, 0x6E, 0x33, 0x33, 0x3E, 0x30, 0x1F},
+    {0x07, 0x06, 0x36, 0x6E, 0x66, 0x66, 0x67, 0x00},
+    {0x0C, 0x00, 0x0E, 0x0C, 0x0C, 0x0C, 0x1E, 0x00},
+    {0x30, 0x00, 0x30, 0x30, 0x30, 0x33, 0x33, 0x1E},
+    {0x07, 0x06, 0x66, 0x36, 0x1E, 0x36, 0x67, 0x00},
+    {0x0E, 0x0C, 0x0C, 0x0C, 0x0C, 0x0C, 0x1E, 0x00},
+    {0x00, 0x00, 0x33, 0x7F, 0x7F, 0x6B, 0x63, 0x00},
+    {0x00, 0x00, 0x1F, 0x33, 0x33, 0x33, 0x33, 0x00},
+    {0x00, 0x00, 0x1E, 0x33, 0x33, 0x33, 0x1E, 0x00},
+    {0x00, 0x00, 0x3B, 0x66, 0x66, 0x3E, 0x06, 0x0F},
+    {0x00, 0x00, 0x6E, 0x33, 0x33, 0x3E, 0x30, 0x78},
+    {0x00, 0x00, 0x3B, 0x6E, 0x66, 0x06, 0x0F, 0x00},
+    {0x00, 0x00, 0x3E, 0x03, 0x1E, 0x30, 0x1F, 0x00},
+    {0x08, 0x0C, 0x3E, 0x0C, 0x0C, 0x2C, 0x18, 0x00},
+    {0x00, 0x00, 0x33, 0x33, 0x33, 0x33, 0x6E, 0x00},
+    {0x00, 0x00, 0x33, 0x33, 0x33, 0x1E, 0x0C, 0x00},
+    {0x00, 0x00, 0x63, 0x6B, 0x7F, 0x7F, 0x36, 0x00},
+    {0x00, 0x00, 0x63, 0x36, 0x1C, 0x36, 0x63, 0x00},
+    {0x00, 0x00, 0x33, 0x33, 0x33, 0x3E, 0x30, 0x1F},
+    {0x00, 0x00, 0x3F, 0x19, 0x0C, 0x26, 0x3F, 0x00},
+    {0x38, 0x0C, 0x0C, 0x07, 0x0C, 0x0C, 0x38, 0x00},
+    {0x18, 0x18, 0x18, 0x00, 0x18, 0x18, 0x18, 0x00},
+    {0x07, 0x0C, 0x0C, 0x38, 0x0C, 0x0C, 0x07, 0x00},
+    {0x6E, 0x3B, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+};
+
+static void draw_char(int x, int y, char c, int scale, unsigned int color) {
+    unsigned char uc = (unsigned char)c;
+    if (uc < 32 || uc > 126) uc = '?';
+    const unsigned char *g = font8x8[uc - 32];
+    for (int row = 0; row < 8; row++)
+        for (int col = 0; col < 8; col++)
+            if (g[row] & (1u << col))
+                fill_rect(x + col * scale, y + row * scale, scale, scale, color);
+}
+static void draw_text(int x, int y, const char *s, int scale, unsigned int color) {
+    while (*s) { draw_char(x, y, *s++, scale, color); x += 8 * scale; }
+}
+static int text_w(const char *s, int scale) {
+    int n = 0;
+    while (s[n]) n++;
+    return n * 8 * scale;
+}
+static char *u2s(unsigned long v, char *buf) {
+    char tmp[24];
+    int i = 0, j = 0;
+    if (v == 0) tmp[i++] = '0';
+    while (v) { tmp[i++] = (char)('0' + (v % 10)); v /= 10; }
+    while (i) buf[j++] = tmp[--i];
+    buf[j] = 0;
+    return buf;
+}
+static void clock_str(unsigned long t, char *buf) { /* uptime as HH:MM:SS */
+    unsigned long h = (t / 3600) % 100, m = (t / 60) % 60, s = t % 60;
+    buf[0] = (char)('0' + h / 10); buf[1] = (char)('0' + h % 10); buf[2] = ':';
+    buf[3] = (char)('0' + m / 10); buf[4] = (char)('0' + m % 10); buf[5] = ':';
+    buf[6] = (char)('0' + s / 10); buf[7] = (char)('0' + s % 10); buf[8] = 0;
 }
 
 /* ---------- milestone 5: physical page allocator (4KB pages, bitmap) ---------- */
@@ -306,6 +447,21 @@ static void mem_selftest(void) {
     page_free(a);
     page_free(c);
     page_free(d);
+}
+
+/* Shell output sink: 0 = UART (serial shell), 1 = GUI terminal window.
+   term_* are defined in the milestone 8 section below. */
+static int out_to_term = 0;
+static void term_putc(char c);
+static void term_clear(void);
+static void sh_putc(char c) { if (out_to_term) term_putc(c); else uart_putc(c); }
+static void sh_puts(const char *s) { while (*s) sh_putc(*s++); }
+static void sh_putnum(unsigned long v) {
+    char buf[24];
+    int i = 0;
+    if (v == 0) { sh_putc('0'); return; }
+    while (v) { buf[i++] = (char)('0' + (v % 10)); v /= 10; }
+    while (i) sh_putc(buf[--i]);
 }
 
 /* ---------- milestone 7: RAM filesystem + shell ---------- */
@@ -380,6 +536,61 @@ static void next_token(const char **cursor, char *buf, int bufsz) {
     *cursor = s;
 }
 
+static void shell_exec(char *line) {
+    const char *cur = line;
+    char cmd[32];
+    next_token(&cur, cmd, sizeof(cmd));
+    if (streq(cmd, "help")) {
+        sh_puts("commands: help ls write cat rm mem clear\n");
+    } else if (streq(cmd, "ls")) {
+        int any = 0;
+        for (int i = 0; i < FS_MAX_FILES; i++) {
+            if (fs_files[i].used) {
+                sh_puts(fs_files[i].name);
+                sh_puts("  ");
+                sh_putnum(fs_files[i].size);
+                sh_puts(" bytes\n");
+                any = 1;
+            }
+        }
+        if (!any) sh_puts("(no files)\n");
+    } else if (streq(cmd, "write")) {
+        char name[FS_NAME_MAX];
+        next_token(&cur, name, sizeof(name));
+        if (!name[0]) { sh_puts("usage: write <name> <text>\n"); return; }
+        int idx = fs_create(name);
+        if (idx < 0) { sh_puts("fs full\n"); return; }
+        while (*cur) fs_append_byte(idx, *cur++);
+        sh_puts("ok\n");
+    } else if (streq(cmd, "cat")) {
+        char name[FS_NAME_MAX];
+        next_token(&cur, name, sizeof(name));
+        int idx = fs_find(name);
+        if (idx < 0) { sh_puts("no such file\n"); return; }
+        struct fs_file *f = &fs_files[idx];
+        for (unsigned long i = 0; i < f->size; i++)
+            sh_putc(((char *)f->pages[i / PAGE_SIZE])[i % PAGE_SIZE]);
+        sh_putc('\n');
+    } else if (streq(cmd, "rm")) {
+        char name[FS_NAME_MAX];
+        next_token(&cur, name, sizeof(name));
+        int idx = fs_find(name);
+        if (idx < 0) { sh_puts("no such file\n"); return; }
+        fs_delete(idx);
+        sh_puts("removed\n");
+    } else if (streq(cmd, "mem")) {
+        sh_putnum(mem_free);
+        sh_puts(" pages free\n");
+    } else if (streq(cmd, "clear")) {
+        if (out_to_term) term_clear(); else draw_scene();
+        sh_puts("screen redrawn\n");
+    } else {
+        sh_puts("unknown command: ");
+        sh_puts(cmd);
+        sh_putc('\n');
+    }
+}
+
 static void shell(void) {
     char line[128];
     uart_puts("NeoOS shell. Type 'help'.\n");
@@ -395,58 +606,536 @@ static void shell(void) {
         }
         line[n] = 0;
         if (n == 0) continue;
-        const char *cur = line;
-        char cmd[32];
-        next_token(&cur, cmd, sizeof(cmd));
-        if (streq(cmd, "help")) {
-            uart_puts("commands: help ls write cat rm mem clear\n");
-        } else if (streq(cmd, "ls")) {
-            int any = 0;
-            for (int i = 0; i < FS_MAX_FILES; i++) {
-                if (fs_files[i].used) {
-                    uart_puts(fs_files[i].name);
-                    uart_puts("  ");
-                    uart_putnum(fs_files[i].size);
-                    uart_puts(" bytes\n");
-                    any = 1;
-                }
-            }
-            if (!any) uart_puts("(no files)\n");
-        } else if (streq(cmd, "write")) {
-            char name[FS_NAME_MAX];
-            next_token(&cur, name, sizeof(name));
-            if (!name[0]) { uart_puts("usage: write <name> <text>\n"); continue; }
-            int idx = fs_create(name);
-            if (idx < 0) { uart_puts("fs full\n"); continue; }
-            while (*cur) fs_append_byte(idx, *cur++);
-            uart_puts("ok\n");
-        } else if (streq(cmd, "cat")) {
-            char name[FS_NAME_MAX];
-            next_token(&cur, name, sizeof(name));
-            int idx = fs_find(name);
-            if (idx < 0) { uart_puts("no such file\n"); continue; }
-            struct fs_file *f = &fs_files[idx];
-            for (unsigned long i = 0; i < f->size; i++)
-                uart_putc(((char *)f->pages[i / PAGE_SIZE])[i % PAGE_SIZE]);
-            uart_putc('\n');
-        } else if (streq(cmd, "rm")) {
-            char name[FS_NAME_MAX];
-            next_token(&cur, name, sizeof(name));
-            int idx = fs_find(name);
-            if (idx < 0) { uart_puts("no such file\n"); continue; }
-            fs_delete(idx);
-            uart_puts("removed\n");
-        } else if (streq(cmd, "mem")) {
-            uart_putnum(mem_free);
-            uart_puts(" pages free\n");
-        } else if (streq(cmd, "clear")) {
-            draw_scene();
-            uart_puts("screen redrawn\n");
-        } else {
-            uart_puts("unknown command: ");
-            uart_puts(cmd);
-            uart_putc('\n');
+        shell_exec(line);
+    }
+}
+
+/* ---------- milestone 8: virtio-input, window manager, GUI apps ---------- */
+static int gui_dirty = 1;
+static int mouse_x = 512, mouse_y = 384, mouse_btn = 0;
+
+/* --- input queue (virtio keyboard + UART both feed this) --- */
+static char inq[128];
+static int inq_head = 0, inq_tail = 0;
+static void inq_push(char c) {
+    int n = (inq_tail + 1) % 128;
+    if (n != inq_head) { inq[inq_tail] = c; inq_tail = n; }
+}
+static int inq_pop(void) {
+    if (inq_head == inq_tail) return -1;
+    char c = inq[inq_head];
+    inq_head = (inq_head + 1) % 128;
+    return (int)(unsigned char)c;
+}
+
+/* --- keyboard translation (Linux keycodes -> ASCII) --- */
+static int kb_shift = 0;
+static const char kb_map[58] = {
+    0, 27, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 8, 9,
+    'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']', '\n', 0,
+    'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\'', '`', 0, '\\',
+    'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, '*', 0, ' '
+};
+static char kb_shifted(char c) {
+    if (c >= 'a' && c <= 'z') return (char)(c - 32);
+    switch (c) {
+        case '1': return '!'; case '2': return '@'; case '3': return '#';
+        case '4': return '$'; case '5': return '%'; case '6': return '^';
+        case '7': return '&'; case '8': return '*'; case '9': return '(';
+        case '0': return ')'; case '-': return '_'; case '=': return '+';
+        case '[': return '{'; case ']': return '}'; case ';': return ':';
+        case '\'': return '"'; case '`': return '~'; case '\\': return '|';
+        case ',': return '<'; case '.': return '>'; case '/': return '?';
+    }
+    return c;
+}
+static void kb_event(unsigned int code, int value) {
+    if (code == 42 || code == 54) { kb_shift = (value != 0); return; }
+    if (value == 0 || code >= 58) return; /* key up / out of map */
+    char c = kb_map[code];
+    if (kb_shift) c = kb_shifted(c);
+    if (c) inq_push(c);
+}
+
+/* --- terminal window text grid --- */
+#define TERM_COLS 37
+#define TERM_ROWS 18
+static char tgrid[TERM_ROWS][TERM_COLS];
+static int tcur_x = 0, tcur_y = 0;
+
+static void term_clear(void) {
+    for (int y = 0; y < TERM_ROWS; y++)
+        for (int x = 0; x < TERM_COLS; x++) tgrid[y][x] = ' ';
+    tcur_x = 0;
+    tcur_y = 0;
+}
+static void term_scroll(void) {
+    for (int y = 0; y < TERM_ROWS - 1; y++)
+        for (int x = 0; x < TERM_COLS; x++) tgrid[y][x] = tgrid[y + 1][x];
+    for (int x = 0; x < TERM_COLS; x++) tgrid[TERM_ROWS - 1][x] = ' ';
+}
+static void term_putc(char c) {
+    if (c == '\n') { tcur_x = 0; tcur_y++; }
+    else if (c == '\r') { tcur_x = 0; }
+    else if (c >= 32 && c < 127) {
+        tgrid[tcur_y][tcur_x] = c;
+        if (++tcur_x >= TERM_COLS) { tcur_x = 0; tcur_y++; }
+    }
+    if (tcur_y >= TERM_ROWS) { term_scroll(); tcur_y = TERM_ROWS - 1; }
+    gui_dirty = 1;
+}
+static void term_puts(const char *s) { while (*s) term_putc(*s++); }
+
+static char term_line[128];
+static int term_line_len = 0;
+static void term_erase(void) {
+    if (tcur_x > 0) tcur_x--;
+    else if (tcur_y > 0) { tcur_y--; tcur_x = TERM_COLS - 1; }
+    tgrid[tcur_y][tcur_x] = ' ';
+    gui_dirty = 1;
+}
+static void term_key(char c) {
+    if (c == '\n') {
+        term_putc('\n');
+        term_line[term_line_len] = 0;
+        if (term_line_len > 0) {
+            out_to_term = 1;
+            shell_exec(term_line);
+            out_to_term = 0;
         }
+        term_line_len = 0;
+        term_puts("neo> ");
+    } else if (c == 8 || c == 127) {
+        if (term_line_len > 0) { term_line_len--; term_erase(); }
+    } else if (c >= 32 && c < 127) {
+        if (term_line_len < 127) { term_line[term_line_len++] = c; term_putc(c); }
+    }
+    gui_dirty = 1;
+}
+
+/* --- window manager --- */
+enum { W_TERM, W_INFO, W_FILES, W_SETTINGS };
+struct window { int x, y, w, h, kind; const char *title; };
+static struct window wins[4];
+static int zord[4]; /* draw order: zord[3] is topmost (focused) */
+static int drag_win = -1, drag_dx = 0, drag_dy = 0;
+static unsigned int desktop_color = 0x00101828;
+static const unsigned int swatches[4] = {0x00101828, 0x00142A18, 0x002A1830, 0x00332A18};
+static const char *swatch_names[4] = {"Navy", "Forest", "Plum", "Bronze"};
+static int swatch_sel = 0;
+
+static void wm_init(void) {
+    wins[W_TERM] = (struct window){24, 48, 624, 330, W_TERM, "Terminal"};
+    wins[W_INFO] = (struct window){664, 48, 336, 176, W_INFO, "System Info"};
+    wins[W_FILES] = (struct window){664, 248, 336, 200, W_FILES, "Files"};
+    wins[W_SETTINGS] = (struct window){300, 428, 340, 180, W_SETTINGS, "Settings"};
+    zord[0] = W_INFO; zord[1] = W_FILES; zord[2] = W_SETTINGS; zord[3] = W_TERM;
+}
+static void wm_raise(int wi) {
+    int pos = 0;
+    for (int i = 0; i < 4; i++) if (zord[i] == wi) pos = i;
+    for (int i = pos; i < 3; i++) zord[i] = zord[i + 1];
+    zord[3] = wi;
+}
+static void settings_click(struct window *w, int x, int y) {
+    for (int i = 0; i < 4; i++) {
+        int sx = w->x + 16 + i * 56, sy = w->y + 62;
+        if (x >= sx && x < sx + 44 && y >= sy && y < sy + 44) {
+            swatch_sel = i;
+            desktop_color = swatches[i];
+        }
+    }
+}
+static void wm_press(int x, int y) {
+    for (int zi = 3; zi >= 0; zi--) {
+        int wi = zord[zi];
+        struct window *w = &wins[wi];
+        if (x >= w->x && x < w->x + w->w && y >= w->y && y < w->y + w->h) {
+            wm_raise(wi);
+            if (y < w->y + 22) {
+                drag_win = wi;
+                drag_dx = x - w->x;
+                drag_dy = y - w->y;
+            } else if (w->kind == W_SETTINGS) {
+                settings_click(w, x, y);
+            }
+            gui_dirty = 1;
+            return;
+        }
+    }
+}
+static void wm_release(void) { drag_win = -1; gui_dirty = 1; }
+static void wm_drag_update(void) {
+    if (drag_win < 0) return;
+    struct window *w = &wins[drag_win];
+    int nx = mouse_x - drag_dx, ny = mouse_y - drag_dy;
+    if (nx < 0) nx = 0;
+    if (nx > FB_W - 80) nx = FB_W - 80;
+    if (ny < 28) ny = 28;
+    if (ny > FB_H - 40) ny = FB_H - 40;
+    w->x = nx;
+    w->y = ny;
+}
+
+static void buf_add(char *b, const char *s) {
+    int i = 0;
+    while (b[i]) i++;
+    while (*s) b[i++] = *s++;
+    b[i] = 0;
+}
+static void buf_addnum(char *b, unsigned long v) {
+    char tmp[24];
+    u2s(v, tmp);
+    buf_add(b, tmp);
+}
+static void rect_outline(int x, int y, int w, int h, unsigned int color) {
+    fill_rect(x, y, w, 2, color);
+    fill_rect(x, y + h - 2, w, 2, color);
+    fill_rect(x, y, 2, h, color);
+    fill_rect(x + w - 2, y, 2, h, color);
+}
+
+static void draw_term_content(struct window *w, int focused) {
+    for (int r = 0; r < TERM_ROWS; r++)
+        for (int c = 0; c < TERM_COLS; c++) {
+            char ch = tgrid[r][c];
+            if (ch != ' ')
+                draw_char(w->x + 8 + c * 16, w->y + 27 + r * 16, ch, 2, 0x00A8E6A0);
+        }
+    if (focused)
+        fill_rect(w->x + 8 + tcur_x * 16, w->y + 27 + tcur_y * 16 + 14, 14, 2, 0x00A8E6A0);
+}
+static void draw_info_content(struct window *w) {
+    char buf[48], clk[12];
+    int x = w->x + 12, y = w->y + 30;
+    draw_text(x, y, "NeoOS stage 8 GUI", 2, 0x00FFFFFF); y += 20;
+    clock_str(ticks, clk);
+    buf[0] = 0; buf_add(buf, "Uptime "); buf_add(buf, clk);
+    draw_text(x, y, buf, 2, 0x00C0D8E8); y += 20;
+    buf[0] = 0; buf_add(buf, "Free pages "); buf_addnum(buf, mem_free);
+    draw_text(x, y, buf, 2, 0x00C0D8E8); y += 20;
+    buf[0] = 0; buf_add(buf, "Free RAM "); buf_addnum(buf, mem_free / 256); buf_add(buf, " MB");
+    draw_text(x, y, buf, 2, 0x00C0D8E8); y += 20;
+    draw_text(x, y, "Tasks 2 (preemptive)", 2, 0x00C0D8E8); y += 20;
+    buf[0] = 0; buf_add(buf, "Mouse "); buf_addnum(buf, (unsigned long)mouse_x);
+    buf_add(buf, ", "); buf_addnum(buf, (unsigned long)mouse_y);
+    draw_text(x, y, buf, 2, 0x00C0D8E8);
+}
+static void draw_files_content(struct window *w) {
+    int y = w->y + 30, any = 0;
+    for (int i = 0; i < FS_MAX_FILES; i++) {
+        if (!fs_files[i].used) continue;
+        if (y + 16 > w->y + w->h - 6) break;
+        any = 1;
+        char buf[48];
+        buf[0] = 0;
+        buf_add(buf, fs_files[i].name);
+        buf_add(buf, "  ");
+        buf_addnum(buf, fs_files[i].size);
+        buf_add(buf, " B");
+        draw_text(w->x + 12, y, buf, 2, 0x00D8E8F0);
+        y += 20;
+    }
+    if (!any) draw_text(w->x + 12, y, "(no files)", 2, 0x00809098);
+}
+static void draw_settings_content(struct window *w) {
+    draw_text(w->x + 16, w->y + 32, "Desktop background", 2, 0x00FFFFFF);
+    for (int i = 0; i < 4; i++) {
+        int sx = w->x + 16 + i * 56, sy = w->y + 62;
+        fill_rect(sx, sy, 44, 44, swatches[i]);
+        if (i == swatch_sel) rect_outline(sx - 2, sy - 2, 48, 48, 0x00FFFFFF);
+    }
+    draw_text(w->x + 16, w->y + 122, swatch_names[swatch_sel], 2, 0x00C0D0D8);
+}
+
+static const char *cursor_shape[16] = {
+    "X...........", "XX..........", "XXX.........", "XXXX........",
+    "XXXXX.......", "XXXXXX......", "XXXXXXX.....", "XXXXXXXX....",
+    "XXXXXXXXX...", "XXXXXXXXXX..", "XXXXXX......", "XXX.XXX.....",
+    "XX...XXX....", "X.....XXX...", "......XXX...", "......XX...."
+};
+static void draw_cursor(void) {
+    for (int pass = 0; pass < 2; pass++) {
+        unsigned int col = pass == 0 ? 0x00000000 : 0x00FFFFFF;
+        int o = pass == 0 ? 1 : 0;
+        for (int r = 0; r < 16; r++)
+            for (int c = 0; c < 12; c++)
+                if (cursor_shape[r][c] == 'X')
+                    draw_pixel(mouse_x + o + c, mouse_y + o + r, col);
+    }
+}
+
+static void wm_redraw(void) {
+    fill_rect(0, 0, FB_W, FB_H, desktop_color);
+    fill_rect(0, 0, FB_W, 26, 0x00202838);
+    draw_text(10, 5, "NeoOS", 2, 0x00FFFFFF);
+    char clk[12];
+    clock_str(ticks, clk);
+    draw_text(FB_W - 10 - text_w(clk, 2), 5, clk, 2, 0x00C0D8E8);
+    for (int zi = 0; zi < 4; zi++) {
+        struct window *w = &wins[zord[zi]];
+        int foc = (zi == 3);
+        fill_rect(w->x, w->y, w->w, w->h, 0x00607080);
+        fill_rect(w->x + 1, w->y + 1, w->w - 2, 21, foc ? 0x002A5A8A : 0x00304050);
+        draw_text(w->x + 8, w->y + 4, w->title, 2, 0x00FFFFFF);
+        fill_rect(w->x + 1, w->y + 22, w->w - 2, w->h - 23, 0x000E1418);
+        switch (w->kind) {
+            case W_TERM: draw_term_content(w, foc); break;
+            case W_INFO: draw_info_content(w); break;
+            case W_FILES: draw_files_content(w); break;
+            case W_SETTINGS: draw_settings_content(w); break;
+        }
+    }
+    draw_cursor();
+}
+
+/* --- virtio-input driver (virtio-mmio, event queue, polled) --- */
+#define VI_QN 32
+struct vi_event { unsigned short type, code; unsigned int value; };
+struct vring_desc { unsigned long long addr; unsigned int len; unsigned short flags, next; };
+struct vring_avail { unsigned short flags, idx, ring[VI_QN], used_event; };
+struct vring_used_elem { unsigned int id, len; };
+struct vring_used { unsigned short flags, idx; struct vring_used_elem ring[VI_QN]; unsigned short avail_event; };
+
+struct vi_dev {
+    volatile unsigned int *r;
+    int version, is_tablet, is_keyboard;
+    int abs_min_x, abs_max_x, abs_min_y, abs_max_y;
+    struct vi_event ev[VI_QN];
+    struct vring_desc *desc;
+    struct vring_avail *avail;
+    struct vring_used *used;
+    unsigned short avail_idx, used_idx;
+};
+static unsigned char vq_mem[2][8192] __attribute__((aligned(4096)));
+static struct vi_dev vi_devs[2];
+static int vi_count = 0;
+
+static int str_contains(const char *s, const char *sub) {
+    for (int i = 0; s[i]; i++) {
+        int j = 0;
+        while (sub[j] && s[i + j] == sub[j]) j++;
+        if (!sub[j]) return 1;
+    }
+    return 0;
+}
+static unsigned char vi_cfg_rd8(struct vi_dev *d, unsigned int off) {
+    return *(volatile unsigned char *)((unsigned long)d->r + 0x100 + off);
+}
+static void vi_cfg_wr8(struct vi_dev *d, unsigned int off, unsigned char v) {
+    *(volatile unsigned char *)((unsigned long)d->r + 0x100 + off) = v;
+}
+static unsigned int vi_cfg_rd32(struct vi_dev *d, unsigned int off) {
+    return *(volatile unsigned int *)((unsigned long)d->r + 0x100 + off);
+}
+static void vi_read_name(struct vi_dev *d, char *buf, int bufsz) {
+    vi_cfg_wr8(d, 0, 0x01); /* VIRTIO_INPUT_CFG_ID_NAME */
+    vi_cfg_wr8(d, 1, 0);
+    int sz = vi_cfg_rd8(d, 2);
+    if (sz > bufsz - 1) sz = bufsz - 1;
+    if (sz < 0) sz = 0;
+    for (int i = 0; i < sz; i++) buf[i] = (char)vi_cfg_rd8(d, 8 + i);
+    buf[sz] = 0;
+}
+static void vi_abs_info(struct vi_dev *d, int axis, int *mn, int *mx) {
+    vi_cfg_wr8(d, 0, 0x12); /* VIRTIO_INPUT_CFG_ABS_INFO */
+    vi_cfg_wr8(d, 1, (unsigned char)axis);
+    *mn = (int)vi_cfg_rd32(d, 8);
+    *mx = (int)vi_cfg_rd32(d, 12);
+}
+
+static int vi_setup_queue(struct vi_dev *d, unsigned char *mem) {
+    volatile unsigned int *r = d->r;
+    r[0x30 / 4] = 0; /* QueueSel: eventq */
+    if (r[0x34 / 4] == 0) return -1; /* QueueNumMax */
+    r[0x38 / 4] = VI_QN; /* QueueNum */
+    unsigned int align = (d->version == 1) ? r[0x3C / 4] : 4096; /* QueueAlign */
+    if (align == 0) align = 4096;
+    unsigned int avail_off = VI_QN * 16;
+    unsigned int used_off = avail_off + 6 + 2 * VI_QN;
+    used_off = (used_off + align - 1) & ~(align - 1);
+    d->desc = (struct vring_desc *)mem;
+    d->avail = (struct vring_avail *)(mem + avail_off);
+    d->used = (struct vring_used *)(mem + used_off);
+    for (int i = 0; i < VI_QN; i++) {
+        d->desc[i].addr = (unsigned long)&d->ev[i];
+        d->desc[i].len = 8;
+        d->desc[i].flags = 2; /* VRING_DESC_F_WRITE */
+        d->desc[i].next = 0;
+        d->avail->ring[i] = (unsigned short)i;
+    }
+    d->avail->flags = 0;
+    d->avail->idx = VI_QN;
+    d->used->flags = 0;
+    d->used->idx = 0;
+    d->avail_idx = VI_QN;
+    d->used_idx = 0;
+    __asm__ volatile("dmb sy" ::: "memory");
+    if (d->version == 1) {
+        /* GuestPageSize must be programmed first: QEMU's virtio-mmio
+           defaults guest_page_shift to 0 and would otherwise treat the
+           PFN itself as the queue address (events then never arrive). */
+        r[0x28 / 4] = 4096; /* VIRTIO_MMIO_GUEST_PAGE_SIZE */
+        r[0x40 / 4] = (unsigned int)((unsigned long)mem / 4096); /* QueuePFN */
+    } else {
+        unsigned long m = (unsigned long)mem;
+        r[0x80 / 4] = (unsigned int)m;         r[0x84 / 4] = (unsigned int)(m >> 32);
+        r[0x90 / 4] = (unsigned int)(unsigned long)d->avail;
+        r[0x94 / 4] = (unsigned int)((unsigned long)d->avail >> 32);
+        r[0xA0 / 4] = (unsigned int)(unsigned long)d->used;
+        r[0xA4 / 4] = (unsigned int)((unsigned long)d->used >> 32);
+        r[0x44 / 4] = 1; /* QueueReady */
+    }
+    return 0;
+}
+
+static void vi_handle_event(struct vi_dev *d, struct vi_event *ev) {
+    if (d->is_tablet) {
+        if (ev->type == 3) { /* EV_ABS */
+            if (ev->code == 0) { /* ABS_X */
+                long range = (long)d->abs_max_x - d->abs_min_x;
+                if (range <= 0) range = 32767;
+                long v = (long)(int)ev->value - d->abs_min_x;
+                int px = (int)(v * (FB_W - 1) / range);
+                mouse_x = px < 0 ? 0 : (px > FB_W - 1 ? FB_W - 1 : px);
+                wm_drag_update();
+                gui_dirty = 1;
+            } else if (ev->code == 1) { /* ABS_Y */
+                long range = (long)d->abs_max_y - d->abs_min_y;
+                if (range <= 0) range = 32767;
+                long v = (long)(int)ev->value - d->abs_min_y;
+                int py = (int)(v * (FB_H - 1) / range);
+                mouse_y = py < 0 ? 0 : (py > FB_H - 1 ? FB_H - 1 : py);
+                wm_drag_update();
+                gui_dirty = 1;
+            }
+        } else if (ev->type == 1 && ev->code == 0x110) { /* BTN_LEFT */
+            int v = ev->value ? 1 : 0;
+            if (v != mouse_btn) {
+                mouse_btn = v;
+                if (v) wm_press(mouse_x, mouse_y); else wm_release();
+                gui_dirty = 1;
+            }
+        }
+    } else if (d->is_keyboard) {
+        if (ev->type == 1) kb_event(ev->code, (int)ev->value); /* EV_KEY */
+    }
+}
+
+static void vi_poll(struct vi_dev *d) {
+    volatile unsigned int *r = d->r;
+    unsigned int isr = r[0x60 / 4]; /* InterruptStatus */
+    if (isr) r[0x64 / 4] = isr;     /* InterruptACK */
+    int kicked = 0;
+    __asm__ volatile("dmb sy" ::: "memory");
+    while (d->used_idx != d->used->idx) {
+        struct vring_used_elem e = d->used->ring[d->used_idx % VI_QN];
+        d->used_idx++;
+        struct vi_event ev = d->ev[e.id % VI_QN];
+        vi_handle_event(d, &ev);
+        d->avail->ring[d->avail_idx % VI_QN] = (unsigned short)(e.id % VI_QN);
+        __asm__ volatile("dmb sy" ::: "memory");
+        d->avail_idx++;
+        d->avail->idx = d->avail_idx;
+        kicked = 1;
+    }
+    if (kicked) r[0x50 / 4] = 0; /* QueueNotify */
+}
+
+static void vi_init_one(unsigned long base) {
+    volatile unsigned int *r = (volatile unsigned int *)base;
+    if (r[0] != 0x74726976) return;      /* MagicValue "virt" */
+    if (r[0x08 / 4] != 18) return;       /* DeviceID: input */
+    if (vi_count >= 2) return;
+    struct vi_dev *d = &vi_devs[vi_count];
+    d->r = r;
+    d->version = (int)r[0x04 / 4];
+    d->is_tablet = 0;
+    d->is_keyboard = 0;
+    r[0x70 / 4] = 0; /* Status: reset */
+    for (int i = 0; i < 100000 && r[0x70 / 4] != 0; i++) { }
+    r[0x70 / 4] = 1; /* ACKNOWLEDGE */
+    r[0x70 / 4] |= 2; /* DRIVER */
+    if (d->version >= 2) {
+        r[0x24 / 4] = 0; r[0x20 / 4] = 0; /* DriverFeatures word 0: none */
+        r[0x24 / 4] = 1; r[0x20 / 4] = 1; /* word 1: VIRTIO_F_VERSION_1 */
+        r[0x70 / 4] |= 8; /* FEATURES_OK */
+        if (!(r[0x70 / 4] & 8)) { uart_puts("virtio-input: features rejected\n"); return; }
+    }
+    if (vi_setup_queue(d, vq_mem[vi_count]) != 0) {
+        uart_puts("virtio-input: no event queue\n");
+        return;
+    }
+    r[0x70 / 4] |= 4; /* DRIVER_OK */
+    r[0x50 / 4] = 0;  /* kick eventq */
+    char name[64];
+    vi_read_name(d, name, sizeof(name));
+    d->is_tablet = str_contains(name, "Tablet");
+    d->is_keyboard = str_contains(name, "Keyboard");
+    if (!d->is_tablet && !d->is_keyboard) {
+        int mn, mx;
+        vi_abs_info(d, 0, &mn, &mx);
+        if (mx > 0) d->is_tablet = 1; else d->is_keyboard = 1;
+    }
+    if (d->is_tablet) {
+        vi_abs_info(d, 0, &d->abs_min_x, &d->abs_max_x);
+        vi_abs_info(d, 1, &d->abs_min_y, &d->abs_max_y);
+        if (d->abs_max_x <= d->abs_min_x) { d->abs_min_x = 0; d->abs_max_x = 32767; }
+        if (d->abs_max_y <= d->abs_min_y) { d->abs_min_y = 0; d->abs_max_y = 32767; }
+    }
+    uart_puts("virtio-input: ");
+    uart_puts(name[0] ? name : "(unnamed)");
+    uart_puts(d->is_tablet ? " [tablet]\n" : " [keyboard]\n");
+    vi_count++;
+}
+static void vi_init(void) {
+    /* QEMU virt: 32 virtio-mmio transports at 0x0a000000 + 0x200*i
+       (0x200-byte windows, region ends at 0x0a004000; probing past it
+       takes a synchronous external abort). Devices fill from the top
+       slot down, so scan them all and match DeviceID 18 (input). */
+    for (int i = 0; i < 32; i++)
+        vi_init_one(0x0a000000UL + 0x200UL * (unsigned long)i);
+    if (vi_count == 0) uart_puts("virtio-input: none (UART input only)\n");
+}
+
+/* --- GUI main loop --- */
+static void fs_seed(void) {
+    static const char *seed[2][2] = {
+        {"hello.txt", "Hello from the NeoOS GUI!"},
+        {"about.txt", "NeoOS stage 8: windows, mouse, apps"}
+    };
+    for (int i = 0; i < 2; i++) {
+        int idx = fs_create(seed[i][0]);
+        if (idx >= 0) {
+            const char *s = seed[i][1];
+            while (*s) fs_append_byte(idx, *s++);
+        }
+    }
+}
+
+static void gui_main(void) {
+    vi_init();
+    wm_init();
+    term_clear();
+    term_puts("NeoOS shell. Type 'help'.\n");
+    term_puts("neo> ");
+    fs_seed();
+    gui_dirty = 1;
+    unsigned long last_tick = ticks;
+    uart_puts("gui on (UART ESC returns to serial shell)\n");
+    while (1) {
+        for (int i = 0; i < vi_count; i++) vi_poll(&vi_devs[i]);
+        while (!(UART0[6] & 0x10)) { /* RXFE clear: byte waiting */
+            char c = (char)(UART0[0] & 0xFF);
+            if (c == 0x1B) { uart_puts("\ngui off\n"); return; }
+            inq_push(c == '\r' ? '\n' : c);
+        }
+        int c;
+        while ((c = inq_pop()) >= 0) {
+            if (wins[zord[3]].kind == W_TERM) term_key((char)c);
+        }
+        if (ticks != last_tick) { last_tick = ticks; gui_dirty = 1; }
+        if (gui_dirty) { wm_redraw(); gui_dirty = 0; }
     }
 }
 
@@ -459,6 +1148,7 @@ void kernel_main(void) {
     mem_selftest();
     sched_init();
     screen_init();
+    if (fb_ready) gui_main(); /* returns when UART ESC is pressed */
     draw_scene();
     shell();
 }
