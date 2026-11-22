@@ -32,6 +32,14 @@ def _legacy_data_dir() -> Path:
     return Path(os.environ.get("NEOOS_DATA_DIR", "data")).expanduser()
 
 
+def _legacy_text(value: Any) -> str:
+    """Replace invalid Unicode surrogate code points before SQLite storage."""
+    return "".join(
+        "\ufffd" if 0xD800 <= ord(char) <= 0xDFFF else char
+        for char in str(value)
+    )
+
+
 def _read_legacy_tasks(path: Path) -> list[Any] | None:
     """Read a legacy task array, returning None for unreadable or invalid data."""
     try:
@@ -101,9 +109,9 @@ def _initialize(conn: sqlite3.Connection) -> None:
                         """INSERT OR IGNORE INTO tasks
                            (id,title,details,status,created_at,updated_at)
                            VALUES (?,?,?,?,?,?)""",
-                        (str(item["id"]), str(item["title"])[:160],
-                         str(item.get("details", ""))[:2000], status,
-                         str(created), str(updated)),
+                        (_legacy_text(item["id"]), _legacy_text(item["title"])[:160],
+                         _legacy_text(item.get("details", ""))[:2000], status,
+                         _legacy_text(created), _legacy_text(updated)),
                     )
                 # A versioned marker lets older databases retry even if the old
                 # implementation marked a missing or invalid file as imported.
