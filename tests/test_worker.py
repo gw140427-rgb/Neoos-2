@@ -56,7 +56,9 @@ class WorkerTests(unittest.TestCase):
                 marker = conn.execute(
                     "SELECT value FROM schema_meta WHERE key='imported_tasks_json'"
                 ).fetchone()
+                events = conn.execute("SELECT event FROM journal ORDER BY id").fetchall()
             self.assertIsNone(marker)
+            self.assertEqual(events, [("worker_heartbeat",)])
 
             repaired_tasks = [{"id": "repaired1", "title": "Recovered task", "status": "queued"}]
             tasks_file.write_text(json.dumps(repaired_tasks), encoding="utf-8")
