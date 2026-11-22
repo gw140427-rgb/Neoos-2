@@ -71,7 +71,7 @@ class WorkerTests(unittest.TestCase):
                     "SELECT id,title,status FROM tasks WHERE id='repaired1'"
                 ).fetchone()
                 marker = conn.execute(
-                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json'"
+                    "SELECT value FROM schema_meta WHERE key='imported_tasks_json_v2'"
                 ).fetchone()
             self.assertEqual(imported, ("repaired1", "Recovered task", "queued"))
             self.assertIsNotNone(marker)
