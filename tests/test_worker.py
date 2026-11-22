@@ -143,7 +143,7 @@ class WorkerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             data = Path(temp)
             tasks_file = data / "tasks.json"
-            original_bytes = b"\\xff\\xfe\\x80"
+            original_bytes = bytes((0xFF, 0xFE, 0x80))
             tasks_file.write_bytes(original_bytes)
 
             result = self.run_worker(temp)
