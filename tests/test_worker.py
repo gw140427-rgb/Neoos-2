@@ -212,6 +212,28 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(tasks_file.read_bytes(), original_bytes)
 
 
+    def test_legacy_surrogate_text_is_sanitized_without_changing_source(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)
+            tasks_file = data / "tasks.json"
+            original = [{
+                "id": "surrogate1",
+                "title": "Bad\\ud800title",
+                "details": "Details\\ud800",
+            }]
+            original_json = json.dumps(original)
+            tasks_file.write_text(original_json, encoding="utf-8")
+
+            result = self.run_worker(temp)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(tasks_file.read_text(encoding="utf-8"), original_json)
+            with sqlite3.connect(data / "neoos.sqlite3") as conn:
+                imported = conn.execute(
+                    "SELECT id,title,details FROM tasks WHERE id='surrogate1'"
+                ).fetchone()
+            self.assertEqual(imported, ("surrogate1", "Bad\\ufffdtitle", "Details\\ufffd"))
+
     def test_non_string_legacy_task_status_defaults_to_queued(self):
         with tempfile.TemporaryDirectory() as temp:
             data = Path(temp)
