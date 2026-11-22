@@ -152,5 +152,24 @@ class WorkerTests(unittest.TestCase):
             self.assertIn("readable", result.stdout)
             self.assertEqual(tasks_file.read_bytes(), original_bytes)
 
+
+    def test_non_string_legacy_task_status_defaults_to_queued(self):
+        with tempfile.TemporaryDirectory() as temp:
+            data = Path(temp)
+            tasks_file = data / "tasks.json"
+            original = [{"id": "odd01", "title": "Odd status", "status": []}]
+            tasks_file.write_text(json.dumps(original), encoding="utf-8")
+
+            result = self.run_worker(temp)
+
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertIn("queued: 1", result.stdout)
+            self.assertEqual(json.loads(tasks_file.read_text(encoding="utf-8")), original)
+            with sqlite3.connect(data / "neoos.sqlite3") as conn:
+                task = conn.execute(
+                    "SELECT id,title,status FROM tasks WHERE id='odd01'"
+                ).fetchone()
+            self.assertEqual(task, ("odd01", "Odd status", "queued"))
+
 if __name__ == "__main__":
     unittest.main()
