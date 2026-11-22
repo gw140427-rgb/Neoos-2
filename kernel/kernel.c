@@ -190,6 +190,7 @@ static void fw_dma_write(int sel, const void *buf, unsigned int len) {
 }
 
 static int fb_ready = 0;
+static void disp_flush(void); /* defined in the virtio-gpu section below */
 static void screen_init(void) {
     int sel = fw_find_file("etc/ramfb");
     if (sel < 0) {
@@ -243,6 +244,7 @@ static void draw_scene(void) {
     draw_letter(glyph_o, x, y, s, 0x00FFFFFF); x += 60;
     draw_letter(glyph_o, x, y, s, 0x00FFFFFF); x += 60;
     draw_letter(glyph_S, x, y, s, 0x00FFFFFF);
+    disp_flush();
 }
 
 /* ---------- milestone 8: full 8x8 font + text drawing ----------
@@ -1098,6 +1100,176 @@ static void vi_init(void) {
     if (vi_count == 0) uart_puts("virtio-input: none (UART input only)\n");
 }
 
+/* --- milestone 8.2: virtio-gpu display (tried first; ramfb is fallback) ---
+   Minimal 2D path over the control virtqueue: create a 1024x768 resource
+   backed by the same static fb[] the ramfb path uses, bind it to scanout 0,
+   and push pixels with TRANSFER_TO_HOST_2D + RESOURCE_FLUSH after redraws.
+   Same virtio-mmio transport handling as the input driver above (legacy
+   QueuePFN and modern address+QueueReady paths). Commands are synchronous:
+   one descriptor chain (request + writable response), polled to completion. */
+#define GPU_QN 16
+#define GPU_CMD_GET_DISPLAY_INFO 0x0100
+#define GPU_CMD_RESOURCE_CREATE_2D 0x0101
+#define GPU_CMD_SET_SCANOUT 0x0103
+#define GPU_CMD_RESOURCE_FLUSH 0x0104
+#define GPU_CMD_TRANSFER_TO_HOST_2D 0x0105
+#define GPU_CMD_RESOURCE_ATTACH_BACKING 0x0106
+#define GPU_RESP_OK_NODATA 0x1100
+#define GPU_RESP_OK_DISPLAY_INFO 0x1101
+#define GPU_FORMAT_B8G8R8X8 2 /* memory bytes B,G,R,X == our XRGB8888 words */
+
+struct gpu_hdr { unsigned int type, flags; unsigned long long fence; unsigned int ctx, pad; };
+static unsigned char gpu_qmem[8192] __attribute__((aligned(4096)));
+static unsigned char gpu_req[64] __attribute__((aligned(16)));
+static unsigned char gpu_resp[512] __attribute__((aligned(16)));
+static volatile unsigned int *gpu_r = 0;
+static struct vring_desc *gpu_desc;
+static struct vring_avail *gpu_avail;
+static struct vring_used *gpu_used;
+static unsigned short gpu_avail_idx = 0, gpu_used_idx = 0;
+static int gpu_active = 0;
+
+static void gpu_put32(unsigned int off, unsigned int v) { *(unsigned int *)(gpu_req + off) = v; }
+static void gpu_put64(unsigned int off, unsigned long long v) { *(unsigned long long *)(gpu_req + off) = v; }
+static unsigned int gpu_resp32(unsigned int off) { return *(unsigned int *)(gpu_resp + off); }
+
+/* Run one control command. The caller fills the request body at gpu_req+24;
+   req_extra is the body length. Returns the response type, or -1 on timeout. */
+static int gpu_cmd(unsigned int type, unsigned int req_extra, unsigned int resp_len) {
+    for (unsigned int i = 0; i < sizeof(gpu_resp); i++) gpu_resp[i] = 0;
+    struct gpu_hdr *h = (struct gpu_hdr *)gpu_req;
+    h->type = type; h->flags = 0; h->fence = 0; h->ctx = 0; h->pad = 0;
+    gpu_desc[0].addr = (unsigned long)gpu_req;
+    gpu_desc[0].len = 24 + req_extra;
+    gpu_desc[0].flags = 1; /* NEXT */
+    gpu_desc[0].next = 1;
+    gpu_desc[1].addr = (unsigned long)gpu_resp;
+    gpu_desc[1].len = resp_len;
+    gpu_desc[1].flags = 2; /* WRITE */
+    gpu_desc[1].next = 0;
+    gpu_avail->ring[gpu_avail_idx % GPU_QN] = 0;
+    __asm__ volatile("dmb sy" ::: "memory");
+    gpu_avail_idx++;
+    gpu_avail->idx = gpu_avail_idx;
+    gpu_r[0x50 / 4] = 0; /* QueueNotify: controlq */
+    long spin = 0;
+    for (;;) {
+        __asm__ volatile("dmb sy" ::: "memory");
+        if (gpu_used->idx != gpu_used_idx) break;
+        if (++spin > 500000000L) return -1; /* device not answering */
+    }
+    gpu_used_idx++;
+    unsigned int isr = gpu_r[0x60 / 4]; /* InterruptStatus */
+    if (isr) gpu_r[0x64 / 4] = isr;    /* InterruptACK */
+    return (int)((struct gpu_hdr *)gpu_resp)->type;
+}
+
+static int gpu_setup_queue(int version) {
+    volatile unsigned int *r = gpu_r;
+    r[0x30 / 4] = 0; /* QueueSel: controlq */
+    if (r[0x34 / 4] == 0) return -1; /* QueueNumMax */
+    r[0x38 / 4] = GPU_QN; /* QueueNum */
+    unsigned int align = (version == 1) ? r[0x3C / 4] : 4096; /* QueueAlign */
+    if (align == 0) align = 4096;
+    unsigned int avail_off = GPU_QN * 16;
+    unsigned int used_off = avail_off + 6 + 2 * GPU_QN;
+    used_off = (used_off + align - 1) & ~(align - 1);
+    gpu_desc = (struct vring_desc *)gpu_qmem;
+    gpu_avail = (struct vring_avail *)(gpu_qmem + avail_off);
+    gpu_used = (struct vring_used *)(gpu_qmem + used_off);
+    gpu_avail->flags = 0; gpu_avail->idx = 0;
+    gpu_used->flags = 0; gpu_used->idx = 0;
+    gpu_avail_idx = 0; gpu_used_idx = 0;
+    __asm__ volatile("dmb sy" ::: "memory");
+    if (version == 1) {
+        r[0x28 / 4] = 4096; /* GuestPageSize first, as for the input driver */
+        r[0x40 / 4] = (unsigned int)((unsigned long)gpu_qmem / 4096); /* QueuePFN */
+    } else {
+        unsigned long m = (unsigned long)gpu_qmem;
+        unsigned long a = (unsigned long)gpu_avail, u = (unsigned long)gpu_used;
+        r[0x80 / 4] = (unsigned int)m;         r[0x84 / 4] = (unsigned int)(m >> 32);
+        r[0x90 / 4] = (unsigned int)a;         r[0x94 / 4] = (unsigned int)(a >> 32);
+        r[0xA0 / 4] = (unsigned int)u;         r[0xA4 / 4] = (unsigned int)(u >> 32);
+        r[0x44 / 4] = 1; /* QueueReady */
+    }
+    return 0;
+}
+
+static int gpu_init_one(unsigned long base) {
+    volatile unsigned int *r = (volatile unsigned int *)base;
+    if (r[0] != 0x74726976) return -1;   /* MagicValue "virt" */
+    if (r[0x08 / 4] != 16) return -1;    /* DeviceID: GPU */
+    gpu_r = r;
+    int version = (int)r[0x04 / 4];
+    r[0x70 / 4] = 0; /* Status: reset */
+    for (int i = 0; i < 100000 && r[0x70 / 4] != 0; i++) { }
+    r[0x70 / 4] = 1; /* ACKNOWLEDGE */
+    r[0x70 / 4] |= 2; /* DRIVER */
+    if (version >= 2) {
+        r[0x24 / 4] = 0; r[0x20 / 4] = 0; /* device features: none (no virgl/edid) */
+        r[0x24 / 4] = 1; r[0x20 / 4] = 1; /* word 1: VIRTIO_F_VERSION_1 */
+        r[0x70 / 4] |= 8; /* FEATURES_OK */
+        if (!(r[0x70 / 4] & 8)) { uart_puts("virtio-gpu: features rejected\n"); return -1; }
+    }
+    if (gpu_setup_queue(version) != 0) { uart_puts("virtio-gpu: no control queue\n"); return -1; }
+    r[0x70 / 4] |= 4; /* DRIVER_OK */
+    int t = gpu_cmd(GPU_CMD_GET_DISPLAY_INFO, 0, 24 + 16 * 24);
+    if (t != GPU_RESP_OK_DISPLAY_INFO) { uart_puts("virtio-gpu: no display info\n"); return -1; }
+    uart_puts("virtio-gpu: scanout ");
+    uart_putnum(gpu_resp32(24 + 8)); /* pmodes[0].r.width */
+    uart_putc('x');
+    uart_putnum(gpu_resp32(24 + 12)); /* pmodes[0].r.height */
+    uart_puts(gpu_resp32(24 + 16) ? " enabled\n" : " (reported disabled)\n");
+    /* RESOURCE_CREATE_2D: resource_id, format, width, height */
+    gpu_put32(24, 1); gpu_put32(28, GPU_FORMAT_B8G8R8X8);
+    gpu_put32(32, FB_W); gpu_put32(36, FB_H);
+    t = gpu_cmd(GPU_CMD_RESOURCE_CREATE_2D, 16, 24);
+    if (t != GPU_RESP_OK_NODATA) { uart_puts("virtio-gpu: create2d failed\n"); return -1; }
+    /* RESOURCE_ATTACH_BACKING: resource_id, nr_entries, {addr, len, pad} */
+    gpu_put32(24, 1); gpu_put32(28, 1);
+    gpu_put64(32, (unsigned long)fb);
+    gpu_put32(40, FB_W * FB_H * 4); gpu_put32(44, 0);
+    t = gpu_cmd(GPU_CMD_RESOURCE_ATTACH_BACKING, 24, 24);
+    if (t != GPU_RESP_OK_NODATA) { uart_puts("virtio-gpu: attach backing failed\n"); return -1; }
+    /* SET_SCANOUT: rect, scanout_id, resource_id */
+    gpu_put32(24, 0); gpu_put32(28, 0); gpu_put32(32, FB_W); gpu_put32(36, FB_H);
+    gpu_put32(40, 0); gpu_put32(44, 1);
+    t = gpu_cmd(GPU_CMD_SET_SCANOUT, 24, 24);
+    if (t != GPU_RESP_OK_NODATA) { uart_puts("virtio-gpu: set scanout failed\n"); return -1; }
+    gpu_active = 1;
+    return 0;
+}
+
+static void gpu_flush(void) {
+    if (!gpu_active) return;
+    /* TRANSFER_TO_HOST_2D: rect, offset, resource_id, pad */
+    gpu_put32(24, 0); gpu_put32(28, 0); gpu_put32(32, FB_W); gpu_put32(36, FB_H);
+    gpu_put64(40, 0);
+    gpu_put32(48, 1); gpu_put32(52, 0);
+    gpu_cmd(GPU_CMD_TRANSFER_TO_HOST_2D, 32, 24);
+    /* RESOURCE_FLUSH: rect, resource_id, pad */
+    gpu_put32(24, 0); gpu_put32(28, 0); gpu_put32(32, FB_W); gpu_put32(36, FB_H);
+    gpu_put32(40, 1); gpu_put32(44, 0);
+    gpu_cmd(GPU_CMD_RESOURCE_FLUSH, 24, 24);
+}
+
+static void disp_flush(void) { if (gpu_active) gpu_flush(); }
+
+/* Display selection: virtio-gpu first (what Vectras shows), ramfb fallback
+   (the desktop-QEMU setup used through stage 8.1). */
+static void display_init(void) {
+    for (int i = 0; i < 32; i++) {
+        if (gpu_init_one(0x0a000000UL + 0x200UL * (unsigned long)i) == 0) {
+            fb_ready = 1;
+            uart_puts("display: virtio-gpu\n");
+            return;
+        }
+    }
+    uart_puts("virtio-gpu: none\n");
+    screen_init();
+    if (fb_ready) uart_puts("display: ramfb\n");
+}
+
 /* --- GUI main loop --- */
 static void fs_seed(void) {
     static const char *seed[2][2] = {
@@ -1135,7 +1307,7 @@ static void gui_main(void) {
             if (wins[zord[3]].kind == W_TERM) term_key((char)c);
         }
         if (ticks != last_tick) { last_tick = ticks; gui_dirty = 1; }
-        if (gui_dirty) { wm_redraw(); gui_dirty = 0; }
+        if (gui_dirty) { wm_redraw(); disp_flush(); gui_dirty = 0; }
     }
 }
 
@@ -1147,7 +1319,7 @@ void kernel_main(void) {
     mem_init();
     mem_selftest();
     sched_init();
-    screen_init();
+    display_init();
     if (fb_ready) gui_main(); /* returns when UART ESC is pressed */
     draw_scene();
     shell();
