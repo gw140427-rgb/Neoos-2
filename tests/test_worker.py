@@ -81,7 +81,10 @@ class WorkerTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             data = Path(temp)
             tasks_file = data / "tasks.json"
-            repaired_tasks = [{"id": "legacyfix", "title": "Recovered after upgrade"}]
+            repaired_tasks = [
+                {"id": "legacyfix", "title": "Recovered after upgrade"},
+                {"id": "existing1", "title": "Do not overwrite existing task"},
+            ]
             tasks_file.write_text(json.dumps(repaired_tasks), encoding="utf-8")
             db_path = data / "neoos.sqlite3"
             with sqlite3.connect(db_path) as conn:
@@ -121,6 +124,12 @@ class WorkerTests(unittest.TestCase):
             self.assertEqual(existing, ("existing1", "Keep existing task"))
             self.assertEqual(old_marker, ("old-marker",))
             self.assertIsNotNone(new_marker)
+
+            second_run = self.run_worker(temp)
+            self.assertEqual(second_run.returncode, 0, second_run.stderr)
+            with sqlite3.connect(db_path) as conn:
+                task_count = conn.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+            self.assertEqual(task_count, 2)
 
     def test_malformed_legacy_json_is_warned_and_preserved(self):
         with tempfile.TemporaryDirectory() as temp:
