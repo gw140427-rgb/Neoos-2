@@ -405,8 +405,8 @@ const events={
     {label:'배터리가 다 될 때까지 그냥 둔다 (스트레스 -3)',effect(){adjust('stress',-3);note('폰을 다시 침대 밑에 밀어 넣고 모른 척했다.');}}
   ]},
   black_market:{title:'🌙 교도관 몰래 열린 특가 매점',text:'야간 점호 뒤, 창고 뒤편에서 누군가 조용히 손짓해. 반값에 물건을 넘긴다는 소문이 사실이었어.',choices:[
-    {label:'간식을 반값(4 코인)에 산다',condition(){return state.money>=4;},effect(){state.money-=4;state.inventory.snack++;note('특가 매점에서 간식을 4 코인에 샀다.');Sound.buy();}},
-    {label:'책을 반값(6 코인)에 산다',condition(){return state.money>=6;},effect(){state.money-=6;state.inventory.book++;note('특가 매점에서 책을 6 코인에 샀다.');Sound.buy();}},
+    {label:'간식을 반값(4 코인)에 산다',condition(){return state.money>=4;},effect(){state.money-=4;state.inventory.snack=Math.min(99,state.inventory.snack+1);note('특가 매점에서 간식을 4 코인에 샀다.');Sound.buy();}},
+    {label:'책을 반값(6 코인)에 산다',condition(){return state.money>=6;},effect(){state.money-=6;state.inventory.book=Math.min(99,state.inventory.book+1);note('특가 매점에서 책을 6 코인에 샀다.');Sound.buy();}},
     {label:'위험한 장사라 거절하고 돌아간다',effect(){adjust('trust',3,-30,100);adjust('stress',-2);note('특가 매점의 유혹을 뿌리치고 조용히 돌아왔다.');}}
   ]}
 };
@@ -624,13 +624,15 @@ $('resetGame').addEventListener('click',function(){
   render();
   setNotice('게임을 초기화했어.');
 });
-if(state.pendingEvent)eventReadyAt=Date.now()+700;
+if(state.pendingEvent){eventReadyAt=Date.now()+700;setTimeout(function(){if(state.pendingEvent)render();},760);}
 save();
 render();
 
-/* 사이트 전체 서버 점검/종료 감지 */
+/* 사이트 전체 서버 점검/종료 감지 — 오버레이 HTML이 스크립트 뒤에 있어 DOMContentLoaded 뒤에 실행 */
+window.addEventListener('DOMContentLoaded', function(){
 function checkMaint(){
-  var offline = localStorage.getItem('neoos_cloud_service') === 'offline';
+  var offline = false;
+  try { offline = localStorage.getItem('neoos_cloud_service') === 'offline'; } catch (e) {}
   var el = document.getElementById('portalMaintenanceOverlay');
   if (el) {
     el.style.display = offline ? 'flex' : 'none';
@@ -663,6 +665,7 @@ if (resumeBtn) {
     alert('🟢 서버가 다시 켜졌습니다. 정상 운영 모드로 전환됩니다.');
   });
 }
+});
 })();
 </script>
 

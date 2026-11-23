@@ -80,7 +80,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
     <nav class="toplinks" aria-label="앱 바로가기">
       <a href="/cloud" data-app="cloud">☁ Cloud</a>
       <a href="/ai" data-app="ai">🤖 AI</a>
-      <a href="/pricing">₩ 요금 정책</a>
+      <a href="/pricing" data-app="pricing">₩ 요금 정책</a>
       <a href="/editor" data-app="editor">🎬 Studio</a>
       <a href="/game" data-app="game">🍚 Game</a>
     </nav>
@@ -201,7 +201,8 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:14p
 
   /* 사이트 전체 서버 점검/종료 감지 */
   function checkMaint(){
-    var offline = localStorage.getItem('neoos_cloud_service') === 'offline';
+    var offline = false;
+    try { offline = localStorage.getItem('neoos_cloud_service') === 'offline'; } catch (e) {}
     var el = document.getElementById('portalMaintenanceOverlay');
     if (el) {
       el.style.display = offline ? 'flex' : 'none';

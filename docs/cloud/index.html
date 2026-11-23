@@ -554,9 +554,9 @@ function renderMaintenance(){
   if(!offline)return;
   const at=serviceChangedAt();
   $('maintMeta').textContent=at?('점검 시작: '+at.toLocaleString('ko-KR')):'';
-  $('maintLoginBtn').hidden=adminUnlocked;
+  var maintLoginBtn=$('maintLoginBtn'); if(maintLoginBtn)maintLoginBtn.hidden=adminUnlocked;
   $('maintAdminBox').hidden=!adminUnlocked;
-  $('maintLockBtn').hidden=!adminUnlocked;
+  var maintLockBtn=$('maintLockBtn'); if(maintLockBtn)maintLockBtn.hidden=!adminUnlocked;
 }
 function renderService(){
   const offline=serviceState()==='offline';
@@ -600,6 +600,7 @@ function renderInstances(){
   $('running-count').textContent=running+'대';
   const firstRunning=instances.find(function(i){return i.state==='running'&&i.ip&&i.ip.indexOf('할당')<0;});
   if(firstRunning)$('primary-ip').textContent=firstRunning.ip;
+  else $('primary-ip').textContent='—';
 
   if(!instances.length){
     const empty=document.createElement('p');
@@ -684,6 +685,7 @@ function renderAdmin(){
 }
 
 /* ---------------- API sync ---------------- */
+let syncFailNotified=false;
 async function syncInstances(silent){
   if(serviceState()==='offline')return;
   const customUrl=localStorage.getItem(KEYS.url);
@@ -716,6 +718,7 @@ async function syncInstances(silent){
           if(!silent)log('[NeoOS Cloud 동기화] 실시간 인스턴스 '+instances.length+'대 확인 ('+(data.region||'ap-southeast-2')+')');
           $('refreshBtn').textContent='🔄 새로고침';
           success=true;
+          syncFailNotified=false;
           break;
         }
       }
@@ -725,8 +728,14 @@ async function syncInstances(silent){
   }
 
   if(!success){
-    if(!silent)log('[네트워크] 백엔드 응답 대기 중 · 저장된 인스턴스 목록 표시');
     $('refreshBtn').textContent='🔄 새로고침';
+    if(!syncFailNotified){
+      syncFailNotified=true;
+      log('[네트워크] 백엔드 응답 없음 · 저장된 인스턴스 목록 표시');
+      toast('⚠️ 백엔드에 연결할 수 없어. 저장된 목록을 표시 중이야.');
+    }else if(!silent){
+      log('[네트워크] 백엔드 응답 대기 중 · 저장된 인스턴스 목록 표시');
+    }
     renderInstances();
   }
 }
@@ -824,7 +833,7 @@ async function terminateInstance(inst){
 async function deploy(){
   if(!CONTROL_ACTIONS_ENABLED){window.alert('보안 점검 중이야. 현재는 인스턴스 상태 조회만 가능해.');return;}
   if(!adminUnlocked){
-    openGate('새 서버 배포는 개발자만 할 수 있어. 비밀번호를 입력해 줘.',deploy);
+    requireAdmin('새 서버 배포는 개발자만 할 수 있어.',deploy);
     return;
   }
   if(instances.length>=MAX_INSTANCES){

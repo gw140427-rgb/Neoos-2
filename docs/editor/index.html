@@ -62,7 +62,7 @@ textarea{resize:vertical;min-height:64px}
 .tick::after{content:"";position:absolute;left:50%;top:13px;width:1px;height:5px;background:#33405e}
 .tl-track{position:relative;height:36px;border-radius:9px;background:#0a0e1a;border:1px solid #1d2437;margin-bottom:6px;overflow:hidden}
 .tl-clip{position:absolute;inset:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 10px;border-radius:8px;background:linear-gradient(90deg,#4c1d95,#0e7490);font-size:.76rem;font-weight:700;color:#f4f6ff;white-space:nowrap;overflow:hidden}
-.tl-clip.empty{background:#141a28;color:#69ım;color:#67748f;font-weight:600}
+.tl-clip.empty{background:#141a28;color:#67748f;font-weight:600}
 .text-track{height:30px;background:#0a0e1a}
 .tl-text{position:absolute;top:4px;bottom:4px;border-radius:6px;background:linear-gradient(90deg,#831843,#be185d);border:1px solid #f472b6;color:#fff;font-size:.66rem;font-weight:700;padding:0 6px;display:flex;align-items:center;overflow:hidden;white-space:nowrap;cursor:pointer}
 .tl-text.sel{box-shadow:0 0 0 2px #fff6}
@@ -412,7 +412,7 @@ function addFiles(fileList){
   });
   if(!added){toast('비디오나 사진 파일만 불러올 수 있어.');return;}
   renderMediaList();
-  if(!source)loadMedia(media[0].id);
+  if(!source)loadMedia(media[media.length-1].id);
   toast(added+'개 미디어를 불러왔어.');
 }
 function addSample(){
@@ -824,6 +824,7 @@ function updateSelected(mutate){
   if(!item)return;
   mutate(item);
   renderTextTrack();
+  renderTextList();
   drawFrame(currentTime);
   updateTimeUI();
 }
@@ -1100,9 +1101,11 @@ rebuildTimeline();
 drawFrame(0);
 requestAnimationFrame(loop);
 
-/* 사이트 전체 서버 점검/종료 감지 */
+/* 사이트 전체 서버 점검/종료 감지 — 오버레이 HTML이 스크립트 뒤에 있어 DOMContentLoaded 뒤에 실행 */
+window.addEventListener('DOMContentLoaded', function(){
 function checkMaint(){
-  var offline = localStorage.getItem('neoos_cloud_service') === 'offline';
+  var offline = false;
+  try { offline = localStorage.getItem('neoos_cloud_service') === 'offline'; } catch (e) {}
   var el = document.getElementById('portalMaintenanceOverlay');
   if (el) {
     el.style.display = offline ? 'flex' : 'none';
@@ -1135,6 +1138,7 @@ if (resumeBtn) {
     alert('🟢 서버가 다시 켜졌습니다. 정상 운영 모드로 전환됩니다.');
   });
 }
+});
 })();
 </script>
 
