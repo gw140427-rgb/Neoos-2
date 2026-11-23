@@ -72,7 +72,6 @@ button.send:disabled{opacity:.45;cursor:wait}
 </div>
 
 <script>
-window.onerror = function(msg, src, line){ var el = document.getElementById('statusText'); if (el) el.textContent = 'ERR: ' + msg + ' @' + line; };
 var DIRECT = "https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech";
 var KEY = "1c5fd8fc6119de39fbf38d78";
 var SAME_ORIGIN = (location.hostname === 'neoos-2.vercel.app') || /\.vercel\.app$/.test(location.hostname);
@@ -88,7 +87,7 @@ var input = document.getElementById('input');
 var send = document.getElementById('send');
 var statusEl = document.getElementById('status');
 var statusText = document.getElementById('statusText');
-var history = [];
+var chatHistory = [];
 var modelName = "Neo-1 Plus";
 
 function addMsg(text, cls){
@@ -101,17 +100,17 @@ function addMsg(text, cls){
 }
 
 function saveChat(){
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(history.slice(-50))); } catch (e) {}
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(chatHistory.slice(-50))); } catch (e) {}
 }
 
 function loadChat(){
   var saved = [];
   try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || '[]'); } catch (e) { saved = []; }
   if (!Array.isArray(saved)) saved = [];
-  history = saved.filter(function(m){
+  chatHistory = saved.filter(function(m){
     return m && (m.role === 'user' || m.role === 'assistant') && typeof m.content === 'string';
   });
-  history.forEach(function(m){
+  chatHistory.forEach(function(m){
     addMsg(m.content, m.role === 'user' ? 'user' : 'bot');
   });
 }
@@ -137,12 +136,11 @@ function checkHealth(){
     if (killer) clearTimeout(killer);
   });
 }
-statusText.textContent = 'M1';
 statusEl.style.cursor = 'pointer';
 statusEl.addEventListener('click', checkHealth);
 
 document.getElementById('clearBtn').addEventListener('click', function(){
-  history = [];
+  chatHistory = [];
   saveChat();
   chat.innerHTML = '';
   addMsg('대화를 지웠어요. 새로 말을 걸어 보세요.', 'sys');
@@ -154,11 +152,8 @@ input.addEventListener('keydown', function(e){
   if (e.isComposing || e.keyCode === 229) e.stopPropagation();
 }, true);
 
-statusText.textContent = 'M2';
 loadChat();
-statusText.textContent = 'M3';
 checkHealth();
-statusText.textContent = 'M4';
 setInterval(checkHealth, 30000);
 
 form.addEventListener('submit', function(e){
@@ -167,7 +162,7 @@ form.addEventListener('submit', function(e){
   if (!text || send.disabled) return;
   input.value = '';
   addMsg(text, 'user');
-  history.push({role:'user', content:text});
+  chatHistory.push({role:'user', content:text});
   saveChat();
   var wait = addMsg(modelName + '이(가) 생각 중', 'bot wait');
   var dots = document.createElement('span');
@@ -187,7 +182,7 @@ form.addEventListener('submit', function(e){
   var chatOpts = {
     method: 'POST',
     headers: {'Content-Type':'application/json', 'X-Neo-Key': KEY},
-    body: JSON.stringify({messages: history.slice(-12)}),
+    body: JSON.stringify({messages: chatHistory.slice(-12)}),
     signal: ctrl ? ctrl.signal : undefined
   };
   fetch(ep.chat, chatOpts).catch(function(err){
@@ -199,20 +194,20 @@ form.addEventListener('submit', function(e){
   }).then(function(res){
     if (res.status === 200 && res.body.reply) {
       addMsg(res.body.reply, 'bot');
-      history.push({role:'assistant', content: res.body.reply});
+      chatHistory.push({role:'assistant', content: res.body.reply});
       saveChat();
     } else if (res.status === 429 && res.body.error === 'busy') {
       addMsg('지금 다른 질문에 답하는 중이에요. 답이 끝나면 다시 보내주세요.', 'sys');
-      history.pop(); saveChat();
+      chatHistory.pop(); saveChat();
     } else if (res.status === 429) {
       addMsg('사용 한도(시간당 횟수)를 넘었어요. 잠시 뒤에 다시 해주세요.', 'sys');
-      history.pop(); saveChat();
+      chatHistory.pop(); saveChat();
     } else if (res.status === 503) {
       addMsg('모델이 꺼져 있어서 답할 수 없어요.', 'sys');
-      history.pop(); saveChat();
+      chatHistory.pop(); saveChat();
     } else {
       addMsg('답을 가져오지 못했어요. 잠시 뒤에 다시 해주세요.', 'sys');
-      history.pop(); saveChat();
+      chatHistory.pop(); saveChat();
     }
   }).catch(function(err){
     if (err && err.name === 'AbortError') {
@@ -220,7 +215,7 @@ form.addEventListener('submit', function(e){
     } else {
       addMsg('서버(VPS)에 연결할 수 없어요. 서버가 켜져 있는지 확인해 주세요.', 'sys');
     }
-    history.pop(); saveChat();
+    chatHistory.pop(); saveChat();
     checkHealth();
   }).finally(function(){
     clearInterval(timer);
