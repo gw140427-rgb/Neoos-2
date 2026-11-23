@@ -72,6 +72,7 @@ button.send:disabled{opacity:.45;cursor:wait}
 </div>
 
 <script>
+window.onerror = function(msg, src, line){ var el = document.getElementById('statusText'); if (el) el.textContent = 'ERR: ' + msg + ' @' + line; };
 var DIRECT = "https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech";
 var KEY = "1c5fd8fc6119de39fbf38d78";
 var SAME_ORIGIN = (location.hostname === 'neoos-2.vercel.app') || /\.vercel\.app$/.test(location.hostname);
@@ -136,6 +137,7 @@ function checkHealth(){
     if (killer) clearTimeout(killer);
   });
 }
+statusText.textContent = 'M1';
 statusEl.style.cursor = 'pointer';
 statusEl.addEventListener('click', checkHealth);
 
@@ -152,11 +154,13 @@ input.addEventListener('keydown', function(e){
   if (e.isComposing || e.keyCode === 229) e.stopPropagation();
 }, true);
 
+statusText.textContent = 'M2';
 loadChat();
+statusText.textContent = 'M3';
 checkHealth();
+statusText.textContent = 'M4';
 setInterval(checkHealth, 30000);
 
-document.title = 'AI_SCRIPT_RAN';
 form.addEventListener('submit', function(e){
   e.preventDefault();
   var text = input.value.trim();
