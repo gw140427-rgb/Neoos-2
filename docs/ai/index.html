@@ -26,6 +26,7 @@ h1{font-size:1.5rem;margin:4px 0 4px;letter-spacing:-.02em}
 .status.off i{background:var(--red)}
 .clear{font-size:.78rem;font-weight:700;color:var(--muted);border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:6px 12px;cursor:pointer}
 .clear:hover{color:var(--text)}
+.mpick.sel{color:#04060d;background:linear-gradient(90deg,#7c3aed,#22d3ee);border-color:transparent}
 .chat{flex:1;border:1px solid var(--line);border-radius:20px;background:linear-gradient(180deg,#0e1324e6,#0a0e1ae6);padding:16px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;min-height:320px;max-height:58vh;max-height:58dvh}
 .msg{max-width:85%;padding:10px 14px;border-radius:16px;font-size:.94rem;white-space:pre-wrap;word-break:break-word}
 .msg.user{align-self:flex-end;background:#1d2a52;border:1px solid #2c3d6e;border-bottom-right-radius:6px}
@@ -52,15 +53,17 @@ button.send:disabled{opacity:.45;cursor:wait}
     <a class="back" href="/">← 홈으로</a>
   </header>
 
-  <h1>🤖 Neo-1 Plus에게 물어보기</h1>
-  <p class="sub">직접 학습시킨 AI 모델이 실제로 답하는 페이지예요. 가짜 데모가 아니라, 지금 VPS에서 돌아가는 모델이 실시간으로 답합니다.</p>
+  <h1>🤖 Neo 모델에게 물어보기</h1>
+  <p class="sub">직접 학습시킨 AI 모델이 실제로 답하는 페이지예요. 가짜 데모가 아니라, 지금 VPS에서 돌아가는 모델이 실시간으로 답합니다. 위에서 Neo-1과 Neo-1 Plus 중 골라 쓸 수 있어요.</p>
   <div class="bar">
     <span class="status" id="status"><i></i><span id="statusText">서버 확인 중…</span></span>
+    <button type="button" class="clear mpick" id="pickPlus">Neo-1 Plus</button>
+    <button type="button" class="clear mpick" id="pickV1">Neo-1</button>
     <button type="button" class="clear" id="clearBtn">대화 지우기</button>
   </div>
 
   <div class="chat" id="chat">
-    <div class="msg sys">Neo-1 Plus에게 말을 걸어 보세요. 예: "대한민국의 수도는 어디야?", "오늘 서울 날씨 어때?"</div>
+    <div class="msg sys">모델을 고르고 말을 걸어 보세요. 예: "대한민국의 수도는 어디야?", "오늘 서울 날씨 어때?"</div>
   </div>
 
   <form id="form">
@@ -88,7 +91,22 @@ var send = document.getElementById('send');
 var statusEl = document.getElementById('status');
 var statusText = document.getElementById('statusText');
 var chatHistory = [];
-var modelName = "Neo-1 Plus";
+var selectedModel = 'neo-1-plus';
+try { selectedModel = localStorage.getItem('neo-chat-model') || 'neo-1-plus'; } catch (e) {}
+if (selectedModel !== 'neo-1') selectedModel = 'neo-1-plus';
+function modelLabel(m){ return m === 'neo-1' ? 'Neo-1' : 'Neo-1 Plus'; }
+var modelName = modelLabel(selectedModel);
+function paintPicks(){
+  document.getElementById('pickPlus').className = 'clear mpick' + (selectedModel === 'neo-1-plus' ? ' sel' : '');
+  document.getElementById('pickV1').className = 'clear mpick' + (selectedModel === 'neo-1' ? ' sel' : '');
+}
+function setModel(m){
+  selectedModel = m;
+  modelName = modelLabel(m);
+  try { localStorage.setItem('neo-chat-model', m); } catch (e) {}
+  paintPicks();
+  checkHealth();
+}
 
 function addMsg(text, cls){
   var d = document.createElement('div');
@@ -120,7 +138,6 @@ function checkHealth(){
   var killer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 8000) : null;
   fetch(ep.health, {signal: ctrl ? ctrl.signal : undefined}).then(function(r){ return r.json(); }).then(function(j){
     if (j.ok) {
-      modelName = (j.model || 'neo-1-plus').replace(':latest','') === 'neo-1' ? 'Neo-1' : 'Neo-1 Plus';
       statusEl.className = 'status on';
       statusText.textContent = modelName + ' 작동 중 (VPS 실시간 연결)';
     } else {
@@ -138,6 +155,10 @@ function checkHealth(){
 }
 statusEl.style.cursor = 'pointer';
 statusEl.addEventListener('click', checkHealth);
+
+document.getElementById('pickPlus').addEventListener('click', function(){ setModel('neo-1-plus'); });
+document.getElementById('pickV1').addEventListener('click', function(){ setModel('neo-1'); });
+paintPicks();
 
 document.getElementById('clearBtn').addEventListener('click', function(){
   chatHistory = [];
@@ -182,7 +203,7 @@ form.addEventListener('submit', function(e){
   var chatOpts = {
     method: 'POST',
     headers: {'Content-Type':'application/json', 'X-Neo-Key': KEY},
-    body: JSON.stringify({messages: chatHistory.slice(-12)}),
+    body: JSON.stringify({model: selectedModel, messages: chatHistory.slice(-12)}),
     signal: ctrl ? ctrl.signal : undefined
   };
   fetch(ep.chat, chatOpts).catch(function(err){
