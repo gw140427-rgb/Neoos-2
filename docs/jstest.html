@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>jstest</title>
+</head>
+<body>
+<div id="out">JS_NOT_RUN</div>
+<form id="f"><input id="i" type="text"><button type="submit">send</button></form>
+<div id="chatlog"></div>
+<script>
+document.getElementById('out').textContent = 'JS_OK';
+document.getElementById('f').addEventListener('submit', function(e){
+  e.preventDefault();
+  document.getElementById('chatlog').textContent = 'SUBMIT_OK: ' + document.getElementById('i').value;
+});
+fetch('/api/health').then(function(r){ return r.json(); }).then(function(j){
+  document.getElementById('out').textContent = 'JS_OK HEALTH: ' + JSON.stringify(j);
+}).catch(function(e){
+  document.getElementById('out').textContent = 'JS_OK HEALTH_FAIL: ' + e;
+});
+</script>
+</body>
+</html>
