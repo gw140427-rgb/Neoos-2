@@ -1079,6 +1079,7 @@ video.addEventListener('loadedmetadata',()=>{
   if(source&&source.kind==='video'){
     source.duration=Number.isFinite(video.duration)?video.duration:0;
     rebuildTimeline();
+    if(currentTime>0&&Number.isFinite(video.duration))video.currentTime=Math.min(currentTime,video.duration);
     updateTimeUI();
     drawFrame(currentTime);
   }

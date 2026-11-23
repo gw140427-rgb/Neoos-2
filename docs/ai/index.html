@@ -111,7 +111,9 @@ function loadChat(){
 }
 
 function checkHealth(){
-  fetch(API + '/health').then(function(r){ return r.json(); }).then(function(j){
+  var ctrl = ('AbortController' in window) ? new AbortController() : null;
+  var killer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 8000) : null;
+  fetch(API + '/health', {signal: ctrl ? ctrl.signal : undefined}).then(function(r){ return r.json(); }).then(function(j){
     if (j.ok) {
       modelName = (j.model || 'neo-1-plus').replace(':latest','') === 'neo-1' ? 'Neo-1' : 'Neo-1 Plus';
       statusEl.className = 'status on';
@@ -122,9 +124,14 @@ function checkHealth(){
     }
   }).catch(function(){
     statusEl.className = 'status off';
-    statusText.textContent = '서버(VPS)가 꺼져 있어요';
+    statusText.textContent = '서버에 연결할 수 없어요 (눌러서 다시 확인)';
+    setTimeout(checkHealth, 5000);
+  }).finally(function(){
+    if (killer) clearTimeout(killer);
   });
 }
+statusEl.style.cursor = 'pointer';
+statusEl.addEventListener('click', checkHealth);
 
 document.getElementById('clearBtn').addEventListener('click', function(){
   history = [];

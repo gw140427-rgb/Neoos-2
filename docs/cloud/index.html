@@ -585,7 +585,10 @@ function toggleService(next){
 /* ---------------- instances / TTL ---------------- */
 function loadInstances(){
   const stored=readJson('neoos_vps_instances',null);
-  if(Array.isArray(stored)&&stored.length)return stored;
+  if(Array.isArray(stored)&&stored.length){
+    const clean=stored.filter(function(i){return i&&typeof i==='object';});
+    if(clean.length)return clean;
+  }
   return DEFAULT_INSTANCES.slice();
 }
 function saveInstances(list){
@@ -686,8 +689,11 @@ function renderAdmin(){
 
 /* ---------------- API sync ---------------- */
 let syncFailNotified=false;
+let syncInFlight=false;
 async function syncInstances(silent){
   if(serviceState()==='offline')return;
+  if(syncInFlight)return;
+  syncInFlight=true;
   const customUrl=localStorage.getItem(KEYS.url);
   const customToken=sessionStorage.getItem(KEYS.token);
   
@@ -738,6 +744,7 @@ async function syncInstances(silent){
     }
     renderInstances();
   }
+  syncInFlight=false;
 }
 
 /* ---------------- instance actions ---------------- */
@@ -1005,8 +1012,8 @@ try{
   adminUnlocked=false;
 }
 instances=loadInstances();
-$('api-url').value=localStorage.getItem(KEYS.url)||'';
-$('api-token').value=sessionStorage.getItem(KEYS.token)||'';
+try{$('api-url').value=localStorage.getItem(KEYS.url)||'';}catch(e){}
+try{$('api-token').value=sessionStorage.getItem(KEYS.token)||'';}catch(e){}
 renderAdmin();
 renderInstances();
 renderService();
