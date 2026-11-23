@@ -1,6 +1,14 @@
 {
   "rewrites": [
     {
+      "source": "/api/health",
+      "destination": "https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech/health"
+    },
+    {
+      "source": "/api/chat",
+      "destination": "https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech/chat"
+    },
+    {
       "source": "/pricing",
       "destination": "/pricing/index.html"
     },

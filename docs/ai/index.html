@@ -72,8 +72,13 @@ button.send:disabled{opacity:.45;cursor:wait}
 </div>
 
 <script>
-var API = "https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech";
+var DIRECT = "https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech";
 var KEY = "1c5fd8fc6119de39fbf38d78";
+var SAME_ORIGIN = (location.hostname === 'neoos-2.vercel.app') || /\.vercel\.app$/.test(location.hostname);
+var ENDPOINTS = SAME_ORIGIN
+  ? [{health: '/api/health', chat: '/api/chat'}, {health: DIRECT + '/health', chat: DIRECT + '/chat'}]
+  : [{health: DIRECT + '/health', chat: DIRECT + '/chat'}];
+var ep = ENDPOINTS[0];
 var STORE_KEY = 'neo-chat-v1';
 var TIMEOUT_MS = 150000;
 var chat = document.getElementById('chat');
@@ -113,7 +118,7 @@ function loadChat(){
 function checkHealth(){
   var ctrl = ('AbortController' in window) ? new AbortController() : null;
   var killer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 8000) : null;
-  fetch(API + '/health', {signal: ctrl ? ctrl.signal : undefined}).then(function(r){ return r.json(); }).then(function(j){
+  fetch(ep.health, {signal: ctrl ? ctrl.signal : undefined}).then(function(r){ return r.json(); }).then(function(j){
     if (j.ok) {
       modelName = (j.model || 'neo-1-plus').replace(':latest','') === 'neo-1' ? 'Neo-1' : 'Neo-1 Plus';
       statusEl.className = 'status on';
@@ -123,6 +128,7 @@ function checkHealth(){
       statusText.textContent = '모델이 꺼져 있어요';
     }
   }).catch(function(){
+    if (ENDPOINTS[1] && ep !== ENDPOINTS[1]) { ep = ENDPOINTS[1]; setTimeout(checkHealth, 300); return; }
     statusEl.className = 'status off';
     statusText.textContent = '서버에 연결할 수 없어요 (눌러서 다시 확인)';
     setTimeout(checkHealth, 5000);
@@ -173,11 +179,16 @@ form.addEventListener('submit', function(e){
   var ctrl = ('AbortController' in window) ? new AbortController() : null;
   var killer = ctrl ? setTimeout(function(){ ctrl.abort(); }, TIMEOUT_MS) : null;
 
-  fetch(API + '/chat', {
+  var chatOpts = {
     method: 'POST',
     headers: {'Content-Type':'application/json', 'X-Neo-Key': KEY},
     body: JSON.stringify({messages: history.slice(-12)}),
     signal: ctrl ? ctrl.signal : undefined
+  };
+  fetch(ep.chat, chatOpts).catch(function(err){
+    if (err && err.name === 'AbortError') throw err;
+    if (ENDPOINTS[1] && ep !== ENDPOINTS[1]) { ep = ENDPOINTS[1]; return fetch(ep.chat, chatOpts); }
+    throw err;
   }).then(function(r){
     return r.json().then(function(j){ return {status: r.status, body: j}; });
   }).then(function(res){
