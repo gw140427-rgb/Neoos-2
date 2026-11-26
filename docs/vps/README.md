@@ -1,108 +1,140 @@
-# NeoOS VPS backends
+# NeoOS Podroid Docker backend
 
-Two small Python services sit under the NeoOS console. Both talk to Docker on
-the device with a fixed argument list (never a shell) and both are reached from
-the browser only through `api/instances.js`.
+NeoOS Cloud is configured for the Docker Engine running inside Podroid. It creates
+short-lived Linux **containers** on that phone; it does not create full virtual
+machines, assign public IP addresses, or reserve a fixed-size virtual disk.
 
-| Service | What it does | Port |
-| --- | --- | --- |
-| `vps_server.py` | authenticated, read-only Docker status | `8080` |
-| `podroid_vps_server.py` | guest container panel: list, create, start, stop, reboot, delete, exec | `8080` |
+## 1. Podroid service
 
-Run one of them at a time: they both default to port `8080`.
-
-## Guest container panel (`podroid_vps_server.py`)
+Run the API in the same Podroid environment that can execute docker ps.
+The service listens on loopback port 8080 by default and refuses to start unless
+NEOOS_API_TOKEN is set to a random secret at least 32 characters long.
 
 ```sh
 export NEOOS_API_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export HOST=127.0.0.1
+export PORT=8080
+export NEOOS_NODE_NAME=Podroid
 python3 podroid_vps_server.py
 ```
 
-`GET /health` is open; every other route wants `Authorization: Bearer <token>`
-when `NEOOS_API_TOKEN` is set. Leave the variable unset only on a private
-network.
+Keep the token private. Do not put it in a public HTML file, GitHub commit,
+screenshot, or chat message. The API has a public, minimal GET /health
+endpoint; all container data and every mutating endpoint require the bearer
+token. An unset or short token makes protected routes fail closed with HTTP 503.
 
-### Endpoints
+## 2. Console connection
 
-| Method & path | Meaning |
+There are two supported connection paths.
+
+### Recommended: Vercel gateway
+
+Configure these server-side Vercel project environment variables:
+
+| Variable | Purpose |
 | --- | --- |
-| `GET /health` | `{"status": "ok", "provider": "podroid"}` |
-| `GET /api/instances` | every container plus live CPU/RAM, published ports, TTL and `capacity` |
-| `POST /api/instances` | `{"name", "os", "instance_type", "volume_gb"}` → `202` with the new instance |
-| `POST /api/instances/{id}/start` \| `stop` \| `reboot` | lifecycle, `202` |
-| `POST /api/instances/{id}/exec` | `{"cmd": "..."}` → `{"exit_code", "stdout", "stderr"}` |
-| `DELETE /api/instances/{id}` | `202`, or `403` for a protected container |
+| NEOOS_BACKEND_URL | HTTPS URL that securely tunnels/proxies to the Podroid API |
+| NEOOS_API_TOKEN | The same backend bearer token configured in Podroid |
+| NEOOS_CONSOLE_TOKEN | A separate random owner-console token, at least 32 characters |
 
-`{id}` is a container name or a unique id prefix.
+The Cloud page sends X-NeoOS-Console-Token to the Vercel function. The function
+checks that owner token, then adds the private Podroid bearer token before
+forwarding the request. The browser never receives NEOOS_API_TOKEN.
 
-### What a guest gets
+NEOOS_BACKEND_URL must be reachable from Vercel over HTTPS. A private Podroid
+address such as 10.x.x.x or 127.0.0.1 is not reachable from Vercel. Use a
+proper authenticated HTTPS tunnel/reverse proxy; do not open the Podroid API
+port directly to the public internet.
 
-- `alpine` → `alpine:latest`, `ubuntu` → `ubuntu:24.04`, `debian` → `debian:bookworm-slim`
-- `--cap-drop=ALL --security-opt=no-new-privileges`, `--memory=256m`,
-  `--cpus=0.5`, `--pids-limit=64`
-- one free host port from `8101`–`8199`, published as `-p <port>:80`
-  (a service listening on port 80 inside the container is reachable at once)
-- labels `neoos.managed=guest` and `neoos.expires_at=<epoch>`; `TTL` is 30
-  minutes by default and a janitor thread removes expired guests every minute
+In the Cloud page, open the hidden developer settings, leave the custom API URL
+empty, enter the NEOOS_CONSOLE_TOKEN, and save. This browser token is stored
+only in the current tab's session storage.
 
-### Guardrails
+### Direct HTTPS endpoint
 
-- `MAX_CONTAINERS` (default `4`) caps simultaneous guests. The next request gets
-  `429 {"error": "capacity_full"}`. `GET /api/instances` reports
-  `capacity: {"used", "max"}` and the console shows it as `사용 중 N / 4 슬롯`.
-- Protected containers are never stopped, deleted or expired: `PROTECTED_CONTAINERS`
-  (default `box`), anything named `user-vps-*` (`PROTECTED_PREFIXES`), and every
-  container without the `neoos.managed=guest` label — including anything that
-  already ran on the device before this service existed.
-- Names must match `^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,30}$` and ids
-  `^[a-zA-Z0-9_.-]{2,64}$`, so a request can never smuggle a Docker flag.
-- `exec` runs `docker exec <container> sh -c <cmd>` with a 10 s timeout and an
-  8192-character output cap. The container mounts nothing from the device, so a
-  command's reach stops at the container. **Anyone holding the API token has a
-  shell in every container**, so do not point a public console at it without
-  real per-user authentication in front.
+Alternatively, enter the full HTTPS base URL of an authenticated reverse proxy
+in the Cloud page and enter the Podroid NEOOS_API_TOKEN. The proxy must
+forward the /api/instances paths to Podroid and allow the
+https://neoos-2.vercel.app browser origin. Set
+NEOOS_ALLOWED_ORIGINS to the exact origin if you use a different domain.
 
-### Environment
+The direct path is not suitable for a plain HTTP public endpoint. Keep it behind
+HTTPS and authentication.
+
+## 3. Real Docker features
+
+| Feature | API |
+| --- | --- |
+| List containers and live CPU/RAM | GET /api/instances |
+| Create a guest | POST /api/instances with {"name":"worker-01","os":"alpine"} |
+| Start / stop / restart | POST /api/instances/{id}/start, stop, reboot |
+| Pause / resume | POST /api/instances/{id}/pause, unpause |
+| Run a command | POST /api/instances/{id}/exec with {"cmd":"uname -a"} |
+| Recent container logs | GET /api/instances/{id}/logs (last 100 lines) |
+| Delete guest | DELETE /api/instances/{id} |
+
+Supported templates:
+
+- alpine — alpine:latest
+- ubuntu — ubuntu:24.04
+- debian — debian:bookworm-slim
+- busybox — busybox:1.36
+- node — node:22-alpine
+- python — python:3.13-alpine
+- nginx — nginx:alpine, started as a real Nginx foreground web server
+
+Guests are capped by default at 256 MB RAM, 0.5 CPU and 64 PIDs. Docker
+capabilities are dropped and no-new-privileges is enabled. Each guest receives
+one host port from 8101–8199, bound to **127.0.0.1 only**; it is not a public
+internet port. The Nginx template listens on container port 80.
+
+The writable container layer survives stop/start and pause/resume, but it is
+removed with the container. This version does not offer a fixed-size persistent
+volume quota. The default TTL is 30 minutes and the reaper checks every 60
+seconds. MAX_CONTAINERS defaults to 4 and can be changed in the Podroid
+environment after checking phone resources.
+
+## 4. Safety rules
+
+- Only containers with the neoos.managed=guest label can be started, stopped,
+  restarted, paused, resumed, sent commands, logged, or deleted.
+- System/unmanaged containers, the box control-plane container, and names
+  using the user-vps- protected prefix are denied by the backend itself.
+- The browser's developer switch is only a user-interface gate. The real
+  security boundary is the server-side owner token and the backend token.
+- This is a **single-owner control panel**, not a public multi-user VPS service.
+  It does not yet have user registration, per-user container ownership, or
+  per-account quotas. Do not share the owner token or publish the terminal to
+  strangers.
+- Docker containers share the phone's host kernel. Dropped capabilities and
+  resource limits are useful guardrails, not a guarantee equivalent to a
+  hardware-isolated VM.
+- Do not enable router port forwarding for ports 8080 or 8101–8199.
+
+## 5. Environment variables
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PORT` / `HOST` | `8080` / `0.0.0.0` | listen address |
-| `NEOOS_API_TOKEN` | empty (open) | bearer token |
-| `MAX_CONTAINERS` | `4` | guest slots |
-| `NEOOS_TTL_SECONDS` | `1800` | guest lifetime |
-| `NEOOS_REAPER_INTERVAL` | `60` | janitor period |
-| `PROTECTED_CONTAINERS` | `box` | never stopped/deleted |
-| `PROTECTED_PREFIXES` | `user-vps-` | never stopped/deleted |
-| `NEOOS_ALLOWED_ORIGINS` | empty | extra browser origins (comma separated) |
-| `NEOOS_NODE_NAME` | `Podroid` | shown as the instance region |
+| NEOOS_API_TOKEN | required | Backend bearer secret (minimum 32 characters) |
+| HOST | 127.0.0.1 | API listen address |
+| PORT | 8080 | API listen port |
+| NEOOS_NODE_NAME | Podroid | Node label shown in console |
+| MAX_CONTAINERS | 4 | Maximum guest containers |
+| NEOOS_TTL_SECONDS | 1800 | Guest lifetime |
+| NEOOS_REAPER_INTERVAL | 60 | Expiry sweep interval |
+| PROTECTED_CONTAINERS | box | Protected exact container names |
+| PROTECTED_PREFIXES | user-vps- | Protected name prefixes |
+| NEOOS_ALLOWED_ORIGINS | empty | Additional exact browser origins |
 
-CORS answers only `https://neoos-2.vercel.app`, localhost/127.0.0.1 previews and
-the extra origins above. `OPTIONS` answers `204`.
+## 6. Validation
 
-## Read-only status API (`vps_server.py`)
-
-`GET /api/status` lists running Docker container names. It never creates,
-stops or deletes anything.
-
-```sh
-export NEOOS_VPS_API_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export NEOOS_ALLOWED_ORIGINS="https://gw140427-rgb.github.io"
-python3 vps_server.py
-```
-
-## Security notes
-
-- Do not expose either port directly to the public internet or configure router
-  port forwarding. Put an HTTPS reverse proxy with authentication in front, or
-  use the Vercel gateway (`NEOOS_BACKEND_URL` + `NEOOS_API_TOKEN`).
-- Keep the token private and rotate it if it ever appeared in a screenshot, a
-  log or a commit.
-- The old public `ntfy.sh` command worker stays disabled: anyone who knew its
-  public topic could send container-create requests.
-
-## Validation
+Run the repository tests and Python compile checks before restarting the service:
 
 ```sh
 python3 -m unittest discover -s tests -v
-python -m py_compile vps_server.py podroid_vps_server.py neoos_vps_worker.py
+python3 -m py_compile podroid_vps_server.py vps_server.py neoos_vps_worker.py
 ```
+
+The API code and Cloud page must be deployed together. Updating GitHub source
+does not update an already running Podroid process; restart the Podroid API
+only after reviewing the changes and preserving its existing environment.
