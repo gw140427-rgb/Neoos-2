@@ -98,6 +98,8 @@ input:disabled,select:disabled{opacity:.55}
 .term-form input{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem}
 .term-form .btn{flex:0 0 auto}
 .term-meta{font-size:.74rem;color:var(--muted);margin-top:6px}
+.term-quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+.term-quick button{border:1px solid #2a4a6e;background:#0d1e31;color:#bcdcff;border-radius:8px;padding:6px 9px;font-size:.72rem}
 .code{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#050b14;border:1px solid #203554;border-radius:10px;padding:10px 12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8rem;color:var(--green);margin:8px 0;word-break:break-all}
 .code button{flex:0 0 auto;border:1px solid #2a4a6e;background:#0d1e31;color:#bcdcff;border-radius:8px;padding:4px 9px;font-size:.72rem;min-height:30px}
 .code span{min-width:0}
@@ -200,28 +202,28 @@ input:disabled,select:disabled{opacity:.55}
     <a href="/game" data-app="game">🍚 콩밥 감옥</a>
   </nav>
 
-  <!-- 요약 -->
-  <section class="stats" aria-label="클라우드 요약">
+  <!-- Podroid runtime summary -->
+  <section class="stats" aria-label="Podroid Docker 요약">
     <div class="stat">
-      <div class="stat-label">보유 인스턴스</div>
-      <div class="stat-val blue" id="total-count">– / 4대</div>
-      <div class="stat-sub">게스트 슬롯 기준</div>
+      <div class="stat-label">게스트 컨테이너</div>
+      <div class="stat-val blue" id="total-count">0 / 4대</div>
+      <div class="stat-sub">Podroid Docker 슬롯</div>
       <div class="quota-bar"><span id="quotaBar"></span></div>
     </div>
     <div class="stat">
-      <div class="stat-label">가동 중</div>
+      <div class="stat-label">실행 중</div>
       <div class="stat-val green" id="running-count">0대</div>
-      <div class="stat-sub">t3.micro · 8GB gp3</div>
+      <div class="stat-sub">실제 Docker 상태</div>
     </div>
     <div class="stat">
-      <div class="stat-label">기본 공인 IP</div>
+      <div class="stat-label">Podroid 노드</div>
       <div class="stat-val" id="primary-ip" style="font-size:.95rem;font-family:ui-monospace,monospace">—</div>
-      <div class="stat-sub">ap-southeast-2 · Sydney</div>
+      <div class="stat-sub">휴대폰의 Docker 엔진</div>
     </div>
     <div class="stat">
-      <div class="stat-label">남은 크레딧</div>
-      <div class="stat-val blue" style="font-size:1.05rem">$119.03</div>
-      <div class="stat-sub">2027년 5월까지 · 참고용</div>
+      <div class="stat-label">컨테이너 기본 제한</div>
+      <div class="stat-val blue" style="font-size:1.05rem">256 MB</div>
+      <div class="stat-sub">RAM · CPU 0.5 · PID 64</div>
     </div>
   </section>
 
@@ -234,95 +236,89 @@ input:disabled,select:disabled{opacity:.55}
       </div>
     </div>
     <div id="instances-list"></div>
-    <p class="hint">기존 제어 버튼 화면을 복원했어. 실제 서버 조작은 안전한 서버 측 관리자 인증이 연결될 때까지 비활성화돼. 인스턴스와 데이터는 유지돼.</p>
+    <p class="hint">목록과 상태는 Podroid Docker 엔진에서 직접 읽어 와. 보호된 시스템 컨테이너는 조회만 가능하고, NeoOS가 만든 게스트 컨테이너만 조작·삭제할 수 있어.</p>
   </section>
 
-  <!-- 배포 -->
+  <!-- Podroid Docker container creation -->
   <section class="card" aria-labelledby="deployTitle">
     <div class="card-head">
-      <h2 id="deployTitle">🚀 새 가상 서버 배포</h2>
-      <span class="state" style="background:#13273e;color:var(--blue);border-color:#204b78">크레딧 보호 모드</span>
+      <h2 id="deployTitle">🐳 Docker 컨테이너 추가</h2>
+      <span class="state" style="background:#13273e;color:var(--blue);border-color:#204b78">Podroid 로컬</span>
     </div>
-    <p class="muted" style="margin:0 0 12px">현재 배포 기능은 보안 점검을 위해 일시 중지했어. 기존 AWS 인스턴스와 데이터는 유지돼.</p>
+    <p class="muted" style="margin:0 0 12px">실제 Podroid의 Docker Engine에 컨테이너를 생성해. 가상머신이나 공인 IP가 아니며, 이 휴대폰의 CPU·메모리·저장공간을 사용해.</p>
 
     <div class="field" style="margin-bottom:10px">
-      <label>1. 운영체제(OS) 템플릿</label>
+      <label>1. 컨테이너 템플릿</label>
       <div class="os-grid">
-        <div class="os-choice selected" data-os="ubuntu" role="button" tabindex="0">
-          <div class="os-icon">🐧</div><div class="os-title">Ubuntu 26.04 LTS</div><div class="os-desc">안정적인 최신 표준</div>
+        <div class="os-choice selected" data-os="alpine" role="button" tabindex="0">
+          <div class="os-icon">🏔️</div><div class="os-title">Alpine Linux</div><div class="os-desc">초경량 셸</div>
+        </div>
+        <div class="os-choice" data-os="ubuntu" role="button" tabindex="0">
+          <div class="os-icon">🐧</div><div class="os-title">Ubuntu 24.04</div><div class="os-desc">일반 리눅스</div>
         </div>
         <div class="os-choice" data-os="debian" role="button" tabindex="0">
-          <div class="os-icon">🌀</div><div class="os-title">Debian 12 Bookworm</div><div class="os-desc">가볍고 단단한 서버</div>
+          <div class="os-icon">🌀</div><div class="os-title">Debian 12</div><div class="os-desc">안정적인 환경</div>
         </div>
-        <div class="os-choice" data-os="alpine" role="button" tabindex="0">
-          <div class="os-icon">🏔️</div><div class="os-title">Alpine Linux</div><div class="os-desc">초경량 고속 부팅</div>
+        <div class="os-choice" data-os="busybox" role="button" tabindex="0">
+          <div class="os-icon">📦</div><div class="os-title">BusyBox</div><div class="os-desc">가장 작은 도구상자</div>
+        </div>
+        <div class="os-choice" data-os="node" role="button" tabindex="0">
+          <div class="os-icon">🟩</div><div class="os-title">Node.js 22</div><div class="os-desc">JavaScript 런타임</div>
+        </div>
+        <div class="os-choice" data-os="python" role="button" tabindex="0">
+          <div class="os-icon">🐍</div><div class="os-title">Python 3.13</div><div class="os-desc">Python 런타임</div>
+        </div>
+        <div class="os-choice" data-os="nginx" role="button" tabindex="0">
+          <div class="os-icon">🌐</div><div class="os-title">Nginx</div><div class="os-desc">웹 서버 실행</div>
         </div>
       </div>
     </div>
 
-    <div class="form-grid">
-      <div class="field">
-        <label for="server-name">2. 서버 이름 <span id="nameLock" style="color:#ffd98a;font-weight:600">🔒</span></label>
-        <input id="server-name" type="text" value="NeoOS Worker 02" maxlength="32">
-      </div>
-      <div class="field">
-        <label for="server-spec">3. 사양 (고정)</label>
-        <select id="server-spec" disabled title="요금 보호를 위해 t3.micro로 고정돼 있어">
-          <option value="t3.micro" selected>t3.micro (2 vCPU · 1GB RAM) · 고정</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="server-disk">4. SSD (고정)</label>
-        <select id="server-disk" disabled>
-          <option value="8" selected>8GB gp3 (고정)</option>
-        </select>
-      </div>
-      <div class="field">
-        <label for="server-region">5. 리전 (고정)</label>
-        <select id="server-region" disabled>
-          <option value="ap-southeast-2" selected>호주 시드니 · 고정</option>
-        </select>
-      </div>
+    <div class="field">
+      <label for="server-name">2. 컨테이너 이름</label>
+      <input id="server-name" type="text" value="neoos-worker-02" maxlength="31" autocomplete="off" spellcheck="false">
+      <p class="hint">영문·숫자로 시작하고 영문·숫자·밑줄·마침표·하이픈만 사용할 수 있어. 2~31자.</p>
     </div>
 
-    <button type="button" class="btn primary" id="deploy-btn" style="width:100%;margin-top:14px;padding:13px;font-size:.92rem">⚡ 가상 서버 즉시 배포하기</button>
-    <p class="hint" id="deployHint">🔒 개발자 인증 후 배포할 수 있어. 버튼을 누르면 비밀번호를 물어볼게.</p>
-    <p class="hint">♾️ 워커 인스턴스에는 NeoOS 자체의 24시간 만료 타이머가 없어. 서버가 실행되는 동안 클라우드 공급자 요금이 발생할 수 있으니 사용량과 청구 내역을 확인해 줘. 게스트 컨테이너는 생성 30분 뒤 자동 정리돼.</p>
+    <button type="button" class="btn primary" id="deploy-btn" style="width:100%;margin-top:14px;padding:13px;font-size:.92rem">🐳 Podroid에 컨테이너 생성</button>
+    <p class="hint" id="deployHint">먼저 접속 토큰을 설정하고 서버 연결을 확인해 줘.</p>
+    <p class="hint">기본 제한은 컨테이너당 RAM 256MB, CPU 0.5, PID 64개야. 컨테이너 쓰기 레이어는 중지·시작 사이에 유지되지만, 삭제하거나 30분 TTL이 끝나면 함께 삭제돼.</p>
 
-    <div class="status-log" id="status-log" role="status">NeoOS Cloud Engine 대기 중 · 준비 완료.</div>
+    <div class="status-log" id="status-log" role="status">Podroid Docker 연결 대기 중.</div>
 
     <details style="margin-top:16px;border-top:1px solid var(--line);padding-top:12px">
-      <summary style="color:var(--muted);cursor:pointer;font-size:.8rem">⚙️ 고급 엔드포인트 및 API 토큰 (개발자 전용)</summary>
+      <summary style="color:var(--muted);cursor:pointer;font-size:.8rem">⚙️ Podroid 연결 및 보안 토큰 설정</summary>
       <div class="form-grid" style="margin-top:10px">
         <div class="field">
-          <label for="api-url">커스텀 API 엔드포인트</label>
-          <input id="api-url" type="url" placeholder="https://api.neoos.local">
+          <label for="api-url">Podroid API 주소 (선택)</label>
+          <input id="api-url" type="url" placeholder="https://your-podroid-api.example">
+          <p class="hint">비워 두면 NeoOS Vercel 게이트웨이를 사용해.</p>
         </div>
         <div class="field">
-          <label for="api-token">Bearer 토큰</label>
-          <input id="api-token" type="password" placeholder="32자리 이상 비밀 토큰">
+          <label for="api-token">접속 토큰</label>
+          <input id="api-token" type="password" placeholder="서버에 설정한 32자 이상 토큰" autocomplete="off">
+          <p class="hint">기본값은 현재 탭의 세션에만 보관돼. 이 토큰을 웹페이지 코드나 공개 저장소에 넣지 마.</p>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:9px">
-        <button type="button" class="btn sm" id="saveEndpoint">설정 저장</button>
-        <button type="button" class="btn sm" id="resetEndpoint">기본값 복원</button>
+        <button type="button" class="btn sm" id="saveEndpoint">연결 저장 및 확인</button>
+        <button type="button" class="btn sm" id="resetEndpoint">초기화</button>
       </div>
     </details>
   </section>
 
-  <!-- 크레딧 가드레일 -->
+  <!-- Podroid safeguards -->
   <section class="card" aria-labelledby="guardTitle">
-    <div class="card-head"><h2 id="guardTitle">🛡️ 크레딧 보호 가드레일</h2><span class="pill" style="color:#bcdcff;border-color:#1c5a91;background:#0d1e31">자동 적용</span></div>
+    <div class="card-head"><h2 id="guardTitle">🛡️ Docker 안전 제한</h2><span class="pill" style="color:#bcdcff;border-color:#1c5a91;background:#0d1e31">백엔드 적용</span></div>
     <ul class="glist">
-      <li><b>게스트 슬롯 4개</b><small>동시 4개까지 · 넘으면 서버가 429로 거절</small></li>
-      <li><b>사양 고정 t3.micro</b><small>2 vCPU · 1GB RAM · 8GB gp3 디스크</small></li>
-      <li><b>게스트 자동 만료 30분</b><small>생성 후 30분이 지나면 서버가 게스트 컨테이너를 자동 정리</small></li>
-      <li><b>운영 시간 제한 없음</b><small>AWS 워커는 NeoOS의 24시간 만료 타이머를 사용하지 않음 · 공급자 요금은 별도</small></li>
-      <li><b>컨트롤 플레인 보호</b><small>neoos 인스턴스는 중지·삭제 불가</small></li>
-      <li><b>개발자 잠금</b><small>관리자 인증 보안 작업 진행 중 · 제어 기능은 임시 비활성화</small></li>
-      <li><b>리전 고정</b><small>시드니(ap-southeast-2)에서만 배포</small></li>
+      <li><b>게스트 슬롯 4개</b><small>서버의 MAX_CONTAINERS 값으로 제한돼. 슬롯이 가득 차면 생성 요청을 거절해.</small></li>
+      <li><b>컨테이너 자원 제한</b><small>기본 256MB RAM · CPU 0.5 · PID 64개</small></li>
+      <li><b>컨테이너 격리</b><small>Linux capabilities 전체 제거 · no-new-privileges · 호스트 폴더 미마운트</small></li>
+      <li><b>자동 만료</b><small>기본 30분 뒤 NeoOS 게스트 컨테이너 자동 정리</small></li>
+      <li><b>시스템 컨테이너 보호</b><small>NeoOS가 만들지 않은 컨테이너와 box·user-vps-*는 변경·삭제하지 않아.</small></li>
+      <li><b>접근 인증</b><small>32자 이상 토큰을 서버에서 검증. 공개 다중 사용자 계정/소유권 기능은 아직 활성화하지 않아.</small></li>
     </ul>
-    <p class="hint">현재 콘솔은 읽기 전용이야. AWS 인스턴스와 저장 데이터는 보존되며, 제어 기능은 별도의 안전한 관리자 인증을 적용한 뒤 다시 열 예정이야. 개발자 모드에서는 각 카드의 💻 터미널(웹 콘솔)만 열려 있어.</p>
+    <p class="hint">Podroid는 휴대폰에서 동작하는 단일 Docker 노드야. 컨테이너는 완전한 VM이 아니고 같은 Android/Linux 커널을 공유하므로, 공개 사용자에게 임의 명령 실행을 제공하지 않도록 해.</p>
   </section>
 
   <!-- 빠른 시작: Railway / ask-cli -->
@@ -405,10 +401,20 @@ input:disabled,select:disabled{opacity:.55}
     <p><b id="webTermInst">neoos</b> · <span id="webTermMeta">명령은 이 컨테이너 안에서만 실행돼.</span></p>
     <div class="term-out" id="webTermOut" aria-live="polite" role="log"># 터미널 준비 완료</div>
     <form class="term-form" id="webTermForm" autocomplete="off">
-      <input id="webTermCmd" type="text" placeholder="예: uname -a   (sh -c 로 실행 · 최대 10초)" maxlength="512" spellcheck="false" aria-label="실행할 명령">
+      <input id="webTermCmd" type="text" placeholder="예: uname -a (최대 10초)" maxlength="512" spellcheck="false" aria-label="실행할 명령">
       <button type="submit" class="btn primary" id="webTermRun">실행</button>
     </form>
-    <p class="term-meta">출력은 8192자까지만 보여 줘. 설치 같은 긴 작업은 <code>nohup … &amp;</code> 로 돌려 줘.</p>
+    <div class="term-quick" id="termQuick" aria-label="빠른 명령">
+      <button type="button" data-cmd="pwd">pwd</button>
+      <button type="button" data-cmd="ls -la">ls -la</button>
+      <button type="button" data-cmd="whoami">whoami</button>
+      <button type="button" data-cmd="id">id</button>
+      <button type="button" data-cmd="uname -a">uname -a</button>
+      <button type="button" data-cmd="cat /etc/os-release">OS 정보</button>
+      <button type="button" data-cmd="df -h">디스크</button>
+      <button type="button" data-cmd="ps">프로세스</button>
+    </div>
+    <p class="term-meta">출력은 8192자까지만 보여 줘. 명령은 해당 게스트 컨테이너 안에서만 실행되고 최대 10초 제한이 있어.</p>
     <div class="modal-actions">
       <button type="button" class="btn sm" id="webTermClear">출력 지우기</button>
       <button type="button" class="btn ghost" id="webTermClose">닫기</button>
