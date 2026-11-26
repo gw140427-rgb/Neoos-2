@@ -77,11 +77,19 @@ OS_IMAGES = {
     "alpine": "alpine:latest",
     "ubuntu": "ubuntu:24.04",
     "debian": "debian:bookworm-slim",
+    "busybox": "busybox:1.36",
+    "node": "node:22-alpine",
+    "python": "python:3.13-alpine",
+    "nginx": "nginx:alpine",
 }
 OS_LABELS = {
     "alpine": ("Alpine Linux", "🏔️"),
     "ubuntu": ("Ubuntu 24.04 LTS", "🐧"),
     "debian": ("Debian 12 Bookworm", "🌀"),
+    "busybox": ("BusyBox Linux", "📦"),
+    "node": ("Node.js 22 Alpine", "🟩"),
+    "python": ("Python 3.13 Alpine", "🐍"),
+    "nginx": ("Nginx Alpine", "🌐"),
 }
 
 MEMORY_LIMIT = "256m"
@@ -111,8 +119,14 @@ STATE_MAP = {
 }
 
 PORT_MAPPING_RE = re.compile(r"(\d+)->(\d+)/(tcp|udp)")
-ACTION_PATTERN = "start|stop|reboot|exec"
-ACTIONS = {"start": "start", "stop": "stop", "reboot": "restart"}
+ACTION_PATTERN = "start|stop|reboot|pause|unpause|exec"
+ACTIONS = {
+    "start": "start",
+    "stop": "stop",
+    "reboot": "restart",
+    "pause": "pause",
+    "unpause": "unpause",
+}
 
 
 # --------------------------------------------------------------------------- #
@@ -350,7 +364,7 @@ def reaper_loop(interval: int = REAPER_INTERVAL) -> None:
 # HTTP handler
 # --------------------------------------------------------------------------- #
 class Handler(BaseHTTPRequestHandler):
-    server_version = "NeoOS-Podroid-VPS/3.0"
+    server_version = "NeoOS-Podroid-VPS/3.1"
 
     def log_message(self, fmt: str, *args: object) -> None:
         # Keep logs useful without echoing request headers or bearer tokens.
@@ -404,9 +418,16 @@ class Handler(BaseHTTPRequestHandler):
         self.send_json(500, payload)
 
     def authorized(self) -> bool:
-        """Bearer token check. When NEOOS_API_TOKEN is empty the API is open."""
-        if not TOKEN:
-            return True
+        """Fail closed unless a strong server-side bearer token is configured."""
+        if len(TOKEN) < 32:
+            self.send_json(
+                503,
+                {
+                    "error": "server_token_not_configured",
+                    "message": "Set NEOOS_API_TOKEN to a random secret of at least 32 characters.",
+                },
+            )
+            return False
         scheme, separator, supplied = self.headers.get("Authorization", "").partition(" ")
         if (
             not separator
@@ -451,6 +472,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/health":
             # Public on purpose: only says that the panel process is alive.
             self.send_json(200, {"status": "ok", "provider": "podroid"})
+            return
+        logs_match = re.fullmatch(r"/api/instances/([^/]+)/logs", path)
+        if logs_match:
+            if not self.authorized():
+                return
+            self.container_logs(logs_match.group(1))
             return
         if path != "/api/instances":
             self.send_json(404, {"error": "not_found"})
@@ -553,17 +580,8 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
 
-        try:
-            volume_gb = int(data.get("volume_gb", 8))
-        except (TypeError, ValueError):
-            self.send_json(400, {"error": "invalid_volume_gb"})
-            return
-        if volume_gb < 1 or volume_gb > 64:
-            self.send_json(
-                400, {"error": "invalid_volume_gb", "message": "volume_gb는 1~64 사이여야 해."}
-            )
-            return
-
+        # This is a Docker container, not a full VM disk. Its writable layer
+        # persists across stop/start but is removed with the container.
         try:
             rows = list_containers()
         except (OSError, subprocess.SubprocessError) as exc:
@@ -617,8 +635,11 @@ class Handler(BaseHTTPRequestHandler):
             "--label",
             f"{EXPIRES_LABEL}={expires}",
             image,
-            "sleep",
-            "infinity",
+            *(
+                ["nginx", "-g", "daemon off;"]
+                if os_choice == "nginx"
+                else ["sh", "-c", "while true; do sleep 3600; done"]
+            ),
         ]
         try:
             docker(command, timeout=180)
@@ -664,8 +685,7 @@ class Handler(BaseHTTPRequestHandler):
                 "accepted": True,
                 "provider": "podroid",
                 "instance": view,
-                "volume_gb": volume_gb,
-                "instance_type": str(data.get("instance_type", "")).strip() or CPU_LIMIT,
+                "storage": "컨테이너 쓰기 레이어 (삭제 시 함께 삭제)",
                 "ttl_seconds": TTL_SECONDS,
                 "capacity": {"used": used, "max": MAX_CONTAINERS},
             },
@@ -686,14 +706,14 @@ class Handler(BaseHTTPRequestHandler):
             return
         name = target[1]
         reason = protection_reason(target)
-        if action == "stop" and reason is not None:
+        if reason is not None:
             self.send_json(
                 403,
                 {
                     "error": "protected_container",
                     "id": name,
                     "reason": reason,
-                    "message": "NeoOS가 관리하지 않는 컨테이너는 중지할 수 없어.",
+                    "message": "NeoOS가 관리하는 게스트 컨테이너만 조작할 수 있어.",
                 },
             )
             return
@@ -740,6 +760,13 @@ class Handler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": "container_not_found", "id": ref})
             return
         name = target[1]
+        reason = protection_reason(target)
+        if reason is not None:
+            self.send_json(
+                403,
+                {"error": "protected_container", "id": name, "reason": reason},
+            )
+            return
         if STATE_MAP.get((target[2] or "").lower()) != "running":
             self.send_json(409, {"error": "container_not_running", "id": name})
             return
@@ -789,6 +816,40 @@ class Handler(BaseHTTPRequestHandler):
             },
         )
 
+    def container_logs(self, ref: str) -> None:
+        """Return recent logs from one NeoOS-managed guest only."""
+        if not REF_RE.fullmatch(ref):
+            self.send_json(400, {"error": "invalid_container_id"})
+            return
+        try:
+            rows = list_containers()
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.docker_failed(exc)
+            return
+        target = resolve_container(rows, ref)
+        if target is None:
+            self.send_json(404, {"error": "container_not_found", "id": ref})
+            return
+        reason = protection_reason(target)
+        if reason is not None:
+            self.send_json(403, {"error": "protected_container", "id": target[1], "reason": reason})
+            return
+        try:
+            result = docker(["logs", "--tail", "100", target[1]], timeout=15)
+        except (OSError, subprocess.SubprocessError) as exc:
+            self.docker_failed(exc)
+            return
+        stdout, stdout_cut = clip_output(result.stdout)
+        stderr, stderr_cut = clip_output(result.stderr)
+        combined = stdout
+        if stderr:
+            combined = (combined + "\\n" + stderr).strip()
+        logs, cut = clip_output(combined)
+        self.send_json(
+            200,
+            {"id": target[1], "logs": logs, "truncated": stdout_cut or stderr_cut or cut},
+        )
+
     def delete_container(self, ref: str) -> None:
         if not REF_RE.fullmatch(ref):
             self.send_json(400, {"error": "invalid_container_id"})
@@ -828,11 +889,9 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main() -> int:
-    if not TOKEN:
-        print(
-            "[neoos] NEOOS_API_TOKEN is not set: the panel answers without a bearer token.\n"
-            "        Set it (e.g. export NEOOS_API_TOKEN=$(python3 -c 'import secrets;"
-            "print(secrets.token_urlsafe(32))')) before exposing the port."
+    if len(TOKEN) < 32:
+        raise SystemExit(
+            "Set NEOOS_API_TOKEN to a random secret of at least 32 characters before starting the server."
         )
     print(f"NeoOS Podroid VPS API listening on {HOST}:{PORT} (node: {NODE_NAME})")
     print(
