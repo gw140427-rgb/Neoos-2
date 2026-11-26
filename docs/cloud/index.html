@@ -93,6 +93,11 @@ input,select{width:100%;border:1px solid #233956;border-radius:10px;background:#
 input:focus,select:focus{border-color:var(--blue);box-shadow:0 0 0 3px #46b5ff22}
 input:disabled,select:disabled{opacity:.55}
 .status-log{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.76rem;color:var(--muted);background:#050c17;border:1px solid var(--line);border-radius:11px;padding:11px 13px;margin-top:12px;white-space:pre-wrap;line-height:1.6;max-height:170px;overflow:auto}
+.term-out{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.78rem;color:#bfe9d4;background:#04101a;border:1px solid #1d3a54;border-radius:11px;padding:12px;margin-top:12px;white-space:pre-wrap;word-break:break-word;line-height:1.55;height:240px;overflow:auto}
+.term-form{display:flex;gap:8px;margin-top:10px;align-items:stretch}
+.term-form input{flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.82rem}
+.term-form .btn{flex:0 0 auto}
+.term-meta{font-size:.74rem;color:var(--muted);margin-top:6px}
 .code{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#050b14;border:1px solid #203554;border-radius:10px;padding:10px 12px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:.8rem;color:var(--green);margin:8px 0;word-break:break-all}
 .code button{flex:0 0 auto;border:1px solid #2a4a6e;background:#0d1e31;color:#bcdcff;border-radius:8px;padding:4px 9px;font-size:.72rem;min-height:30px}
 .code span{min-width:0}
@@ -183,6 +188,7 @@ input:disabled,select:disabled{opacity:.55}
     </div>
     <div class="head-pills">
       <span class="pill" id="servicePill"><span class="pill-dot"></span> 서비스 온라인</span>
+      <span class="pill" id="slotPill" style="color:#bcdcff;border-color:#1c5a91;background:#0d1e31">사용 중 0 / 4 슬롯</span>
     </div>
   </header>
 
@@ -198,8 +204,8 @@ input:disabled,select:disabled{opacity:.55}
   <section class="stats" aria-label="클라우드 요약">
     <div class="stat">
       <div class="stat-label">보유 인스턴스</div>
-      <div class="stat-val blue" id="total-count">– / 2대</div>
-      <div class="stat-sub">쿼터 2대 고정</div>
+      <div class="stat-val blue" id="total-count">– / 4대</div>
+      <div class="stat-sub">게스트 슬롯 기준</div>
       <div class="quota-bar"><span id="quotaBar"></span></div>
     </div>
     <div class="stat">
@@ -281,7 +287,7 @@ input:disabled,select:disabled{opacity:.55}
 
     <button type="button" class="btn primary" id="deploy-btn" style="width:100%;margin-top:14px;padding:13px;font-size:.92rem">⚡ 가상 서버 즉시 배포하기</button>
     <p class="hint" id="deployHint">🔒 개발자 인증 후 배포할 수 있어. 버튼을 누르면 비밀번호를 물어볼게.</p>
-    <p class="hint">♾️ 워커 인스턴스에는 NeoOS 자체의 24시간 만료 타이머가 없어. 서버가 실행되는 동안 클라우드 공급자 요금이 발생할 수 있으니 사용량과 청구 내역을 확인해 줘.</p>
+    <p class="hint">♾️ 워커 인스턴스에는 NeoOS 자체의 24시간 만료 타이머가 없어. 서버가 실행되는 동안 클라우드 공급자 요금이 발생할 수 있으니 사용량과 청구 내역을 확인해 줘. 게스트 컨테이너는 생성 30분 뒤 자동 정리돼.</p>
 
     <div class="status-log" id="status-log" role="status">NeoOS Cloud Engine 대기 중 · 준비 완료.</div>
 
@@ -308,14 +314,15 @@ input:disabled,select:disabled{opacity:.55}
   <section class="card" aria-labelledby="guardTitle">
     <div class="card-head"><h2 id="guardTitle">🛡️ 크레딧 보호 가드레일</h2><span class="pill" style="color:#bcdcff;border-color:#1c5a91;background:#0d1e31">자동 적용</span></div>
     <ul class="glist">
-      <li><b>인스턴스 쿼터 2대</b><small>계정당 최대 2대 · 서버 API가 강제로 거절</small></li>
+      <li><b>게스트 슬롯 4개</b><small>동시 4개까지 · 넘으면 서버가 429로 거절</small></li>
       <li><b>사양 고정 t3.micro</b><small>2 vCPU · 1GB RAM · 8GB gp3 디스크</small></li>
-      <li><b>운영 시간 제한 없음</b><small>NeoOS의 24시간 만료 타이머를 사용하지 않음 · 공급자 요금은 별도</small></li>
+      <li><b>게스트 자동 만료 30분</b><small>생성 후 30분이 지나면 서버가 게스트 컨테이너를 자동 정리</small></li>
+      <li><b>운영 시간 제한 없음</b><small>AWS 워커는 NeoOS의 24시간 만료 타이머를 사용하지 않음 · 공급자 요금은 별도</small></li>
       <li><b>컨트롤 플레인 보호</b><small>neoos 인스턴스는 중지·삭제 불가</small></li>
       <li><b>개발자 잠금</b><small>관리자 인증 보안 작업 진행 중 · 제어 기능은 임시 비활성화</small></li>
       <li><b>리전 고정</b><small>시드니(ap-southeast-2)에서만 배포</small></li>
     </ul>
-    <p class="hint">현재 콘솔은 읽기 전용이야. AWS 인스턴스와 저장 데이터는 보존되며, 제어 기능은 별도의 안전한 관리자 인증을 적용한 뒤 다시 열 예정이야.</p>
+    <p class="hint">현재 콘솔은 읽기 전용이야. AWS 인스턴스와 저장 데이터는 보존되며, 제어 기능은 별도의 안전한 관리자 인증을 적용한 뒤 다시 열 예정이야. 개발자 모드에서는 각 카드의 💻 터미널(웹 콘솔)만 열려 있어.</p>
   </section>
 
   <!-- 빠른 시작: Railway / ask-cli -->
@@ -391,6 +398,24 @@ input:disabled,select:disabled{opacity:.55}
   </div>
 </div>
 
+<!-- 웹 터미널 (컨테이너 안에서 명령 실행) -->
+<div class="modal" id="webTerm" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="webTermTitle" style="max-width:680px">
+    <h3 id="webTermTitle">💻 웹 터미널</h3>
+    <p><b id="webTermInst">neoos</b> · <span id="webTermMeta">명령은 이 컨테이너 안에서만 실행돼.</span></p>
+    <div class="term-out" id="webTermOut" aria-live="polite" role="log"># 터미널 준비 완료</div>
+    <form class="term-form" id="webTermForm" autocomplete="off">
+      <input id="webTermCmd" type="text" placeholder="예: uname -a   (sh -c 로 실행 · 최대 10초)" maxlength="512" spellcheck="false" aria-label="실행할 명령">
+      <button type="submit" class="btn primary" id="webTermRun">실행</button>
+    </form>
+    <p class="term-meta">출력은 8192자까지만 보여 줘. 설치 같은 긴 작업은 <code>nohup … &amp;</code> 로 돌려 줘.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn sm" id="webTermClear">출력 지우기</button>
+      <button type="button" class="btn ghost" id="webTermClose">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 배포 완료 -->
 <div class="modal" id="doneModal" hidden>
   <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="doneTitle">
@@ -434,6 +459,8 @@ const DEFAULT_INSTANCES=[];
 let instances=[];
 let selectedOs='ubuntu';
 let adminUnlocked=false;
+let slotCapacity={used:0,max:4};
+let termTarget=null;
 let gateCallback=null;
 let gateFails=0;
 let gateLockUntil=0;
@@ -463,6 +490,12 @@ function readJson(key,fallback){
 }
 function writeJson(key,value){
   try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(e){return false;}
+}
+function formatTtl(seconds){
+  const total=Math.max(0,Math.round(Number(seconds)||0));
+  const minutes=Math.floor(total/60);
+  const rest=total%60;
+  return minutes>0?(minutes+'분'):(rest+'초');
 }
 function copyText(text,label){
   const done=function(){toast((label||'내용')+' 복사 완료');};
@@ -597,8 +630,11 @@ function saveInstances(list){
 function renderInstances(){
   const box=$('instances-list');
   box.replaceChildren();
-  $('total-count').textContent=instances.length+' / '+MAX_INSTANCES+'대';
-  $('quotaBar').style.width=Math.min(100,instances.length/MAX_INSTANCES*100)+'%';
+  const slotPill=$('slotPill');
+  const guestCount=instances.filter(function(i){return i.managed==='guest';}).length;
+  if(slotPill)slotPill.textContent='사용 중 '+guestCount+' / '+slotCapacity.max+' 슬롯';
+  $('total-count').textContent=guestCount+' / '+slotCapacity.max+'대';
+  $('quotaBar').style.width=Math.min(100,guestCount/Math.max(1,slotCapacity.max)*100)+'%';
   const running=instances.filter(function(i){return i.state==='running';}).length;
   $('running-count').textContent=running+'대';
   const firstRunning=instances.find(function(i){return i.state==='running'&&i.ip&&i.ip.indexOf('할당')<0;});
@@ -639,23 +675,41 @@ function renderInstances(){
     sub2.className='inst-sub';
     sub2.style.color='#5d7699';
     sub2.textContent=(inst.os||'Linux')+' · '+(inst.region||'ap-southeast-2')+' · '+(inst.storage||'8GB gp3');
-    info.append(nameRow,sub,sub2);
+    const perf=document.createElement('div');
+    perf.className='specrow';
+    perf.style.margin='8px 0 0';
+    const chips=[
+      ['CPU',inst.cpu||'—'],
+      ['RAM',inst.mem||'—'],
+      ['PORT',String(inst.ports||'—').replace(/->/g,'→')]
+    ];
+    if(typeof inst.ttl_seconds==='number')chips.push(['TTL',formatTtl(inst.ttl_seconds)]);
+    chips.forEach(function(pair){
+      const chip=document.createElement('span');
+      chip.className='spec';
+      chip.textContent=pair[0]+' '+pair[1];
+      if(pair[0]==='TTL'&&inst.ttl_seconds<=300){chip.style.color='#ffcf70';chip.style.borderColor='#7a5a1c';}
+      perf.append(chip);
+    });
+    info.append(nameRow,sub,sub2,perf);
     main.append(icon,info);
 
     const actions=document.createElement('div');
     actions.className='inst-actions';
-    const addBtn=function(label,cls,fn){
+    const addBtn=function(label,cls,fn,available){
       const b=document.createElement('button');
       b.type='button';
       b.className='btn '+(cls||'');
       b.textContent=label;
-      b.disabled=true;
-      b.title='서버 측 관리자 인증 연결 전까지 실제 조작은 비활성화돼 있어.';
-      b.setAttribute('aria-label',label+' (현재 비활성화)');
+      b.disabled=!available;
+      b.title=available
+        ? '개발자 모드에서 열 수 있어. 상단 구름 로고를 5회 연타해 줘.'
+        : (inst.protected?'보호된 컨테이너라서 조작할 수 없어.':'서버 측 관리자 인증 연결 전까지 실제 조작은 비활성화돼 있어.');
+      b.setAttribute('aria-label',label+(available?'':' (현재 비활성화)'));
       if(fn)b.addEventListener('click',fn);
       actions.append(b);
     };
-    addBtn('💻 터미널 접속','',function(){openTerminal(inst);});
+    addBtn('💻 터미널','',function(){openWebTerminal(inst);},inst.state==='running');
     addBtn('🔄 재부팅','',function(){rebootInstance(inst);});
     if(inst.state==='stopped'){
       addBtn('▶️ 시작','',function(){startInstance(inst);});
@@ -719,6 +773,7 @@ async function syncInstances(silent){
         const data=await res.json();
         if(Array.isArray(data.instances)){
           instances=data.instances;
+          if(data.capacity&&typeof data.capacity.max==='number')slotCapacity.max=data.capacity.max;
           saveInstances(instances);
           renderInstances();
           if(!silent)log('[NeoOS Cloud 동기화] 실시간 인스턴스 '+instances.length+'대 확인 ('+(data.region||'ap-southeast-2')+')');
@@ -757,6 +812,60 @@ function openTerminal(inst){
     $('termModal').hidden=false;
     log('터미널 접속 모달 열림: '+(inst.name||inst.id)+' ('+ip+')');
   });
+}
+
+/* ---------------- web terminal (POST /api/instances/{id}/exec) ---------------- */
+function openWebTerminal(inst){
+  requireAdmin('웹 터미널은 개발자 인증 후에 열 수 있어.',function(){
+    termTarget=inst;
+    const label=inst.name||inst.id||'container';
+    $('webTermInst').textContent=label;
+    const port=inst.ports&&inst.ports!=='—'?('· 공개 포트 '+String(inst.ports).replace(/->/g,'→')+' '):'';
+    $('webTermMeta').textContent='상태 '+(inst.state||'unknown')+' '+port+'· 명령은 이 컨테이너 안에서만 실행돼.';
+    $('webTermOut').textContent='# '+label+' 웹 터미널 준비 완료\n';
+    $('webTermCmd').value='';
+    $('webTerm').hidden=false;
+    log('[웹 터미널] '+label+' 연결');
+    setTimeout(function(){$('webTermCmd').focus();},30);
+  });
+}
+function termAppend(text){
+  const out=$('webTermOut');
+  out.textContent+=text;
+  out.scrollTop=out.scrollHeight;
+}
+async function runWebTermCommand(event){
+  if(event&&event.preventDefault)event.preventDefault();
+  const inst=termTarget;
+  const cmd=$('webTermCmd').value.trim();
+  if(!inst||!cmd)return;
+  termAppend((/\n$/.test($('webTermOut').textContent)?'':'\n')+'$ '+cmd+'\n');
+  $('webTermRun').disabled=true;
+  $('webTermCmd').value='';
+  try{
+    const headers={'Content-Type':'application/json'};
+    const customToken=sessionStorage.getItem(KEYS.token);
+    if(customToken)headers.Authorization='Bearer '+customToken;
+    const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/exec',{
+      method:'POST',
+      headers:headers,
+      body:JSON.stringify({cmd:cmd})
+    });
+    const data=await res.json().catch(function(){return {};});
+    if(!res.ok){
+      termAppend('[오류 '+(data.error||res.status)+'] '+(data.message||'')+'\n');
+      log('[웹 터미널 오류] '+(data.error||res.status));
+    }else{
+      if(data.stdout)termAppend(String(data.stdout).replace(/\n$/,'')+'\n');
+      if(data.stderr)termAppend('[stderr] '+String(data.stderr).replace(/\n$/,'')+'\n');
+      termAppend('[exit '+data.exit_code+']'+(data.truncated?' (출력 잘림)':'')+'\n');
+    }
+  }catch(err){
+    termAppend('[통신 오류] '+err.message+'\n');
+  }finally{
+    $('webTermRun').disabled=false;
+    $('webTermCmd').focus();
+  }
 }
 async function rebootInstance(inst){
   requireAdmin('인스턴스 재부팅은 개발자만 할 수 있어.',async function(){
@@ -980,6 +1089,9 @@ $('maintResumeBtn').addEventListener('click',function(){toggleService('online');
 $('saveEndpoint').addEventListener('click',saveCustomEndpoint);
 $('resetEndpoint').addEventListener('click',resetCustomEndpoint);
 $('termClose').addEventListener('click',function(){$('termModal').hidden=true;});
+$('webTermForm').addEventListener('submit',runWebTermCommand);
+$('webTermClose').addEventListener('click',function(){$('webTerm').hidden=true;});
+$('webTermClear').addEventListener('click',function(){$('webTermOut').textContent='';});
 $('copySsh').addEventListener('click',function(){copyText($('sshCmd').textContent,'SSH 명령어');});
 $('copyPwd').addEventListener('click',function(){copyText($('sshPwd').textContent,'비밀번호');});
 $('doneClose').addEventListener('click',function(){$('doneModal').hidden=true;});
@@ -994,7 +1106,7 @@ document.querySelectorAll('[data-qs]').forEach(function(b){
     $('qs-askcli').hidden=b.dataset.qs!=='askcli';
   });
 });
-[ 'termModal','doneModal' ].forEach(function(id){
+[ 'termModal','doneModal','webTerm' ].forEach(function(id){
   const el=$(id);
   if(el)el.addEventListener('click',function(e){if(e.target===el)el.hidden=true;});
 });
@@ -1002,6 +1114,7 @@ document.addEventListener('keydown',function(e){
   if(e.key==='Escape'){
     if(!$('termModal').hidden)$('termModal').hidden=true;
     if(!$('doneModal').hidden)$('doneModal').hidden=true;
+    if(!$('webTerm').hidden)$('webTerm').hidden=true;
   }
 });
 

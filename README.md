@@ -44,7 +44,9 @@ The workflow in `.github/workflows/neoos-heartbeat.yml` runs hourly on GitHub Ac
 
 For AWS EC2, store the database on the EBS-backed path `/var/lib/neoos/neoos.sqlite3` by setting `NEOOS_DB_PATH`. A systemd unit template is in `deploy/systemd/neoos-mcp.service`; deployment and recovery prerequisites are documented in [docs/vps/aws-ec2.md](docs/vps/aws-ec2.md).
 
-The existing `vps_server.py` endpoint is a separate authenticated, read-only Docker status API. It does not create/delete containers or execute terminal commands.
+`vps_server.py` is a separate authenticated, read-only Docker status API: it does not create/delete containers or execute terminal commands.
+
+`podroid_vps_server.py` is the writable panel behind the console: it lists containers with live CPU/RAM and published ports, creates capped guest containers (`--cap-drop=ALL`, `--security-opt=no-new-privileges`, fixed memory/CPU/PID limits, one free port from 8101–8199), starts/stops/reboots/deletes them, serves a one-shot web terminal (`POST /api/instances/{id}/exec`), caps simultaneous guests (`MAX_CONTAINERS`, `429 capacity_full`), expires guests after 30 minutes, and never touches containers it did not create or anything named `box` / `user-vps-*`. Endpoints, environment variables and guardrails: [docs/vps/README.md](docs/vps/README.md).
 
 ## NeoOS apps
 

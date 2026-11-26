@@ -46,6 +46,22 @@ The dashboard never calls the backend directly. `api/instances.js` (and its `doc
 - `NEOOS_BACKEND_URL` (required): backend base URL, no trailing slash. Without it the proxy answers `503 backend_not_configured`.
 - `NEOOS_API_TOKEN` (optional): sent to the backend as `Authorization: Bearer <token>`. Leave it empty only if the backend does not require a token.
 
+The proxy allows exactly this surface and answers `404` for any other path and `405` for a method that path does not accept:
+
+| Method & path | Forwarded as |
+| --- | --- |
+| `GET /api/instances` | status list |
+| `POST /api/instances` | create |
+| `POST /api/instances/{id}/start` \| `stop` \| `reboot` | lifecycle |
+| `POST /api/instances/{id}/exec` | one-shot web terminal (`{"cmd": "..."}`) |
+| `DELETE /api/instances/{id}` | delete |
+
+Ids are limited to `[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}`, so a URL can never carry a
+Docker flag. Which of these the backend actually honours is the backend's
+decision: the AWS backend above still refuses every mutation with `405`,
+while `podroid_vps_server.py` performs them inside the guest-container
+guardrails described in `docs/vps/README.md`.
+
 Keep the proxy's token equal to the backend's `NEOOS_VPS_API_TOKEN`, otherwise the proxy forwards no usable credential and the console falls back to its cached list.
 
 ## Rotating credentials that were already published
