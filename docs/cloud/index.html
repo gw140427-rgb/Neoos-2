@@ -413,6 +413,12 @@ input:disabled,select:disabled{opacity:.55}
       <button type="button" data-cmd="cat /etc/os-release">OS 정보</button>
       <button type="button" data-cmd="df -h">디스크</button>
       <button type="button" data-cmd="ps">프로세스</button>
+      <button type="button" data-cmd="date">날짜/시간</button>
+      <button type="button" data-cmd="env">환경 변수</button>
+      <button type="button" data-cmd="cat /proc/meminfo">메모리 정보</button>
+      <button type="button" data-cmd="cat /proc/cpuinfo">CPU 정보</button>
+      <button type="button" data-cmd="du -sh .">폴더 용량</button>
+      <button type="button" data-cmd="find . -maxdepth 2 -type f">파일 찾기</button>
     </div>
     <p class="term-meta">출력은 8192자까지만 보여 줘. 명령은 해당 게스트 컨테이너 안에서만 실행되고 최대 10초 제한이 있어.</p>
     <div class="modal-actions">
