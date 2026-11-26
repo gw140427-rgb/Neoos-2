@@ -858,14 +858,38 @@ function openWebTerminal(inst){
   requireAdmin('웹 터미널은 개발자 인증 후에 열 수 있어.',function(){
     termTarget=inst;
     const label=inst.name||inst.id||'container';
+    $('webTermTitle').textContent='💻 웹 터미널';
     $('webTermInst').textContent=label;
-    const port=inst.ports&&inst.ports!=='—'?('· 공개 포트 '+String(inst.ports).replace(/->/g,'→')+' '):'';
-    $('webTermMeta').textContent='상태 '+(inst.state||'unknown')+' '+port+'· 명령은 이 컨테이너 안에서만 실행돼.';
+    const port=inst.ports&&inst.ports!=='—'?('· 내부 포트 '+String(inst.ports).replace(/->/g,'→')+' '):'';
+    $('webTermMeta').textContent='상태 '+(inst.state||'unknown')+' '+port+'· 명령은 이 게스트 컨테이너 안에서 실행돼.';
     $('webTermOut').textContent='# '+label+' 웹 터미널 준비 완료\n';
     $('webTermCmd').value='';
+    $('webTermForm').hidden=false;
+    $('termQuick').hidden=false;
     $('webTerm').hidden=false;
     log('[웹 터미널] '+label+' 연결');
     setTimeout(function(){$('webTermCmd').focus();},30);
+  });
+}
+async function openContainerLogs(inst){
+  requireAdmin('컨테이너 로그 조회는 인증 후에 가능해.',async function(){
+    termTarget=null;
+    $('webTermTitle').textContent='📄 컨테이너 로그';
+    $('webTermInst').textContent=inst.name||inst.id;
+    $('webTermMeta').textContent='최근 로그 최대 100줄 · 읽기 전용';
+    $('webTermOut').textContent='# '+(inst.name||inst.id)+' 로그 불러오는 중...\\n';
+    $('webTermForm').hidden=true;
+    $('termQuick').hidden=true;
+    $('webTerm').hidden=false;
+    try{
+      const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id)+'/logs');
+      const data=await res.json().catch(function(){return {};});
+      if(!res.ok)throw new Error(data.message||data.error||('HTTP '+res.status));
+      $('webTermOut').textContent=(data.logs||'(로그가 없어)')+(data.truncated?'\\n[출력이 잘렸어]':'');
+      $('webTermOut').scrollTop=$('webTermOut').scrollHeight;
+    }catch(err){
+      $('webTermOut').textContent='[로그 조회 실패] '+(err.message||err);
+    }
   });
 }
 function termAppend(text){
@@ -903,6 +927,21 @@ async function runWebTermCommand(event){
     $('webTermCmd').focus();
   }
 }
+async function containerAction(inst,action,confirmText){
+  requireAdmin('컨테이너 상태 변경은 인증 후에 가능해.',async function(){
+    if(confirmText&&!window.confirm(inst.name+' · '+confirmText))return;
+    try{
+      const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id)+'/'+action,{method:'POST'});
+      const data=await res.json().catch(function(){return {};});
+      if(!res.ok)throw new Error(data.message||data.error||('HTTP '+res.status));
+      log('[컨테이너 '+action+'] '+inst.name+' 완료');
+      await syncInstances(true);
+    }catch(err){
+      log('[컨테이너 '+action+' 실패] '+(err.message||err));
+      window.alert('컨테이너 작업 실패: '+(err.message||err));
+    }
+  });
+}
 async function rebootInstance(inst){
   requireAdmin('인스턴스 재부팅은 개발자만 할 수 있어.',async function(){
     if(!window.confirm(inst.name+' ('+inst.id+') 인스턴스를 재부팅할까?'))return;
@@ -923,7 +962,7 @@ async function rebootInstance(inst){
 }
 async function stopInstance(inst,quiet){
   requireAdmin('인스턴스를 중지하려면 개발자 인증이 필요해.',async function(){
-    if(!quiet&&!window.confirm(inst.name+' ('+inst.id+') 인스턴스를 중지할까?\n중지하면 컴퓨팅 요금이 멈춰.'))return;
+    if(!quiet&&!window.confirm(inst.name+' ('+inst.id+') 컨테이너를 중지할까?\n쓰기 레이어는 남지만 30분 TTL은 계속 흐르고, 만료되면 컨테이너가 정리돼.'))return;
     inst.state='stopped';
     saveInstances(instances);
     renderInstances();
