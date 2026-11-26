@@ -63,7 +63,7 @@ class FakeDocker:
             mapping = cmd[cmd.index("-p") + 1]
             labels = ",".join(cmd[index + 1] for index, item in enumerate(cmd) if item == "--label")
             image = next((part for part in cmd if part in set(podroid_vps_server.OS_IMAGES.values())), "alpine:latest")
-            host_port = mapping.split(":")[0]
+            host_port = mapping.split(":")[-2]
             self.rows.append(
                 [
                     "c0ffee123456",
@@ -72,7 +72,7 @@ class FakeDocker:
                     image,
                     "1 second ago",
                     "Up 1 second",
-                    "0.0.0.0:%s->80/tcp" % host_port,
+                    "127.0.0.1:%s->80/tcp" % host_port,
                     labels,
                 ]
             )
@@ -232,7 +232,7 @@ class PodroidPanelTests(unittest.TestCase):
             "--pids-limit=64",
         ):
             self.assertIn(flag, run, flag)
-        self.assertEqual(run[run.index("-p") + 1], "8101:80")
+        self.assertEqual(run[run.index("-p") + 1], "127.0.0.1:8101:80")
         self.assertIn("neoos.managed=guest", run)
         expires = [item for item in run if item.startswith("neoos.expires_at=")][0]
         self.assertAlmostEqual(int(expires.split("=", 1)[1]), int(time.time()) + 1800, delta=5)
@@ -245,7 +245,7 @@ class PodroidPanelTests(unittest.TestCase):
             )
         self.assertEqual(status, 202, body)
         run = [call for call in fake.calls if call[1] == "run"][0]
-        self.assertEqual(run[run.index("-p") + 1], "8102:80")
+        self.assertEqual(run[run.index("-p") + 1], "127.0.0.1:8102:80")
 
     def test_full_capacity_returns_429(self):
         rows = [row(cid="id000000000%d" % index, name="guest-%d" % index, ports="") for index in range(4)]
