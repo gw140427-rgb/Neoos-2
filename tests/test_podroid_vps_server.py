@@ -62,7 +62,7 @@ class FakeDocker:
             name = cmd[cmd.index("--name") + 1]
             mapping = cmd[cmd.index("-p") + 1]
             labels = ",".join(cmd[index + 1] for index, item in enumerate(cmd) if item == "--label")
-            image = cmd[-3]
+            image = next((part for part in cmd if part in set(podroid_vps_server.OS_IMAGES.values())), "alpine:latest")
             host_port = mapping.split(":")[0]
             self.rows.append(
                 [
@@ -77,12 +77,18 @@ class FakeDocker:
                 ]
             )
             return done(cmd, "c0ffee1234567890\n")
-        if verb in {"start", "stop", "restart"}:
+        if verb in {"start", "stop", "restart", "pause", "unpause"}:
             target = cmd[2]
+            states = {
+                "start": "running", "restart": "running", "unpause": "running",
+                "stop": "exited", "pause": "paused",
+            }
             for item in self.rows:
                 if item[1] == target:
-                    item[2] = "running" if verb in {"start", "restart"} else "exited"
+                    item[2] = states[verb]
             return done(cmd)
+        if verb == "logs":
+            return done(cmd, "guest started\\n")
         if verb == "rm":
             target = cmd[-1]
             self.rows = [item for item in self.rows if item[1] != target]
@@ -156,11 +162,13 @@ class PodroidPanelTests(unittest.TestCase):
             status, _, _ = self.request(headers=AUTH)
         self.assertEqual(status, 200)
 
-    def test_token_can_be_left_unset_for_a_private_network(self):
+    def test_missing_token_fails_closed_even_on_private_networks(self):
         fake = FakeDocker([row()])
         with self.panel(fake, token=""):
-            status, _, _ = self.request()
-        self.assertEqual(status, 200)
+            status, _, body = self.request()
+        self.assertEqual(status, 503)
+        self.assertEqual(json.loads(body)["error"], "server_token_not_configured")
+        self.assertEqual(fake.calls, [])
 
     # -- listing ------------------------------------------------------------
     def test_listing_merges_stats_ports_and_capacity(self):
@@ -269,28 +277,32 @@ class PodroidPanelTests(unittest.TestCase):
         self.assertFalse([call for call in fake.calls if call[1] == "run"])
 
     # -- lifecycle ----------------------------------------------------------
-    def test_start_stop_reboot_on_a_guest(self):
+    def test_start_stop_reboot_pause_and_resume_on_a_guest(self):
         fake = FakeDocker([row()])
         with self.panel(fake):
-            for action, verb in (("start", "start"), ("stop", "stop"), ("reboot", "restart")):
+            for action, verb in (
+                ("start", "start"), ("stop", "stop"), ("reboot", "restart"),
+                ("pause", "pause"), ("unpause", "unpause")
+            ):
                 status, _, body = self.request(
                     "POST", "/api/instances/aaaabbbbcccc/%s" % action, {}, headers=self.authed()
                 )
                 self.assertEqual(status, 202, action)
                 self.assertEqual(json.loads(body)["action"], action)
         verbs = [call[1] for call in fake.calls]
-        self.assertEqual(verbs, ["ps", "start", "ps", "stop", "ps", "restart"])
+        self.assertEqual(verbs, ["ps", "start", "ps", "stop", "ps", "restart", "ps", "pause", "ps", "unpause"])
 
-    def test_unmanaged_and_prefix_containers_cannot_be_stopped(self):
+    def test_unmanaged_and_prefix_containers_cannot_be_started_stopped_or_rebooted(self):
         fake = FakeDocker([row(name="box", labels=""), row(name="user-vps-7", labels="neoos.managed=guest")])
         with self.panel(fake):
             for name in ("box", "user-vps-7"):
-                status, _, body = self.request(
-                    "POST", "/api/instances/%s/stop" % name, {}, headers=self.authed()
-                )
-                self.assertEqual(status, 403, name)
-                self.assertEqual(json.loads(body)["error"], "protected_container")
-        self.assertFalse([call for call in fake.calls if call[1] == "stop"])
+                for action in ("start", "stop", "reboot"):
+                    status, _, body = self.request(
+                        "POST", "/api/instances/%s/%s" % (name, action), {}, headers=self.authed()
+                    )
+                    self.assertEqual(status, 403, (name, action))
+                    self.assertEqual(json.loads(body)["error"], "protected_container")
+        self.assertFalse([call for call in fake.calls if call[1] in {"start", "stop", "restart"}])
 
     def test_delete_refuses_protected_and_removes_guests(self):
         fake = FakeDocker(
@@ -395,6 +407,26 @@ class PodroidPanelTests(unittest.TestCase):
             status, _, _ = self.request("POST", "/api/instances/aaaabbbbcccc/exec", {"cmd": "ls"})
         self.assertEqual(status, 401)
         self.assertFalse([call for call in fake.calls if call[1] == "exec"])
+
+    def test_exec_cannot_reach_unmanaged_containers(self):
+        fake = FakeDocker([row(name="box", labels="")])
+        with self.panel(fake):
+            status, _, body = self.request(
+                "POST", "/api/instances/box/exec", {"cmd": "id"}, headers=self.authed()
+            )
+        self.assertEqual(status, 403)
+        self.assertEqual(json.loads(body)["error"], "protected_container")
+        self.assertFalse([call for call in fake.calls if call[1] == "exec"])
+
+    def test_guest_logs_are_available_but_system_logs_are_protected(self):
+        fake = FakeDocker([row(), row(name="box", labels="")])
+        with self.panel(fake):
+            status, _, body = self.request("GET", "/api/instances/guest-one/logs", headers=AUTH)
+            self.assertEqual(status, 200)
+            self.assertEqual(json.loads(body)["logs"], "guest started\\n")
+            status, _, body = self.request("GET", "/api/instances/box/logs", headers=AUTH)
+        self.assertEqual(status, 403)
+        self.assertEqual(json.loads(body)["error"], "protected_container")
 
     # -- TTL ----------------------------------------------------------------
     def test_cleanup_removes_only_expired_guests(self):
