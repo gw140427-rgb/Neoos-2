@@ -88,7 +88,7 @@ class FakeDocker:
                     item[2] = states[verb]
             return done(cmd)
         if verb == "logs":
-            return done(cmd, "guest started\\n")
+            return done(cmd, "guest started" + chr(10))
         if verb == "rm":
             target = cmd[-1]
             self.rows = [item for item in self.rows if item[1] != target]
@@ -215,7 +215,7 @@ class PodroidPanelTests(unittest.TestCase):
             status, _, body = self.request(
                 "POST",
                 "/api/instances",
-                {"name": "guest-two", "os": "alpine", "instance_type": "t3.micro", "volume_gb": 8},
+                {"name": "guest-two", "os": "alpine"},
                 headers=self.authed(),
             )
         payload = json.loads(body)
@@ -238,7 +238,7 @@ class PodroidPanelTests(unittest.TestCase):
         self.assertAlmostEqual(int(expires.split("=", 1)[1]), int(time.time()) + 1800, delta=5)
 
     def test_create_picks_the_next_free_port(self):
-        fake = FakeDocker([row(ports="0.0.0.0:8101->80/tcp")])
+        fake = FakeDocker([row(ports="127.0.0.1:8101->80/tcp")])
         with self.panel(fake):
             status, _, body = self.request(
                 "POST", "/api/instances", {"name": "guest-two", "os": "debian"}, headers=self.authed()
@@ -423,7 +423,7 @@ class PodroidPanelTests(unittest.TestCase):
         with self.panel(fake):
             status, _, body = self.request("GET", "/api/instances/guest-one/logs", headers=AUTH)
             self.assertEqual(status, 200)
-            self.assertEqual(json.loads(body)["logs"], "guest started\\n")
+            self.assertEqual(json.loads(body)["logs"], "guest started" + chr(10))
             status, _, body = self.request("GET", "/api/instances/box/logs", headers=AUTH)
         self.assertEqual(status, 403)
         self.assertEqual(json.loads(body)["error"], "protected_container")
