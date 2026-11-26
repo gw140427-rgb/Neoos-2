@@ -153,6 +153,16 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertIn("X-NeoOS-Console-Token", self.html)
         self.assertIn("async function deploy()", self.html)
         self.assertIn("apiFetch('/api/instances'", self.html)
+        self.assertIn("openContainerLogs", self.html)
+        self.assertIn("containerAction(inst,'pause'", self.html)
+        self.assertIn("document.querySelectorAll('[data-cmd]')", self.html)
+        for command in (
+            "pwd", "ls -la", "whoami", "id", "uname -a",
+            "cat /etc/os-release", "df -h", "ps", "date", "env",
+            "cat /proc/meminfo", "cat /proc/cpuinfo", "du -sh .",
+            "find . -maxdepth 2 -type f",
+        ):
+            self.assertIn('data-cmd="%s"' % command, self.html)
         self.assertNotIn("neoos2026!", self.html)
 
     def test_no_remote_script_tags(self):
