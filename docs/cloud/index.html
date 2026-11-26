@@ -446,8 +446,7 @@ input:disabled,select:disabled{opacity:.55}
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const MAX_INSTANCES=2;
-const CONTROL_ACTIONS_ENABLED=false;
+const MAX_INSTANCES=4;
 // 서버 ID/IP는 화면에 박아 두지 않는다. 보호할 인스턴스가 있으면
 // window.NEOOS_PROTECTED_ID 로 주입하고, 실제 보호는 백엔드가 한다.
 const PROTECTED_ID=(typeof window!=='undefined'&&window.NEOOS_PROTECTED_ID)||'';
@@ -463,8 +462,9 @@ const KEYS={
 // 실제 인스턴스는 /api/instances 응답으로만 채운다(하드코딩된 기본값 없음).
 const DEFAULT_INSTANCES=[];
 let instances=[];
-let selectedOs='ubuntu';
+let selectedOs='alpine';
 let adminUnlocked=false;
+let backendReady=false;
 let slotCapacity={used:0,max:4};
 let termTarget=null;
 let gateCallback=null;
@@ -510,6 +510,30 @@ function copyText(text,label){
   }else{
     window.prompt('아래 내용을 복사해 줘',text);
   }
+}
+function apiToken(){
+  try{return (sessionStorage.getItem(KEYS.token)||'').trim();}catch(e){return '';}
+}
+function hasApiToken(){return apiToken().length>=32;}
+function apiFetch(path,options){
+  const token=apiToken();
+  if(token.length<32)throw new Error('접속 토큰이 없어. 32자 이상 토큰을 설정해 줘.');
+  const opts=options||{};
+  const headers=Object.assign({},opts.headers||{});
+  const customUrl=(localStorage.getItem(KEYS.url)||'').trim().replace(/\\/+$/,'');
+  let target=path;
+  if(customUrl){
+    let parsed;
+    try{parsed=new URL(customUrl);}catch(e){throw new Error('Podroid API 주소가 올바르지 않아.');}
+    if(parsed.protocol!=='https:'&&parsed.hostname!=='localhost'&&parsed.hostname!=='127.0.0.1'){
+      throw new Error('보안을 위해 Podroid API는 HTTPS 주소를 사용해 줘.');
+    }
+    headers.Authorization='Bearer '+token;
+    target=customUrl+path;
+  }else{
+    headers['X-NeoOS-Console-Token']=token;
+  }
+  return fetch(target,Object.assign({},opts,{headers:headers,cache:'no-store'}));
 }
 
 /* ---------------- secret developer gesture & chime ---------------- */
@@ -560,9 +584,19 @@ function toggleDevMode(){
 }
 
 function requireAdmin(reason,fn){
-  if(adminUnlocked){return fn();}
-  toast('🔒 개발자 전용입니다. 상단 구름 로고를 5회 연속 탭하세요.');
-  return undefined;
+  if(!adminUnlocked){
+    toast('🔒 상단 구름 로고를 5회 연속 탭해 개발자 패널을 열어 줘.');
+    return undefined;
+  }
+  if(!hasApiToken()){
+    toast('🔑 먼저 Podroid 접속 토큰을 설정해 줘.');
+    return undefined;
+  }
+  if(!backendReady){
+    toast('📡 Podroid 연결을 확인한 다음 다시 시도해 줘.');
+    return undefined;
+  }
+  return fn();
 }
 
 /* ---------------- service (maintenance) state ---------------- */
@@ -641,11 +675,11 @@ function renderInstances(){
   if(slotPill)slotPill.textContent='사용 중 '+guestCount+' / '+slotCapacity.max+' 슬롯';
   $('total-count').textContent=guestCount+' / '+slotCapacity.max+'대';
   $('quotaBar').style.width=Math.min(100,guestCount/Math.max(1,slotCapacity.max)*100)+'%';
-  const running=instances.filter(function(i){return i.state==='running';}).length;
+  const guestInstances=instances.filter(function(i){return i.managed==='guest';});
+  const running=guestInstances.filter(function(i){return i.state==='running';}).length;
   $('running-count').textContent=running+'대';
-  const firstRunning=instances.find(function(i){return i.state==='running'&&i.ip&&i.ip.indexOf('할당')<0;});
-  if(firstRunning)$('primary-ip').textContent=firstRunning.ip;
-  else $('primary-ip').textContent='—';
+  const nodeInstance=guestInstances[0]||instances[0];
+  $('primary-ip').textContent=nodeInstance?(nodeInstance.region||'Podroid'):'Podroid';
 
   if(!instances.length){
     const empty=document.createElement('p');
@@ -676,11 +710,11 @@ function renderInstances(){
     nameRow.append(name,state);
     const sub=document.createElement('div');
     sub.className='inst-sub';
-    sub.textContent=(inst.id||'')+' · '+(inst.spec||'t3.micro')+' · IP: '+(inst.ip||'할당 중...');
+    sub.textContent=(inst.id||'')+' · '+(inst.spec||'CPU 0.5 / RAM 256MB')+' · 내부 컨테이너';
     const sub2=document.createElement('div');
     sub2.className='inst-sub';
     sub2.style.color='#5d7699';
-    sub2.textContent=(inst.os||'Linux')+' · '+(inst.region||'ap-southeast-2')+' · '+(inst.storage||'8GB gp3');
+    sub2.textContent=(inst.os||'Linux')+' · '+(inst.region||'Podroid')+' · '+(inst.storage||'컨테이너 쓰기 레이어');
     const perf=document.createElement('div');
     perf.className='specrow';
     perf.style.margin='8px 0 0';
@@ -702,24 +736,29 @@ function renderInstances(){
 
     const actions=document.createElement('div');
     actions.className='inst-actions';
+    const managed=inst.managed==='guest'&&!inst.protected;
+    const permitted=managed&&backendReady&&hasApiToken()&&adminUnlocked;
     const addBtn=function(label,cls,fn,available){
       const b=document.createElement('button');
       b.type='button';
       b.className='btn '+(cls||'');
       b.textContent=label;
-      b.disabled=!available;
-      b.title=available
-        ? '개발자 모드에서 열 수 있어. 상단 구름 로고를 5회 연타해 줘.'
-        : (inst.protected?'보호된 컨테이너라서 조작할 수 없어.':'서버 측 관리자 인증 연결 전까지 실제 조작은 비활성화돼 있어.');
-      b.setAttribute('aria-label',label+(available?'':' (현재 비활성화)'));
+      const allowed=permitted&&(available!==false);
+      b.disabled=!allowed;
+      b.title=allowed?'Podroid Docker에서 실제 실행돼.':(inst.protected||!managed?'시스템 컨테이너 보호 중.':'개발자 잠금·접속 토큰·Podroid 연결을 확인해 줘.');
+      b.setAttribute('aria-label',label+(allowed?'':' (현재 비활성화)'));
       if(fn)b.addEventListener('click',fn);
       actions.append(b);
     };
     addBtn('💻 터미널','',function(){openWebTerminal(inst);},inst.state==='running');
+    addBtn('📄 로그','',function(){openContainerLogs(inst);});
     addBtn('🔄 재부팅','',function(){rebootInstance(inst);});
     if(inst.state==='stopped'){
       addBtn('▶️ 시작','',function(){startInstance(inst);});
+    }else if(inst.state==='paused'){
+      addBtn('▶️ 재개','',function(){containerAction(inst,'unpause','컨테이너를 재개할까?');});
     }else{
+      addBtn('⏸️ 일시 정지','',function(){containerAction(inst,'pause','컨테이너를 일시 정지할까?');});
       addBtn('⏹️ 중지','',function(){stopInstance(inst,false);});
     }
     addBtn('🗑️ 삭제','danger',function(){terminateInstance(inst);});
@@ -730,12 +769,16 @@ function renderInstances(){
 }
 function renderDeployState(){
   const btn=$('deploy-btn');
-  btn.classList.add('locked');
-  btn.textContent='🔒 보안 점검 중 · 배포 일시 중지';
-  btn.disabled=true;
+  const guestCount=instances.filter(function(i){return i.managed==='guest';}).length;
+  const full=guestCount>=slotCapacity.max;
+  const ready=hasApiToken()&&backendReady&&adminUnlocked&&!full;
+  btn.classList.toggle('locked',!ready);
+  btn.disabled=!ready;
+  btn.textContent=full?'슬롯이 가득 찼어':(!hasApiToken()?'🔒 접속 토큰 설정 필요':(!backendReady?'📡 Podroid 연결 확인 필요':(!adminUnlocked?'🔒 개발자 잠금 열기':'🐳 Podroid에 컨테이너 생성')));
+  $('deployHint').textContent=full?'사용 중인 게스트 슬롯을 삭제하거나 TTL 만료 후 다시 생성해 줘.':(!hasApiToken()?'고급 설정에서 서버 접속 토큰을 저장해 줘.':(!backendReady?'새로고침으로 Podroid 연결 상태를 확인해 줘.':(!adminUnlocked?'상단 구름 로고를 5회 연속 탭해 개발자 패널을 열어 줘.':'Podroid 연결 완료 · 실제 컨테이너 생성 가능')));
   $('deployHint').hidden=false;
-  $('server-name').disabled=true;
-  $('nameLock').hidden=false;
+  $('server-name').disabled=false;
+  $('nameLock').hidden=true;
 }
 function renderAdmin(){
   const panel=$('adminPanel');
@@ -743,6 +786,7 @@ function renderAdmin(){
     panel.style.display=adminUnlocked?'block':'none';
   }
   renderDeployState();
+  renderInstances();
   renderService();
   renderMaintenance();
 }
@@ -751,64 +795,53 @@ function renderAdmin(){
 let syncFailNotified=false;
 let syncInFlight=false;
 async function syncInstances(silent){
-  if(serviceState()==='offline')return;
   if(syncInFlight)return;
   syncInFlight=true;
-  const customUrl=localStorage.getItem(KEYS.url);
-  const customToken=sessionStorage.getItem(KEYS.token);
-  
-  const endpoints=[];
-  if(customUrl)endpoints.push(customUrl.replace(/\/+$/,'')+'/api/instances');
-  endpoints.push('/api/instances');
-  if(!location.hostname.includes('vercel.app')){
-    endpoints.push('https://neoos-2.vercel.app/api/instances');
+  const refresh=$('refreshBtn');
+  if(!silent)refresh.textContent='연결 중...';
+  if(!hasApiToken()){
+    backendReady=false;
+    if(!silent)log('접속 토큰이 설정되지 않았어.');
+    refresh.textContent='🔄 새로고침';
+    syncInFlight=false;
+    renderDeployState();
+    return;
   }
-
-  if(!silent)$('refreshBtn').textContent='🔄 동기화 중...';
-  
-  let success=false;
-  for(const targetUrl of endpoints){
-    try{
-      const headers={};
-      if(customToken)headers.Authorization='Bearer '+customToken;
-      const controller=new AbortController();
-      const timeoutId=setTimeout(function(){controller.abort();},6000);
-      const res=await fetch(targetUrl,{headers:headers,signal:controller.signal});
-      clearTimeout(timeoutId);
-      if(res.ok){
-        const data=await res.json();
-        if(Array.isArray(data.instances)){
-          instances=data.instances;
-          if(data.capacity&&typeof data.capacity.max==='number')slotCapacity.max=data.capacity.max;
-          saveInstances(instances);
-          renderInstances();
-          if(!silent)log('[NeoOS Cloud 동기화] 실시간 인스턴스 '+instances.length+'대 확인 ('+(data.region||'ap-southeast-2')+')');
-          $('refreshBtn').textContent='🔄 새로고침';
-          success=true;
-          syncFailNotified=false;
-          break;
-        }
-      }
-    }catch(err){
-      // continue to next endpoint
+  let timer=null;
+  try{
+    const controller=new AbortController();
+    timer=setTimeout(function(){controller.abort();},10000);
+    const res=await apiFetch('/api/instances',{signal:controller.signal});
+    const data=await res.json().catch(function(){return {};});
+    if(!res.ok){
+      backendReady=false;
+      throw new Error(data.message||data.error||('HTTP '+res.status));
     }
-  }
-
-  if(!success){
-    $('refreshBtn').textContent='🔄 새로고침';
-    if(!syncFailNotified){
-      syncFailNotified=true;
-      log('[네트워크] 백엔드 응답 없음 · 저장된 인스턴스 목록 표시');
-      toast('⚠️ 백엔드에 연결할 수 없어. 저장된 목록을 표시 중이야.');
-    }else if(!silent){
-      log('[네트워크] 백엔드 응답 대기 중 · 저장된 인스턴스 목록 표시');
+    if(!Array.isArray(data.instances))throw new Error('Podroid가 올바른 컨테이너 목록을 보내지 않았어.');
+    instances=data.instances;
+    if(data.capacity&&typeof data.capacity.max==='number')slotCapacity.max=data.capacity.max;
+    slotCapacity.used=(data.capacity&&Number(data.capacity.used))||0;
+    backendReady=true;
+    saveInstances(instances);
+    renderInstances();
+    if(!silent)log('[Podroid 연결 성공] '+slotCapacity.used+' / '+slotCapacity.max+' 게스트 슬롯 사용 중');
+    syncFailNotified=false;
+  }catch(err){
+    backendReady=false;
+    if(!syncFailNotified||!silent){
+      log('[Podroid 연결 오류] '+(err&&err.message?err.message:'알 수 없는 오류'));
+      if(!silent)toast('Podroid 연결에 실패했어. 주소·토큰·Docker 서버 상태를 확인해 줘.');
     }
+    syncFailNotified=true;
+  }finally{
+    if(timer)clearTimeout(timer);
+    refresh.textContent='🔄 새로고침';
+    syncInFlight=false;
     renderInstances();
   }
-  syncInFlight=false;
 }
 
-/* ---------------- instance actions ---------------- */
+/* ---------------- instance actions ---------------- *//* ---------------- instance actions ---------------- */
 function openTerminal(inst){
   requireAdmin('터미널 접속 정보는 개발자만 볼 수 있어. 비밀번호를 입력해 줘.',function(){
     $('modalInstName').textContent=inst.name||inst.id;
@@ -849,12 +882,9 @@ async function runWebTermCommand(event){
   $('webTermRun').disabled=true;
   $('webTermCmd').value='';
   try{
-    const headers={'Content-Type':'application/json'};
-    const customToken=sessionStorage.getItem(KEYS.token);
-    if(customToken)headers.Authorization='Bearer '+customToken;
-    const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/exec',{
+    const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id)+'/exec',{
       method:'POST',
-      headers:headers,
+      headers:{'Content-Type':'application/json'},
       body:JSON.stringify({cmd:cmd})
     });
     const data=await res.json().catch(function(){return {};});
@@ -880,7 +910,7 @@ async function rebootInstance(inst){
     renderInstances();
     log('[재부팅 요청] '+inst.name+' ('+inst.id+')');
     try{
-      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/reboot',{method:'POST'});
+      const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id)+'/reboot',{method:'POST'});
       log(res.ok?'[재부팅 완료] 신호 접수됨':'[재부팅 실패] 상태 코드: '+res.status);
       if(!res.ok)inst.state='running';
     }catch(e){
@@ -899,7 +929,7 @@ async function stopInstance(inst,quiet){
     renderInstances();
     log('[중지 요청] '+inst.name+' ('+inst.id+')');
     try{
-      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/stop',{method:'POST'});
+      const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id)+'/stop',{method:'POST'});
       log(res.ok?'[중지 완료] 인스턴스 전원 차단 진행 중':'[중지 실패] 상태 코드: '+res.status);
       if(!res.ok)inst.state='running';
     }catch(e){
@@ -916,7 +946,7 @@ async function startInstance(inst){
     renderInstances();
     log('[시작 요청] '+inst.name+' ('+inst.id+')');
     try{
-      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id)+'/start',{method:'POST'});
+      const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id)+'/start',{method:'POST'});
       log(res.ok?'[시작 완료] 인스턴스 부팅 중':'[시작 실패] 상태 코드: '+res.status);
       if(!res.ok)inst.state='stopped';
     }catch(e){
@@ -930,10 +960,11 @@ async function startInstance(inst){
 async function terminateInstance(inst){
   requireAdmin('인스턴스 영구 삭제는 개발자만 할 수 있어.',async function(){
     if(PROTECTED_ID&&inst.id===PROTECTED_ID){window.alert('neoos 컨트롤 플레인 인스턴스는 보호되어 있어 삭제할 수 없어.');return;}
-    if(!window.confirm('[영구 삭제]\n\n'+inst.name+' ('+inst.id+') 인스턴스를 삭제할까?\n가상머신과 모든 데이터가 완전히 사라져.'))return;
+    if(inst.managed!=='guest'||inst.protected){window.alert('NeoOS가 만든 게스트 컨테이너만 삭제할 수 있어.');return;}
+    if(!window.confirm('[컨테이너 삭제]\n\n'+inst.name+' ('+inst.id+') 컨테이너와 쓰기 레이어 데이터를 삭제할까?\n이 작업은 되돌릴 수 없어.'))return;
     log('[삭제 요청] '+inst.name+' ('+inst.id+')');
     try{
-      const res=await fetch('/api/instances/'+encodeURIComponent(inst.id),{method:'DELETE'});
+      const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id),{method:'DELETE'});
       if(res.ok){
         log('[삭제 완료] 인스턴스 영구 종료됨');
         instances=instances.filter(function(i){return i.id!==inst.id;});
@@ -953,88 +984,81 @@ async function terminateInstance(inst){
 
 /* ---------------- deploy ---------------- */
 async function deploy(){
-  if(!CONTROL_ACTIONS_ENABLED){window.alert('보안 점검 중이야. 현재는 인스턴스 상태 조회만 가능해.');return;}
-  if(!adminUnlocked){
-    requireAdmin('새 서버 배포는 개발자만 할 수 있어.',deploy);
-    return;
-  }
-  if(instances.length>=MAX_INSTANCES){
-    window.alert('쿼터 초과! NeoOS Cloud는 최대 '+MAX_INSTANCES+'대까지만 운영할 수 있어.\n기존 인스턴스를 삭제한 뒤 다시 시도해 줘.');
-    return;
-  }
-  const name=$('server-name').value.trim()||'NeoOS-Cloud-Worker';
-  const spec=$('server-spec').value;
-  const disk=$('server-disk').value;
-  const region=$('server-region').value;
-  const osMap={
-    ubuntu:{name:'Ubuntu 26.04 LTS',icon:'🐧'},
-    debian:{name:'Debian 12 Bookworm',icon:'🌀'},
-    alpine:{name:'Alpine Linux',icon:'🏔️'}
-  };
-  const osData=osMap[selectedOs]||osMap.ubuntu;
-  if(!window.confirm('[NeoOS Cloud 배포]\n\n서버명: '+name+'\nOS: '+osData.name+'\n사양: '+spec+' ('+disk+'GB SSD)\n리전: '+region+'\n\n지금 실제 서버를 생성할까?'))return;
-
-  const btn=$('deploy-btn');
-  btn.disabled=true;
-  btn.textContent='⏳ 인스턴스 프로비저닝 중...';
-  log('[배포 요청] '+name+' ('+osData.name+')');
-  try{
-    const res=await fetch('/api/instances',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({name:name,os:selectedOs,instance_type:spec,volume_gb:parseInt(disk,10)||8})
-    });
-    if(res.ok){
-      const data=await res.json();
+  requireAdmin('컨테이너 생성은 인증된 Podroid 연결에서만 가능해.',async function(){
+    const rawName=$('server-name').value.trim().toLowerCase();
+    const name=rawName.replace(/[^a-z0-9_.-]/g,'-').replace(/^[^a-z0-9]+/,'').slice(0,31);
+    if(name.length<2){window.alert('컨테이너 이름은 영문 또는 숫자로 시작하는 2~31자여야 해.');return;}
+    const guests=instances.filter(function(i){return i.managed==='guest';}).length;
+    if(guests>=slotCapacity.max){window.alert('Podroid 컨테이너 슬롯이 가득 찼어. 기존 게스트를 정리한 뒤 다시 시도해 줘.');return;}
+    const osMap={
+      alpine:{name:'Alpine Linux',icon:'🏔️'},
+      ubuntu:{name:'Ubuntu 24.04',icon:'🐧'},
+      debian:{name:'Debian 12',icon:'🌀'},
+      busybox:{name:'BusyBox Linux',icon:'📦'},
+      node:{name:'Node.js 22 Alpine',icon:'🟩'},
+      python:{name:'Python 3.13 Alpine',icon:'🐍'},
+      nginx:{name:'Nginx Alpine',icon:'🌐'}
+    };
+    const osData=osMap[selectedOs]||osMap.alpine;
+    if(!window.confirm('[Podroid Docker 컨테이너 생성]\n\n이름: '+name+'\n템플릿: '+osData.name+'\n제한: CPU 0.5 / RAM 256MB / PID 64\n자동 정리: 30분 후\n\n휴대폰의 Docker Engine에 실제로 생성할까?'))return;
+    const btn=$('deploy-btn');
+    btn.disabled=true;
+    btn.textContent='⏳ Docker 이미지 확인 및 컨테이너 생성 중...';
+    log('[생성 요청] '+name+' · '+osData.name);
+    try{
+      const res=await apiFetch('/api/instances',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({name:name,os:selectedOs})
+      });
+      const data=await res.json().catch(function(){return {};});
+      if(!res.ok)throw new Error(data.message||data.error||('HTTP '+res.status));
       const inst=data.instance||{};
-      if(inst.id){
-        const exists=instances.some(function(i){return i.id===inst.id;});
-        if(!exists){
-          inst.os=inst.os||osData.name;
-          inst.icon=inst.icon||osData.icon;
-          instances.push(inst);
-          saveInstances(instances);
-        }
-      }
-      log('[배포 성공] '+(inst.name||name)+' ('+(inst.id||'id 대기')+') 상태: '+(inst.state||'pending'));
-      $('doneText').textContent=(inst.name||name)+' 인스턴스가 생성됐어. ID: '+(inst.id||'확인 중')+' · IP: '+(inst.ip||'할당 중');
+      log('[생성 완료] '+(inst.name||name)+' · '+(inst.id||'ID 없음'));
+      $('doneTitle').textContent='🐳 컨테이너 생성 완료';
+      $('doneText').textContent=(inst.name||name)+' 컨테이너가 Podroid Docker에 생성됐어. 내부 포트: '+(inst.ports||'없음')+' · 자동 만료: '+formatTtl(data.ttl_seconds||1800);
       $('doneModal').hidden=false;
-      renderInstances();
       await syncInstances(true);
-    }else{
-      const err=await res.json().catch(function(){return {};});
-      log('[배포 실패] '+(err.message||err.error||res.status));
-      window.alert('배포 실패: '+(err.message||err.detail||err.error||res.statusText));
+    }catch(err){
+      log('[생성 실패] '+(err.message||err));
+      window.alert('컨테이너 생성 실패: '+(err.message||err));
+    }finally{
+      renderDeployState();
     }
-  }catch(err){
-    log('[배포 오류] '+err.message);
-    window.alert('통신 오류: '+err.message);
-  }finally{
-    btn.disabled=false;
-    renderDeployState();
-  }
+  });
 }
 
-/* ---------------- endpoints ---------------- */
+/* ---------------- endpoints ---------------- *//* ---------------- endpoints ---------------- */
 function saveCustomEndpoint(){
-  requireAdmin('API 엔드포인트 변경은 개발자만 할 수 있어.',function(){
-    const url=$('api-url').value.trim();
-    const token=$('api-token').value.trim();
-    localStorage.setItem(KEYS.url,url);
-    sessionStorage.setItem(KEYS.token,token);
-    log('커스텀 API 엔드포인트 저장 완료.');
-    toast('엔드포인트 설정 저장 완료');
-  });
+  if(!adminUnlocked){toast('먼저 상단 구름 로고를 5회 연속 탭해 줘.');return;}
+  const url=$('api-url').value.trim().replace(/\\/+$/,'');
+  const token=$('api-token').value.trim();
+  if(token.length<32){window.alert('접속 토큰은 32자 이상이어야 해.');return;}
+  if(url){
+    try{
+      const parsed=new URL(url);
+      if(parsed.protocol!=='https:'&&parsed.hostname!=='localhost'&&parsed.hostname!=='127.0.0.1'){
+        window.alert('보안을 위해 API 주소는 HTTPS를 사용해 줘.');return;
+      }
+    }catch(e){window.alert('API 주소를 확인해 줘.');return;}
+  }
+  localStorage.setItem(KEYS.url,url);
+  sessionStorage.setItem(KEYS.token,token);
+  backendReady=false;
+  log('접속 설정을 이 탭의 세션에 저장했어. Podroid 연결 확인 중...');
+  toast('접속 설정 저장 완료');
+  syncInstances(false);
 }
 function resetCustomEndpoint(){
-  requireAdmin('API 설정 복원은 개발자만 할 수 있어.',function(){
-    localStorage.removeItem(KEYS.url);
-    sessionStorage.removeItem(KEYS.token);
-    $('api-url').value='';
-    $('api-token').value='';
-    log('기본 내장 NeoOS Cloud 엔진으로 복원 완료.');
-    toast('기본 설정으로 복원');
-  });
+  if(!adminUnlocked){toast('먼저 개발자 패널을 열어 줘.');return;}
+  localStorage.removeItem(KEYS.url);
+  sessionStorage.removeItem(KEYS.token);
+  $('api-url').value='';
+  $('api-token').value='';
+  backendReady=false;
+  log('접속 주소와 현재 탭 토큰을 초기화했어.');
+  toast('접속 설정 초기화 완료');
+  renderDeployState();
 }
 
 /* ---------------- UI wiring ---------------- */
@@ -1043,7 +1067,7 @@ document.querySelectorAll('.os-choice').forEach(function(el){
     document.querySelectorAll('.os-choice').forEach(function(c){c.classList.remove('selected');});
     el.classList.add('selected');
     selectedOs=el.dataset.os;
-    log('OS 템플릿 선택: '+selectedOs.toUpperCase());
+    log('Docker 템플릿 선택: '+selectedOs.toUpperCase());
   };
   el.addEventListener('click',choose);
   el.addEventListener('keydown',function(e){
@@ -1096,6 +1120,12 @@ $('saveEndpoint').addEventListener('click',saveCustomEndpoint);
 $('resetEndpoint').addEventListener('click',resetCustomEndpoint);
 $('termClose').addEventListener('click',function(){$('termModal').hidden=true;});
 $('webTermForm').addEventListener('submit',runWebTermCommand);
+document.querySelectorAll('[data-cmd]').forEach(function(button){
+  button.addEventListener('click',function(){
+    $('webTermCmd').value=button.dataset.cmd||'';
+    $('webTermCmd').focus();
+  });
+});
 $('webTermClose').addEventListener('click',function(){$('webTerm').hidden=true;});
 $('webTermClear').addEventListener('click',function(){$('webTermOut').textContent='';});
 $('copySsh').addEventListener('click',function(){copyText($('sshCmd').textContent,'SSH 명령어');});
