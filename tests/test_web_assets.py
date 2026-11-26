@@ -97,11 +97,12 @@ class CloudConsoleTests(unittest.TestCase):
 
     def test_identity_and_navigation(self):
         self.assertIn("<title>NeoOS Cloud", self.html)
-        self.assertIn("독립형 AI 샌드박스", self.html)
+        self.assertIn("Podroid", self.html)
+        self.assertIn("Docker 컨테이너 추가", self.html)
         for path in ('"/cloud"', '"/editor"', '"/game"'):
             self.assertIn(path, self.html)
-        self.assertNotIn("Podroid", self.html)
         self.assertNotIn("AWS EC2", self.html)
+        self.assertNotIn("t3.micro", self.html)
 
     def test_admin_gate_has_no_embedded_ssh_password(self):
         self.assertNotIn("DEFAULT_PASSWORD", self.html)
@@ -119,12 +120,15 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertIn('id="svcOn"', self.html)
         self.assertIn('id="svcOff"', self.html)
 
-    def test_credit_guardrails_and_expiry(self):
-        self.assertIn("MAX_INSTANCES=2", self.html)
-        self.assertIn("24시간 만료 타이머를 사용하지 않음", self.html)
-        self.assertIn("24시간", self.html)
-        self.assertIn("만료", self.html)
-        self.assertIn("t3.micro", self.html)
+    def test_podroid_guardrails_and_expiry(self):
+        self.assertIn("MAX_INSTANCES=4", self.html)
+        self.assertIn("게스트 슬롯 4개", self.html)
+        self.assertIn("자동 정리", self.html)
+        self.assertIn("CPU 0.5", self.html)
+        self.assertIn("RAM 256MB", self.html)
+        self.assertIn("Podroid Docker", self.html)
+        self.assertNotIn("t3.micro", self.html)
+        self.assertNotIn("AWS EC2", self.html)
 
     def test_ask_cli_and_railway_quickstart(self):
         self.assertIn("https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh", self.html)
@@ -141,11 +145,14 @@ class CloudConsoleTests(unittest.TestCase):
             self.assertIn("requireAdmin(", self.html)
             self.assertIn("async function %s(" % action, self.html)
 
-    def test_cloud_console_is_read_only_until_admin_auth_is_secure(self):
-        self.assertIn("CONTROL_ACTIONS_ENABLED=false", self.html)
-        self.assertIn("보안 점검", self.html)
-        self.assertIn("제어 기능은 임시 비활성화", self.html)
-        self.assertIn("현재 콘솔은 읽기 전용이야", self.html)
+    def test_cloud_console_actions_require_real_api_auth_and_connection(self):
+        self.assertNotIn("CONTROL_ACTIONS_ENABLED=false", self.html)
+        self.assertIn("function apiFetch(", self.html)
+        self.assertIn("function hasApiToken()", self.html)
+        self.assertIn("backendReady", self.html)
+        self.assertIn("X-NeoOS-Console-Token", self.html)
+        self.assertIn("async function deploy()", self.html)
+        self.assertIn("apiFetch('/api/instances'", self.html)
         self.assertNotIn("neoos2026!", self.html)
 
     def test_no_remote_script_tags(self):
