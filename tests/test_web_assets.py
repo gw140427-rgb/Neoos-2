@@ -305,6 +305,22 @@ class JavaScriptSyntaxTests(unittest.TestCase):
     def test_game_script(self):
         self.check("bean-jail/index.html")
 
+    def test_api_gateway_scripts_parse_and_match(self):
+        if not self.node:
+            self.skipTest("node is not installed")
+        api = (ROOT / "api" / "instances.js").read_text(encoding="utf-8")
+        docs_api = (DOCS / "api" / "instances.js").read_text(encoding="utf-8")
+        self.assertEqual(api, docs_api, "api/ and docs/api gateway copies must stay identical")
+        for name, source in (("api-instances", api), ("docs-api-instances", docs_api)):
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".mjs", delete=False) as handle:
+                handle.write(source)
+                path = handle.name
+            try:
+                result = subprocess.run([self.node, "--check", path], capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, "%s: %s" % (name, result.stderr))
+            finally:
+                os.unlink(path)
+
 
 if __name__ == "__main__":
     unittest.main()
