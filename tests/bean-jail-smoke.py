@@ -11,6 +11,14 @@ ROOT = Path(__file__).resolve().parents[1]
 GAME = ROOT / "docs" / "bean-jail" / "index.html"
 HOME = ROOT / "docs" / "index.html"
 
+# Vercel Web Analytics is the only external script the page may load: the
+# bootstrap queue snippet plus the deferred insights script it feeds.
+VERCEL_ANALYTICS_SRC = "/_vercel/insights/script.js"
+VERCEL_ANALYTICS_BOOTSTRAP = (
+    "window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };"
+)
+
+
 class GameParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
@@ -19,6 +27,7 @@ class GameParser(HTMLParser):
         self.buy_items = set()
         self.use_items = set()
         self.scripts = []
+        self.remote_srcs = []
         self._in_script = False
         self._script_data = []
 
@@ -33,9 +42,12 @@ class GameParser(HTMLParser):
                 self.buy_items.add(attrs["data-buy"])
             if "data-use" in attrs:
                 self.use_items.add(attrs["data-use"])
-        if tag == "script" and "src" not in attrs:
-            self._in_script = True
-            self._script_data = []
+        if tag == "script":
+            if "src" in attrs:
+                self.remote_srcs.append(attrs["src"])
+            else:
+                self._in_script = True
+                self._script_data = []
 
     def handle_data(self, data):
         if self._in_script:
@@ -43,7 +55,9 @@ class GameParser(HTMLParser):
 
     def handle_endtag(self, tag):
         if tag == "script" and self._in_script:
-            self.scripts.append("".join(self._script_data))
+            script = "".join(self._script_data)
+            if " ".join(script.split()) != VERCEL_ANALYTICS_BOOTSTRAP:
+                self.scripts.append(script)
             self._in_script = False
             self._script_data = []
 
@@ -80,6 +94,8 @@ def main():
     require('mcaddon' not in home_html.lower() and '마인크래프트' not in home_html,
             "Legacy Minecraft add-on section is still on the landing page.")
     require(len(parser.scripts) == 1, f"Expected one inline game script; found {len(parser.scripts)}.")
+    unexpected_remote = [src for src in parser.remote_srcs if src != VERCEL_ANALYTICS_SRC]
+    require(not unexpected_remote, f"Unexpected external scripts: {unexpected_remote}.")
     script = parser.scripts[0]
     require("function validState" in script and "function finishTurnIfNeeded" in script,
             "State validation or turn progression code is missing.")

@@ -27,9 +27,32 @@ def node_binary():
     return None
 
 
+# Vercel Web Analytics is the only external script the pages may load: the
+# bootstrap queue snippet plus the deferred insights script it feeds.
+VERCEL_ANALYTICS_SRC = "/_vercel/insights/script.js"
+VERCEL_ANALYTICS_BOOTSTRAP = (
+    "window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };"
+)
+
+
 def inline_scripts(html):
     pattern = re.compile(r"<script(?P<attrs>[^>]*)>(?P<body>.*?)</script>", re.S)
     return [m.group("body") for m in pattern.finditer(html) if "src=" not in m.group("attrs")]
+
+
+def is_vercel_analytics_bootstrap(body):
+    """True only for that exact bootstrap snippet, never for extra code smuggled around it."""
+    return " ".join(body.split()) == VERCEL_ANALYTICS_BOOTSTRAP
+
+
+def remote_script_sources(html):
+    pattern = re.compile(r"<script(?P<attrs>[^>]*)>", re.S)
+    sources = []
+    for match in pattern.finditer(html):
+        src = re.search(r'src="(?P<src>[^"]*)"', match.group("attrs"))
+        if src:
+            sources.append(src.group("src"))
+    return sources
 
 
 class PortalTests(unittest.TestCase):
@@ -126,7 +149,8 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertNotIn("neoos2026!", self.html)
 
     def test_no_remote_script_tags(self):
-        self.assertNotRegex(self.html, r"<script[^>]+src=")
+        unexpected = [src for src in remote_script_sources(self.html) if src != VERCEL_ANALYTICS_SRC]
+        self.assertEqual(unexpected, [], "unexpected remote script tags: %s" % unexpected)
 
 
 class EditorTests(unittest.TestCase):
@@ -229,7 +253,7 @@ class BeanJailV11Tests(unittest.TestCase):
         self.assertIn("state.pendingEvent)return;", self.html)
 
     def test_single_inline_script(self):
-        scripts = inline_scripts(self.html)
+        scripts = [s for s in inline_scripts(self.html) if not is_vercel_analytics_bootstrap(s)]
         self.assertEqual(len(scripts), 1)
 
 
