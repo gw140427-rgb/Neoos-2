@@ -520,7 +520,7 @@ function apiFetch(path,options){
   if(token.length<32)throw new Error('접속 토큰이 없어. 32자 이상 토큰을 설정해 줘.');
   const opts=options||{};
   const headers=Object.assign({},opts.headers||{});
-  const customUrl=(localStorage.getItem(KEYS.url)||'').trim().replace(/\\/+$/,'');
+  const customUrl=(localStorage.getItem(KEYS.url)||'').trim().replace(new RegExp('/+$'),'');
   let target=path;
   if(customUrl){
     let parsed;
@@ -778,7 +778,6 @@ function renderDeployState(){
   $('deployHint').textContent=full?'사용 중인 게스트 슬롯을 삭제하거나 TTL 만료 후 다시 생성해 줘.':(!hasApiToken()?'고급 설정에서 서버 접속 토큰을 저장해 줘.':(!backendReady?'새로고침으로 Podroid 연결 상태를 확인해 줘.':(!adminUnlocked?'상단 구름 로고를 5회 연속 탭해 개발자 패널을 열어 줘.':'Podroid 연결 완료 · 실제 컨테이너 생성 가능')));
   $('deployHint').hidden=false;
   $('server-name').disabled=false;
-  $('nameLock').hidden=true;
 }
 function renderAdmin(){
   const panel=$('adminPanel');
@@ -795,6 +794,7 @@ function renderAdmin(){
 let syncFailNotified=false;
 let syncInFlight=false;
 async function syncInstances(silent){
+  if(serviceState()==='offline')return;
   if(syncInFlight)return;
   syncInFlight=true;
   const refresh=$('refreshBtn');
@@ -877,7 +877,7 @@ async function openContainerLogs(inst){
     $('webTermTitle').textContent='📄 컨테이너 로그';
     $('webTermInst').textContent=inst.name||inst.id;
     $('webTermMeta').textContent='최근 로그 최대 100줄 · 읽기 전용';
-    $('webTermOut').textContent='# '+(inst.name||inst.id)+' 로그 불러오는 중...\\n';
+    $('webTermOut').textContent='# '+(inst.name||inst.id)+' 로그 불러오는 중...'+String.fromCharCode(10);
     $('webTermForm').hidden=true;
     $('termQuick').hidden=true;
     $('webTerm').hidden=false;
@@ -885,7 +885,7 @@ async function openContainerLogs(inst){
       const res=await apiFetch('/api/instances/'+encodeURIComponent(inst.id)+'/logs');
       const data=await res.json().catch(function(){return {};});
       if(!res.ok)throw new Error(data.message||data.error||('HTTP '+res.status));
-      $('webTermOut').textContent=(data.logs||'(로그가 없어)')+(data.truncated?'\\n[출력이 잘렸어]':'');
+      $('webTermOut').textContent=(data.logs||'(로그가 없어)')+(data.truncated?String.fromCharCode(10)+'[출력이 잘렸어]':'');
       $('webTermOut').scrollTop=$('webTermOut').scrollHeight;
     }catch(err){
       $('webTermOut').textContent='[로그 조회 실패] '+(err.message||err);
@@ -1070,7 +1070,7 @@ async function deploy(){
 /* ---------------- endpoints ---------------- *//* ---------------- endpoints ---------------- */
 function saveCustomEndpoint(){
   if(!adminUnlocked){toast('먼저 상단 구름 로고를 5회 연속 탭해 줘.');return;}
-  const url=$('api-url').value.trim().replace(/\\/+$/,'');
+  const url=$('api-url').value.trim().replace(new RegExp('/+$'),'');
   const token=$('api-token').value.trim();
   if(token.length<32){window.alert('접속 토큰은 32자 이상이어야 해.');return;}
   if(url){
