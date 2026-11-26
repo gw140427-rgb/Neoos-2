@@ -34,7 +34,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 TOKEN = os.environ.get("NEOOS_API_TOKEN", "").strip()
-HOST = os.environ.get("HOST", "0.0.0.0")
+HOST = os.environ.get("HOST", "127.0.0.1")
 PORT = int(os.environ.get("PORT", "8080"))
 NODE_NAME = os.environ.get("NEOOS_NODE_NAME", "Podroid").strip() or "Podroid"
 
@@ -241,7 +241,7 @@ def pick_host_port(used: set) -> int | None:
         probe = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             # No SO_REUSEPORT: an active listener must make the bind fail.
-            probe.bind(("0.0.0.0", port))
+            probe.bind(("127.0.0.1", port))
         except OSError:
             continue
         finally:
@@ -624,7 +624,7 @@ class Handler(BaseHTTPRequestHandler):
             "--name",
             name,
             "-p",
-            f"{host_port}:{CONTAINER_PORT}",
+            f"127.0.0.1:{host_port}:{CONTAINER_PORT}",
             "--cap-drop=ALL",
             "--security-opt=no-new-privileges",
             f"--memory={MEMORY_LIMIT}",
