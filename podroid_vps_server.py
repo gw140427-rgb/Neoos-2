@@ -103,6 +103,10 @@ EXEC_TIMEOUT = 10
 EXEC_MAX_OUTPUT = 8192
 EXEC_MAX_COMMAND = 512
 
+# Serialize guest provisioning so concurrent requests cannot overbook slots
+# or select the same host port/name at the same time.
+CREATE_LOCK = threading.Lock()
+
 PS_FORMAT = (
     "{{.ID}}|{{.Names}}|{{.State}}|{{.Image}}|{{.RunningFor}}|{{.Status}}|{{.Ports}}|{{.Labels}}"
 )
@@ -512,7 +516,8 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/instances":
             if not self.authorized():
                 return
-            self.create_container()
+            with CREATE_LOCK:
+                self.create_container()
             return
         match = re.fullmatch(r"/api/instances/([^/]+)/(" + ACTION_PATTERN + r")", path)
         if not match:
@@ -843,7 +848,7 @@ class Handler(BaseHTTPRequestHandler):
         stderr, stderr_cut = clip_output(result.stderr)
         combined = stdout
         if stderr:
-            combined = (combined + "\\n" + stderr).strip()
+            combined = (combined + chr(10) + stderr).strip()
         logs, cut = clip_output(combined)
         self.send_json(
             200,
