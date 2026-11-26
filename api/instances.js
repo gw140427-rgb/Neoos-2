@@ -7,7 +7,7 @@ export const config = { maxDuration: 60 };
 const SLUG = '[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}';
 const COLLECTION = /^\/api\/instances$/;
 const ITEM = new RegExp('^/api/instances/' + SLUG + '$');
-const ACTION = new RegExp('^/api/instances/' + SLUG + '/(start|stop|reboot|pause|unpause|exec)
+const ACTION = new RegExp('^/api/instances/' + SLUG + '/(start|stop|reboot|pause|unpause|exec)$');
 const ROUTES = [
   { method: 'GET', path: COLLECTION },
   { method: 'GET', path: new RegExp('^/api/instances/' + SLUG + '/logs$') },
