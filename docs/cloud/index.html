@@ -249,10 +249,10 @@ input:disabled,select:disabled{opacity:.55}
       <label>1. 운영체제(OS) 템플릿</label>
       <div class="os-grid">
         <div class="os-choice selected" data-os="ubuntu" role="button" tabindex="0">
-          <div class="os-icon">🐧</div><div class="os-title">Ubuntu 26.04 LTS</div><div class="os-desc">안정적인 최신 표준</div>
+          <div class="os-icon">🐧</div><div class="os-title">Ubuntu 26.04.1 LTS</div><div class="os-desc">LTS · 2031년 5월까지 표준 지원</div>
         </div>
         <div class="os-choice" data-os="debian" role="button" tabindex="0">
-          <div class="os-icon">🌀</div><div class="os-title">Debian 12 Bookworm</div><div class="os-desc">가볍고 단단한 서버</div>
+          <div class="os-icon">🌀</div><div class="os-title">Debian 13 Trixie</div><div class="os-desc">최신 안정판 · 13.8 업데이트</div>
         </div>
         <div class="os-choice" data-os="alpine" role="button" tabindex="0">
           <div class="os-icon">🏔️</div><div class="os-title">Alpine Linux</div><div class="os-desc">초경량 고속 부팅</div>
@@ -961,8 +961,8 @@ async function deploy(){
   const disk=$('server-disk').value;
   const region=$('server-region').value;
   const osMap={
-    ubuntu:{name:'Ubuntu 26.04 LTS',icon:'🐧'},
-    debian:{name:'Debian 12 Bookworm',icon:'🌀'},
+    ubuntu:{name:'Ubuntu 26.04.1 LTS',icon:'🐧'},
+    debian:{name:'Debian 13 Trixie',icon:'🌀'},
     alpine:{name:'Alpine Linux',icon:'🏔️'}
   };
   const osData=osMap[selectedOs]||osMap.ubuntu;
