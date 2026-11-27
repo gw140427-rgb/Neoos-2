@@ -35,6 +35,28 @@ function allowedMethods(path) {
   return Array.from(new Set(methods)).concat('OPTIONS').join(', ');
 }
 
+function cors(res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept');
+  res.setHeader('Access-Control-Max-Age', '86400');
+}
+
+function validCreateBody(text) {
+  let body;
+  try {
+    body = JSON.parse(text || '{}');
+  } catch (err) {
+    return null;
+  }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
+  if (typeof body.name !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}$/.test(body.name)) return null;
+  if (!['ubuntu', 'debian', 'alpine'].includes(body.os)) return null;
+  if (body.instance_type !== undefined && body.instance_type !== 't3.micro') return null;
+  if (body.volume_gb !== undefined && body.volume_gb !== 8) return null;
+  return body;
+}
+
 async function readRequestBody(req) {
   // Vercel parses JSON bodies into req.body; a raw stream is still possible.
   if (req.body !== undefined && req.body !== null) {
@@ -58,6 +80,13 @@ async function readRequestBody(req) {
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
+  cors(res);
+
+  const method = (req.method || 'GET').toUpperCase();
+  if (method === 'OPTIONS') {
+    res.setHeader('Allow', 'GET, POST, DELETE, OPTIONS');
+    return res.status(204).end();
+  }
 
   const BACKEND_URL = (process.env.NEOOS_BACKEND_URL || '').trim().replace(/\/+$/, '');
   const TOKEN = (process.env.NEOOS_API_TOKEN || '').trim();
@@ -69,16 +98,8 @@ export default async function handler(req, res) {
     });
   }
 
-  const method = (req.method || 'GET').toUpperCase();
   const rawPath = (req.url || '/api/instances').split('?')[0];
   const path = rawPath.replace(/\/+$/, '') || '/';
-
-  if (method === 'OPTIONS') {
-    // Same-origin console needs no preflight; this only keeps cross-origin
-    // probes from being answered with a confusing 405.
-    res.setHeader('Allow', 'GET, POST, DELETE, OPTIONS');
-    return res.status(204).end();
-  }
 
   if (!KNOWN_PATHS.some((known) => known.test(path))) {
     return res.status(404).json({ error: 'not_found' });
@@ -97,13 +118,25 @@ export default async function handler(req, res) {
     } catch (err) {
       return res.status(413).json({ error: 'body_too_large' });
     }
+    if (COLLECTION.test(path)) {
+      if (!validCreateBody(bodyText)) {
+        return res.status(400).json({
+          error: 'invalid_payload',
+          message: 'name(2~64자), os(ubuntu|debian|alpine), t3.micro, 8GB만 허용됩니다.'
+        });
+      }
+    }
+    const contentType = String((req.headers && req.headers['content-type']) || '');
+    if (!/^application\/json(;|$)/i.test(contentType)) {
+      return res.status(415).json({ error: 'unsupported_media_type' });
+    }
   }
 
   const headers = { Accept: 'application/json' };
   if (TOKEN) headers.Authorization = `Bearer ${TOKEN}`;
   const init = { method: method, headers: headers, redirect: 'error' };
   if (bodyText) {
-    headers['Content-Type'] = (req.headers && req.headers['content-type']) || 'application/json';
+    headers['Content-Type'] = 'application/json';
     init.body = bodyText;
   }
 

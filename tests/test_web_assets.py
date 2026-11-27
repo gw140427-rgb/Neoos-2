@@ -84,7 +84,7 @@ class PortalTests(unittest.TestCase):
         self.assertIn(".stage-empty[hidden]{display:none}", editor)
         self.assertIn(".media-item[hidden]{display:none}", editor)
         self.assertIn(".banner[hidden]{display:none}", cloud)
-        self.assertIn(".maint[hidden]{display:none}", cloud)
+        self.assertIn(".modal[hidden]{display:none}", cloud)
 
     def test_dark_theme_is_declared(self):
         self.assertIn('name="viewport"', self.html)
@@ -110,18 +110,16 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertIn("function unlockAdmin()", self.html)
         self.assertIn("logoTaps>=5", self.html)
 
-    def test_maintenance_mode_overlay(self):
-        self.assertIn('id="maintenanceOverlay"', self.html)
-        self.assertIn("서버 운영이 일시 종료되었습니다", self.html)
-        self.assertIn("개발자(건우)가 시스템 점검 및 서버 종료 작업을 진행 중입니다.", self.html)
-        self.assertIn("개발자 복구 제어", self.html)
-        self.assertIn("localStorage.setItem(KEYS.service", self.html)
-        self.assertIn('id="svcOn"', self.html)
-        self.assertIn('id="svcOff"', self.html)
+    def test_no_maintenance_overlay_blocks_the_console(self):
+        self.assertNotIn('id="maintenanceOverlay"', self.html)
+        self.assertNotIn("서버 운영이 일시 종료되었습니다", self.html)
+        self.assertIn('id="engineBanner"', self.html)
+        self.assertIn("setEngineMode('api')", self.html)
+        self.assertIn("setEngineMode('local')", self.html)
 
     def test_credit_guardrails_and_expiry(self):
-        self.assertIn("MAX_INSTANCES=2", self.html)
-        self.assertIn("24시간 만료 타이머를 사용하지 않음", self.html)
+        self.assertIn("MAX_INSTANCES=4", self.html)
+        self.assertIn("자체 만료 타이머 없음", self.html)
         self.assertIn("24시간", self.html)
         self.assertIn("만료", self.html)
         self.assertIn("t3.micro", self.html)
@@ -133,19 +131,18 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertIn("Claude Code", self.html)
         self.assertIn("data-qs=", self.html)
 
-    def test_instances_are_viewable_but_actions_are_gated(self):
-        self.assertIn("requireAdmin(", self.html)
-        self.assertIn("개발자 인증", self.html)
-        # every mutating instance action goes through the gate
+    def test_instances_are_viewable_and_actions_are_reachable(self):
+        self.assertIn("requireAdmin(", self.html)  # advanced endpoint settings only
         for action in ("rebootInstance", "stopInstance", "startInstance", "terminateInstance"):
-            self.assertIn("requireAdmin(", self.html)
             self.assertIn("async function %s(" % action, self.html)
+        self.assertIn("function openWebTerminal(inst)", self.html)
+        self.assertIn("function localShell(cmd,inst)", self.html)
 
-    def test_cloud_console_is_read_only_until_admin_auth_is_secure(self):
-        self.assertIn("CONTROL_ACTIONS_ENABLED=false", self.html)
-        self.assertIn("보안 점검", self.html)
-        self.assertIn("제어 기능은 임시 비활성화", self.html)
-        self.assertIn("현재 콘솔은 읽기 전용이야", self.html)
+    def test_cloud_console_works_without_a_backend(self):
+        self.assertNotIn("CONTROL_ACTIONS_ENABLED", self.html)
+        self.assertNotIn("제어 기능은 임시 비활성화", self.html)
+        self.assertNotIn("현재 콘솔은 읽기 전용이야", self.html)
+        self.assertIn("engine.mode==='local'", self.html)
         self.assertNotIn("neoos2026!", self.html)
 
     def test_no_remote_script_tags(self):
@@ -188,6 +185,46 @@ class EditorTests(unittest.TestCase):
         self.assertIn("video/mp4", self.html)
         self.assertIn("video/webm", self.html)
         self.assertIn("a.download", self.html)
+
+
+class AiChatTests(unittest.TestCase):
+    def setUp(self):
+        self.html = read("ai/index.html")
+
+    def test_model_picker_offers_neo_1_and_neo_2_series(self):
+        for model in ("neo-2", "neo-2-plus", "neo-2-mini", "neo-1-plus", "neo-1"):
+            self.assertIn('data-model="%s"' % model, self.html)
+        for label in ("'neo-2': 'Neo-2'", "'neo-2-plus': 'Neo-2 Plus'", "'neo-2-mini': 'Neo-2 Mini'"):
+            self.assertIn(label, self.html)
+
+    def test_selected_model_is_persisted_and_validated(self):
+        self.assertIn("localStorage.getItem('neo-chat-model')", self.html)
+        self.assertIn("if (!MODELS[selectedModel]) selectedModel = DEFAULT_MODEL;", self.html)
+        self.assertIn("body: JSON.stringify({model: selectedModel, messages: chatHistory.slice(-12)})", self.html)
+
+    def test_4o_era_knowledge_note(self):
+        self.assertIn("4o 시절(2024년 중반)까지의 지식", self.html)
+
+    def test_backend_endpoints_match_the_vercel_proxies(self):
+        expected = "https://8091-agrbqrrn23duv6hcwf4exhnyre.instabox.tech"
+        self.assertIn('var DIRECT = "%s"' % expected, self.html)
+        for path in ("api/chat.js", "api/health.js"):
+            self.assertIn("const BACKEND = '%s'" % expected, read(path))
+
+    def test_no_hardcoded_client_key(self):
+        self.assertNotIn("var KEY =", self.html)
+        self.assertNotIn("X-Neo-Key", self.html)
+        self.assertNotIn("neo-key", read("api/chat.js"))
+
+    def test_client_timeout_fits_the_proxy_budget(self):
+        self.assertIn("var TIMEOUT_MS = 55000;", self.html)
+        self.assertIn("export const config = { maxDuration: 60 };", read("api/chat.js"))
+
+    def test_ime_enter_is_not_submitted(self):
+        self.assertIn("if (e.key === 'Enter' || e.keyCode === 13) e.preventDefault();", self.html)
+
+    def test_health_and_chat_fall_back_on_bad_gateway(self):
+        self.assertEqual(self.html.count("r.status === 502 || r.status === 504"), 2)
 
 
 class RouteRedirectTests(unittest.TestCase):
@@ -287,6 +324,9 @@ class JavaScriptSyntaxTests(unittest.TestCase):
 
     def test_game_script(self):
         self.check("bean-jail/index.html")
+
+    def test_ai_script(self):
+        self.check("ai/index.html")
 
 
 if __name__ == "__main__":

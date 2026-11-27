@@ -1,6 +1,6 @@
 export const config = { maxDuration: 30 };
 
-const BACKEND = 'https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech';
+const BACKEND = 'https://8091-agrbqrrn23duv6hcwf4exhnyre.instabox.tech';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');

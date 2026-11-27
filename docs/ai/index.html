@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05060c">
-<meta name="description" content="Neo-1 Plus — 직접 학습시킨 AI 모델과 실제로 대화하는 페이지. 양양의 VPS에서 실시간으로 답합니다.">
-<title>Neo-1 Plus AI 채팅 · NeoOS</title>
+<meta name="description" content="Neo-2 / Neo-2 Plus / Neo-2 Mini — 직접 학습시킨 AI 모델과 실제로 대화하는 페이지. 양양의 VPS에서 실시간으로 답합니다.">
+<title>Neo AI 채팅 · NeoOS</title>
 <style>
 :root{color-scheme:dark;--bg:#05060c;--panel:#0c1020;--line:#232a44;--text:#f2f5ff;--muted:#9aa6c6;--violet:#8b5cf6;--cyan:#22d3ee;--green:#4ade80;--amber:#fbbf24;--red:#f87171}
 *{box-sizing:border-box}
@@ -48,17 +48,20 @@ button.send:disabled{opacity:.45;cursor:wait}
   <header class="top">
     <a class="brand" href="/">
       <span class="logo" aria-hidden="true">N</span>
-      <span><b>NeoOS</b><small>NEO-1 PLUS AI CHAT</small></span>
+      <span><b>NeoOS</b><small>NEO AI CHAT</small></span>
     </a>
     <a class="back" href="/">← 홈으로</a>
   </header>
 
   <h1>🤖 Neo 모델에게 물어보기</h1>
-  <p class="sub">직접 학습시킨 AI 모델이 실제로 답하는 페이지예요. 가짜 데모가 아니라, 지금 VPS에서 돌아가는 모델이 실시간으로 답합니다. 위에서 Neo-1과 Neo-1 Plus 중 골라 쓸 수 있어요.</p>
+  <p class="sub">Neo-2, Neo-2 Plus, Neo-2 Mini와 Neo-1 시리즈 중 골라 대화할 수 있어요. 모델 서버가 연결되면 실시간으로 답하고, 연결되지 않으면 기기 안의 오프라인 응답으로 바로 대화할 수 있어요.</p>
   <div class="bar">
     <span class="status" id="status"><i></i><span id="statusText">서버 확인 중…</span></span>
-    <button type="button" class="clear mpick" id="pickPlus">Neo-1 Plus</button>
-    <button type="button" class="clear mpick" id="pickV1">Neo-1</button>
+    <button type="button" class="clear mpick" data-model="neo-2">Neo-2</button>
+    <button type="button" class="clear mpick" data-model="neo-2-plus">Neo-2 Plus</button>
+    <button type="button" class="clear mpick" data-model="neo-2-mini">Neo-2 Mini</button>
+    <button type="button" class="clear mpick" data-model="neo-1-plus">Neo-1 Plus</button>
+    <button type="button" class="clear mpick" data-model="neo-1">Neo-1</button>
     <button type="button" class="clear" id="clearBtn">대화 지우기</button>
   </div>
 
@@ -71,19 +74,18 @@ button.send:disabled{opacity:.45;cursor:wait}
     <button type="submit" class="send" id="send">보내기</button>
   </form>
 
-  <p class="note">작은 모델(1.2B)이라 틀린 답이나 반복이 있을 수 있어요. 날씨·뉴스 같은 최신 정보는 검색해서 답합니다. 대화 내용은 이 기기에만 저장돼요. 서버(VPS)가 꺼져 있으면 답할 수 없어요.</p>
+  <p class="note">Neo-2 시리즈는 4o 시절(2024년 중반)까지의 지식을 기준으로 동작해서 성능이 모델마다 다를 수 있어요. 작은 모델이라 틀린 답이나 반복이 있을 수 있어요. 날씨·뉴스 같은 최신 정보는 검색해서 답합니다. 대화 내용은 이 기기에만 저장돼요. 서버(VPS)가 꺼져 있으면 답할 수 없어요.</p>
 </div>
 
 <script>
-var DIRECT = "https://8091-agq4jaayolghua7jofmyvhd3a4.instabox.tech";
-var KEY = "1c5fd8fc6119de39fbf38d78";
+var DIRECT = "https://8091-agrbqrrn23duv6hcwf4exhnyre.instabox.tech";
 var SAME_ORIGIN = (location.hostname === 'neoos-2.vercel.app') || /\.vercel\.app$/.test(location.hostname);
 var ENDPOINTS = SAME_ORIGIN
   ? [{health: '/api/health', chat: '/api/chat'}, {health: DIRECT + '/health', chat: DIRECT + '/chat'}]
   : [{health: DIRECT + '/health', chat: DIRECT + '/chat'}];
 var ep = ENDPOINTS[0];
 var STORE_KEY = 'neo-chat-v1';
-var TIMEOUT_MS = 150000;
+var TIMEOUT_MS = 55000;
 var chat = document.getElementById('chat');
 var form = document.getElementById('form');
 var input = document.getElementById('input');
@@ -91,14 +93,24 @@ var send = document.getElementById('send');
 var statusEl = document.getElementById('status');
 var statusText = document.getElementById('statusText');
 var chatHistory = [];
-var selectedModel = 'neo-1-plus';
-try { selectedModel = localStorage.getItem('neo-chat-model') || 'neo-1-plus'; } catch (e) {}
-if (selectedModel !== 'neo-1') selectedModel = 'neo-1-plus';
-function modelLabel(m){ return m === 'neo-1' ? 'Neo-1' : 'Neo-1 Plus'; }
+var MODELS = {
+  'neo-2': 'Neo-2',
+  'neo-2-plus': 'Neo-2 Plus',
+  'neo-2-mini': 'Neo-2 Mini',
+  'neo-1-plus': 'Neo-1 Plus',
+  'neo-1': 'Neo-1'
+};
+var DEFAULT_MODEL = 'neo-2-plus';
+var selectedModel = DEFAULT_MODEL;
+try { selectedModel = localStorage.getItem('neo-chat-model') || DEFAULT_MODEL; } catch (e) {}
+if (!MODELS[selectedModel]) selectedModel = DEFAULT_MODEL;
+function modelLabel(m){ return MODELS[m] || MODELS[DEFAULT_MODEL]; }
 var modelName = modelLabel(selectedModel);
+var picks = document.querySelectorAll('.mpick');
 function paintPicks(){
-  document.getElementById('pickPlus').className = 'clear mpick' + (selectedModel === 'neo-1-plus' ? ' sel' : '');
-  document.getElementById('pickV1').className = 'clear mpick' + (selectedModel === 'neo-1' ? ' sel' : '');
+  Array.prototype.forEach.call(picks, function(b){
+    b.className = 'clear mpick' + (b.getAttribute('data-model') === selectedModel ? ' sel' : '');
+  });
 }
 function setModel(m){
   selectedModel = m;
@@ -136,7 +148,15 @@ function loadChat(){
 function checkHealth(){
   var ctrl = ('AbortController' in window) ? new AbortController() : null;
   var killer = ctrl ? setTimeout(function(){ ctrl.abort(); }, 8000) : null;
-  fetch(ep.health, {signal: ctrl ? ctrl.signal : undefined}).then(function(r){ return r.json(); }).then(function(j){
+  fetch(ep.health, {signal: ctrl ? ctrl.signal : undefined}).then(function(r){
+    if ((r.status === 502 || r.status === 504) && ENDPOINTS[1] && ep !== ENDPOINTS[1]) {
+      ep = ENDPOINTS[1];
+      setTimeout(checkHealth, 300);
+      return null;
+    }
+    return r.json();
+  }).then(function(j){
+    if (!j) return;
     if (j.ok) {
       statusEl.className = 'status on';
       statusText.textContent = modelName + ' 작동 중 (VPS 실시간 연결)';
@@ -156,8 +176,9 @@ function checkHealth(){
 statusEl.style.cursor = 'pointer';
 statusEl.addEventListener('click', checkHealth);
 
-document.getElementById('pickPlus').addEventListener('click', function(){ setModel('neo-1-plus'); });
-document.getElementById('pickV1').addEventListener('click', function(){ setModel('neo-1'); });
+Array.prototype.forEach.call(picks, function(b){
+  b.addEventListener('click', function(){ setModel(b.getAttribute('data-model')); });
+});
 paintPicks();
 
 document.getElementById('clearBtn').addEventListener('click', function(){
@@ -169,8 +190,10 @@ document.getElementById('clearBtn').addEventListener('click', function(){
 });
 
 input.addEventListener('keydown', function(e){
-  // 한글 조합 중 Enter는 제출하지 않음
-  if (e.isComposing || e.keyCode === 229) e.stopPropagation();
+  if (e.isComposing || e.keyCode === 229) {
+    if (e.key === 'Enter' || e.keyCode === 13) e.preventDefault();
+    e.stopPropagation();
+  }
 }, true);
 
 loadChat();
@@ -202,7 +225,7 @@ form.addEventListener('submit', function(e){
 
   var chatOpts = {
     method: 'POST',
-    headers: {'Content-Type':'application/json', 'X-Neo-Key': KEY},
+    headers: {'Content-Type':'application/json'},
     body: JSON.stringify({model: selectedModel, messages: chatHistory.slice(-12)}),
     signal: ctrl ? ctrl.signal : undefined
   };
@@ -210,6 +233,12 @@ form.addEventListener('submit', function(e){
     if (err && err.name === 'AbortError') throw err;
     if (ENDPOINTS[1] && ep !== ENDPOINTS[1]) { ep = ENDPOINTS[1]; return fetch(ep.chat, chatOpts); }
     throw err;
+  }).then(function(r){
+    if ((r.status === 502 || r.status === 504) && ENDPOINTS[1] && ep !== ENDPOINTS[1]) {
+      ep = ENDPOINTS[1];
+      return fetch(ep.chat, chatOpts);
+    }
+    return r;
   }).then(function(r){
     return r.json().then(function(j){ return {status: r.status, body: j}; });
   }).then(function(res){
