@@ -25,7 +25,7 @@
       "destination": "/ai/index.html"
     },
     {
-      "source": "/api/instances/:match*",
+      "source": "/api/instances/:match+",
       "destination": "/api/instances"
     }
   ],
