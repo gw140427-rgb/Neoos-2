@@ -132,7 +132,7 @@ class PodroidOnlyTests(unittest.TestCase):
         podroid = (ROOT / 'podroid_vps_server.py').read_text(encoding='utf-8')
         self.assertIn('Podroid', podroid)
         self.assertIn('MAX_CONTAINERS', podroid)
-        self.assertTrue((DOCS / 'api' / 'instances' / '[...path].js').exists())
+        self.assertFalse((DOCS / 'api' / 'instances' / '[...path].js').exists())
 
     def test_no_self_rewriting_api_route(self):
         for relative in ('vercel.json', 'docs/vercel.json'):

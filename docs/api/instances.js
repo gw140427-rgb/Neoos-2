@@ -112,8 +112,18 @@ export default async function handler(req, res) {
   try {
     const response = await fetch(`${BACKEND_URL}${path}`, init);
     const responseText = await response.text();
+    const localFallback = () => res.status(503).json({
+      error: 'backend_not_configured',
+      message: 'Podroid 백엔드에 연결할 수 없어. 콘솔이 로컬 엔진으로 전환합니다.'
+    });
+    if (!response.ok || !responseText.trim()) return localFallback();
+    try {
+      JSON.parse(responseText);
+    } catch (err) {
+      return localFallback();
+    }
     res.setHeader('Content-Type', 'application/json');
-    return res.status(response.status).send(responseText || '{}');
+    return res.status(response.status).send(responseText);
   } catch (err) {
     const timedOut = err && (err.name === 'AbortError' || err.name === 'TimeoutError');
     return res.status(timedOut ? 504 : 502).json({
