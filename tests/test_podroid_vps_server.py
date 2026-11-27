@@ -207,7 +207,7 @@ class PodroidPanelTests(unittest.TestCase):
             status, _, body = self.request(
                 "POST",
                 "/api/instances",
-                {"name": "guest-two", "os": "alpine", "instance_type": "t3.micro", "volume_gb": 8},
+                {"name": "guest-two", "os": "alpine", "instance_type": "podroid-guest", "volume_gb": 8},
                 headers=self.authed(),
             )
         payload = json.loads(body)

@@ -23,23 +23,9 @@
     {
       "source": "/ai",
       "destination": "/ai/index.html"
-    },
-    {
-      "source": "/api/instances/:match+",
-      "destination": "/api/instances"
     }
   ],
   "redirects": [
-    {
-      "source": "/vps/aws.html",
-      "destination": "/cloud",
-      "permanent": false
-    },
-    {
-      "source": "/vps/aws",
-      "destination": "/cloud",
-      "permanent": false
-    },
     {
       "source": "/vps",
       "destination": "/cloud",

@@ -42,7 +42,7 @@ The workflow in `.github/workflows/neoos-heartbeat.yml` runs hourly on GitHub Ac
 
 ## Persistent VPS deployment
 
-For AWS EC2, store the database on the EBS-backed path `/var/lib/neoos/neoos.sqlite3` by setting `NEOOS_DB_PATH`. A systemd unit template is in `deploy/systemd/neoos-mcp.service`; deployment and recovery prerequisites are documented in [docs/vps/aws-ec2.md](docs/vps/aws-ec2.md).
+On a Podroid node, store the database on a persistent path such as `/var/lib/neoos/neoos.sqlite3` by setting `NEOOS_DB_PATH`. A systemd unit template is in `deploy/systemd/neoos-mcp.service`; backend setup is documented in [docs/vps/README.md](docs/vps/README.md).
 
 `vps_server.py` is a separate authenticated, read-only Docker status API: it does not create/delete containers or execute terminal commands.
 
@@ -53,20 +53,20 @@ For AWS EC2, store the database on the EBS-backed path `/var/lib/neoos/neoos.sql
 One portal, four apps (`docs/index.html`):
 
 - **Neo AI 채팅** — [docs/ai/index.html](docs/ai/index.html), served at `/ai`. Five selectable models: Neo-2, Neo-2 Plus, Neo-2 Mini, Neo-1 Plus and Neo-1. The Neo-2 series uses 2024 (GPT-4o era) knowledge as its baseline.
-- **NeoOS Cloud** — [docs/cloud/index.html](docs/cloud/index.html), served at `/cloud`. Unified AI-sandbox and VPS console with a local engine: deploy, start/stop/reboot/delete and the web terminal work without any backend, with state kept in the browser. `MAX_INSTANCES=4`, no 24-hour expiry on worker instances (guest containers are cleaned up after 30 minutes), `ask-cli` install guide, and the Railway free-sandbox quick start. An optional API mode forwards actions to a real NeoOS backend. Backend setup and IAM requirements: [docs/vps/AWS.md](docs/vps/AWS.md); the EC2 backend uses an attached IAM role and only manages instances tagged for NeoOS.
+- **NeoOS Cloud** — [docs/cloud/index.html](docs/cloud/index.html), served at `/cloud`. Podroid-only guest console with a local engine: deploy, start/stop/reboot/delete and the web terminal work without any backend, with state kept in the browser. `MAX_INSTANCES=4`, Podroid guests are cleaned up after 30 minutes, `ask-cli` install guide, and the Railway free-sandbox quick start. An optional API mode forwards actions to the Podroid backend ([docs/vps/README.md](docs/vps/README.md)).
 - **NeoOS CapCut Studio** — [docs/editor/index.html](docs/editor/index.html), served at `/editor`. Browser video editor: canvas preview, timeline, text overlays, filters, speed control, and MediaRecorder export.
 - **콩밥 먹기: 감옥 생존기 v1.1** — [docs/bean-jail/index.html](docs/bean-jail/index.html), served at `/game`. Retro-sound survival mini game with new events and a hidden ending.
 
-`/vps`, `/vps/aws.html` and `docs/vps/index.html` are redirects to `/cloud`; the old Podroid dashboard was folded into NeoOS Cloud. Routing lives in `vercel.json` (root and `docs/`).
+`/vps` and `docs/vps/index.html` redirect to `/cloud`; the Podroid dashboard is NeoOS Cloud. Routing lives in `vercel.json` (root and `docs/`).
 
 The AI chat backend is [neo_ai_server.py](neo_ai_server.py): `GET /health` lists the models and `POST /chat` forwards a whitelisted model plus up to 12 messages to Ollama. It needs no client-side API key (a static page cannot keep one secret); abuse is capped by a per-IP rate limit and a single-generation lock. Model definitions live in `models/*/Modelfile` (Neo-2 = 1.5B, Neo-2 Plus = 3B, Neo-2 Mini = 0.5B base). On this sandbox run `./start_ai.sh` after a restart: it starts Ollama from `/data/ollama`, loads models from `/data/ollama-models`, starts the backend on port 8091, and republishes the port. The Vercel functions in `docs/api/` proxy to the same backend URL as the page's direct fallback. The Neo models are prompt/parameter variants of open base models, not weights trained from scratch.
 
-> The admin panel and API settings are stored in the browser. In local-engine mode nothing is deployed to a cloud provider: instances and costs are simulated, so no real permission or billing applies. Real actions only happen in API mode, where protection comes from the server API token, the instance quota, and the IAM role.
+> The admin panel and API settings are stored in the browser. In local-engine mode nothing is deployed to a node: guests are simulated in the browser. Real actions only happen in API mode, where protection comes from the Podroid API token, the 4-guest quota and the 30-minute TTL.
 
 ## Safety and persistence
 
 - SQLite is included with standard Python builds; no paid database service is required for this configuration.
-- The database persists only when its file is placed on a persistent disk. The EC2 setup uses its attached EBS volume.
+- The database persists only when its file is placed on a persistent disk on the Podroid node.
 - Keep backups. Do not store passwords, API keys, or private personal information in task descriptions.
-- S3 object storage is not connected; the AWS account inventory showed no buckets in accessible regions. Create one only after reviewing ownership, access controls, and possible charges.
+- No external object storage is connected; task data stays in local SQLite on the node.
 - Never commit environment files or tokens.

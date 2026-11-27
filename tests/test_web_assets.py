@@ -75,7 +75,6 @@ class PortalTests(unittest.TestCase):
         self.assertNotIn("mcaddon", lowered)
         self.assertNotIn("마인크래프트", self.html)
         self.assertNotIn("jszip", lowered)
-        self.assertNotIn("podroid", lowered)
         self.assertNotIn("aws ec2", lowered)
 
     def test_hidden_panels_stay_hidden(self):
@@ -100,7 +99,7 @@ class CloudConsoleTests(unittest.TestCase):
         self.assertIn("독립형 AI 샌드박스", self.html)
         for path in ('"/cloud"', '"/editor"', '"/game"'):
             self.assertIn(path, self.html)
-        self.assertNotIn("Podroid", self.html)
+        self.assertIn("Podroid", self.html)
         self.assertNotIn("AWS EC2", self.html)
 
     def test_admin_gate_has_no_embedded_ssh_password(self):
@@ -119,10 +118,9 @@ class CloudConsoleTests(unittest.TestCase):
 
     def test_credit_guardrails_and_expiry(self):
         self.assertIn("MAX_INSTANCES=4", self.html)
-        self.assertIn("자체 만료 타이머 없음", self.html)
-        self.assertIn("24시간", self.html)
+        self.assertIn("게스트 30분 자동 정리", self.html)
         self.assertIn("만료", self.html)
-        self.assertIn("t3.micro", self.html)
+        self.assertIn("podroid-guest", self.html)
 
     def test_ask_cli_and_railway_quickstart(self):
         self.assertIn("https://raw.githubusercontent.com/gw140427-rgb/ask-cli/main/install.sh", self.html)
@@ -228,11 +226,10 @@ class AiChatTests(unittest.TestCase):
 
 
 class RouteRedirectTests(unittest.TestCase):
-    def test_legacy_vps_routes_redirect_to_cloud(self):
-        for relative in ("vps/aws.html", "vps/index.html"):
-            html = read(relative)
-            self.assertIn("../cloud/", html)
-            self.assertIn('http-equiv="refresh"', html)
+    def test_vps_route_redirects_to_cloud(self):
+        html = read("vps/index.html")
+        self.assertIn("../cloud/", html)
+        self.assertIn('http-equiv="refresh"', html)
 
     def test_game_short_route_is_rewritten(self):
         config = json.loads((ROOT / "vercel.json").read_text(encoding="utf-8"))
@@ -251,8 +248,9 @@ class RouteRedirectTests(unittest.TestCase):
         self.assertEqual(rewrites["/game"], "/bean-jail/index.html")
         self.assertEqual(rewrites["/ai"], "/ai/index.html")
         redirects = {item["source"]: item["destination"] for item in root["redirects"]}
-        self.assertEqual(redirects["/vps/aws.html"], "/cloud")
         self.assertEqual(redirects["/vps"], "/cloud")
+        self.assertEqual(redirects["/vps/(.*)"], "/cloud")
+        self.assertNotIn("/vps/aws.html", redirects)
 
 
 class BeanJailV11Tests(unittest.TestCase):

@@ -1,4 +1,5 @@
 """Regression checks for the restored, always-working NeoOS site."""
+import json
 import re
 import shutil
 import subprocess
@@ -101,6 +102,43 @@ class GatewayHardeningTests(unittest.TestCase):
             (ROOT / "api/instances.js").read_text(encoding="utf-8"),
             (DOCS / "api/instances.js").read_text(encoding="utf-8"),
         )
+
+
+class PodroidOnlyTests(unittest.TestCase):
+    def test_no_aws_backend_docs_or_tests_remain(self):
+        for relative in (
+            'aws_vps_server.py',
+            'tests/test_aws_vps_server.py',
+            'tests/test_aws_vps_guardrails.py',
+            'docs/vps/AWS.md',
+            'docs/vps/aws-ec2.md',
+            'docs/vps/aws.html',
+        ):
+            self.assertFalse((ROOT / relative).exists(), relative)
+
+    def test_no_aws_terms_in_source_or_ui(self):
+        banned = ('AWS', 'EC2', 'boto3', 'gp3', 't3.micro', 'ap-southeast-2', 'IAM role')
+        for relative in ('README.md', 'requirements.txt', 'docs/cloud/index.html', 'docs/index.html',
+                         'api/instances.js', 'docs/api/instances.js', 'neoos_store.py'):
+            source = (ROOT / relative).read_text(encoding='utf-8')
+            for term in banned:
+                self.assertNotIn(term, source, '%s contains %s' % (relative, term))
+
+    def test_podroid_is_the_declared_backend(self):
+        cloud = read('cloud/index.html')
+        self.assertIn('podroid-guest', cloud)
+        self.assertIn('Podroid 노드', cloud)
+        self.assertIn('value="podroid"', cloud)
+        podroid = (ROOT / 'podroid_vps_server.py').read_text(encoding='utf-8')
+        self.assertIn('Podroid', podroid)
+        self.assertIn('MAX_CONTAINERS', podroid)
+        self.assertTrue((DOCS / 'api' / 'instances' / '[...path].js').exists())
+
+    def test_no_self_rewriting_api_route(self):
+        for relative in ('vercel.json', 'docs/vercel.json'):
+            config = json.loads((ROOT / relative).read_text(encoding='utf-8'))
+            for rewrite in config['rewrites']:
+                self.assertNotEqual(rewrite['source'], rewrite['destination'])
 
 
 class ScriptSyntaxTests(unittest.TestCase):

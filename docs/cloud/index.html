@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070d18">
-<meta name="description" content="NeoOS Cloud — 독립형 AI 샌드박스 & VPS 클라우드 콘솔. 서버 상태 조회와 비용 안내.">
+<meta name="description" content="NeoOS Cloud — 독립형 AI 샌드박스 & Podroid 게스트 콘솔. 원클릭 배포와 웹 터미널.">
 <title>NeoOS Cloud · AI 샌드박스 & VPS 콘솔</title>
 <style>
 :root{color-scheme:dark;--bg:#060b14;--panel:#0c1626;--panel2:#0a1220;--line:#1b2c45;--text:#eef5ff;--muted:#8ea5c4;--blue:#46b5ff;--cyan:#22d3ee;--green:#4eebb5;--amber:#ffcf70;--red:#ff7b7b;--violet:#8b5cf6}
@@ -157,7 +157,7 @@ input:disabled,select:disabled{opacity:.55}
       <div class="brand-mark" aria-hidden="true">☁</div>
       <div>
         <h1>NeoOS Cloud <span class="beta">CLOUD CONSOLE</span></h1>
-        <p>독립형 AI 샌드박스 &amp; 고속 VPS 클라우드 · 원클릭 배포</p>
+        <p>독립형 AI 샌드박스 &amp; Podroid 게스트 콘솔 · 원클릭 배포</p>
       </div>
     </div>
     <div class="head-pills">
@@ -187,12 +187,12 @@ input:disabled,select:disabled{opacity:.55}
     <div class="stat">
       <div class="stat-label">가동 중</div>
       <div class="stat-val green" id="running-count">0대</div>
-      <div class="stat-sub">t3.micro · 8GB gp3</div>
+      <div class="stat-sub">Podroid 게스트 · 4슬롯</div>
     </div>
     <div class="stat">
       <div class="stat-label">기본 공인 IP</div>
       <div class="stat-val" id="primary-ip" style="font-size:.95rem;font-family:ui-monospace,monospace">—</div>
-      <div class="stat-sub">ap-southeast-2 · Sydney</div>
+      <div class="stat-sub">Podroid 노드 · 로컬</div>
     </div>
     <div class="stat">
       <div class="stat-label">요금 상태</div>
@@ -216,7 +216,7 @@ input:disabled,select:disabled{opacity:.55}
   <!-- 배포 -->
   <section class="card" aria-labelledby="deployTitle">
     <div class="card-head">
-      <h2 id="deployTitle">🚀 새 가상 서버 배포</h2>
+      <h2 id="deployTitle">🚀 새 Podroid 게스트 배포</h2>
       <span class="state" style="background:#13273e;color:var(--blue);border-color:#204b78">크레딧 보호 모드</span>
     </div>
     <p class="muted" style="margin:0 0 12px">OS와 서버 이름을 골라 바로 배포할 수 있어. 사양·디스크·리전은 비용 보호를 위해 고정돼.</p>
@@ -243,27 +243,27 @@ input:disabled,select:disabled{opacity:.55}
       </div>
       <div class="field">
         <label for="server-spec">3. 사양 (고정)</label>
-        <select id="server-spec" disabled title="요금 보호를 위해 t3.micro로 고정돼 있어">
-          <option value="t3.micro" selected>t3.micro (2 vCPU · 1GB RAM) · 고정</option>
+        <select id="server-spec" disabled title="자원 보호를 위해 Podroid 게스트 사양으로 고정돼 있어">
+          <option value="podroid-guest" selected>Podroid 게스트 (0.5 vCPU · 256MB RAM) · 고정</option>
         </select>
       </div>
       <div class="field">
         <label for="server-disk">4. SSD (고정)</label>
         <select id="server-disk" disabled>
-          <option value="8" selected>8GB gp3 (고정)</option>
+          <option value="8" selected>8GB 컨테이너 레이어 (고정)</option>
         </select>
       </div>
       <div class="field">
         <label for="server-region">5. 리전 (고정)</label>
         <select id="server-region" disabled>
-          <option value="ap-southeast-2" selected>호주 시드니 · 고정</option>
+          <option value="podroid" selected>Podroid 노드 · 고정</option>
         </select>
       </div>
     </div>
 
     <button type="button" class="btn primary" id="deploy-btn" style="width:100%;margin-top:14px;padding:13px;font-size:.92rem">⚡ 가상 서버 즉시 배포하기</button>
     <p class="hint" id="deployHint">서버를 생성합니다. 로컬 엔진에서는 실제 비용 없이 기기에 저장돼요.</p>
-    <p class="hint">♾️ 워커 인스턴스에는 NeoOS 자체의 24시간 만료 타이머가 없어. 서버가 실행되는 동안 클라우드 공급자 요금이 발생할 수 있으니 사용량과 청구 내역을 확인해 줘. 게스트 컨테이너는 생성 30분 뒤 자동 정리돼.</p>
+    <p class="hint">♾️ Podroid 노드의 게스트 컨테이너는 생성 30분 뒤 자동 정리돼. 별도 클라우드 청구는 없고, 자원은 고정 사양으로 보호돼.</p>
 
     <div class="status-log" id="status-log" role="status">NeoOS Cloud Engine 대기 중 · 준비 완료.</div>
 
@@ -292,12 +292,12 @@ input:disabled,select:disabled{opacity:.55}
     <div class="card-head"><h2 id="guardTitle">🛡️ 크레딧 보호 가드레일</h2><span class="pill" style="color:#bcdcff;border-color:#1c5a91;background:#0d1e31">자동 적용</span></div>
     <ul class="glist">
       <li><b>게스트 슬롯 4개</b><small>동시 4개까지 · 넘으면 서버가 429로 거절</small></li>
-      <li><b>사양 고정 t3.micro</b><small>2 vCPU · 1GB RAM · 8GB gp3 디스크</small></li>
+      <li><b>사양 고정 Podroid 게스트</b><small>0.5 vCPU · 256MB RAM · 컨테이너 레이어</small></li>
       <li><b>게스트 자동 만료 30분</b><small>실제 백엔드의 게스트 컨테이너는 30분 뒤 정리</small></li>
-      <li><b>운영 시간 제한 없음</b><small>워커 인스턴스는 자체 만료 타이머 없음 · 실제 요금은 공급자 청구 화면 확인</small></li>
+      <li><b>게스트 30분 자동 정리</b><small>Podroid 게스트는 TTL 만료 뒤 자동으로 삭제돼</small></li>
       <li><b>컨트롤 플레인 보호</b><small>보호된 인스턴스는 중지·삭제 불가</small></li>
       <li><b>언제나 작동</b><small>백엔드가 없으면 로컬 엔진에서 모든 제어 기능이 동작</small></li>
-      <li><b>리전 고정</b><small>시드니(ap-southeast-2)에서만 배포</small></li>
+      <li><b>노드 고정</b><small>Podroid 노드의 게스트 컨테이너로만 배포</small></li>
     </ul>
     <p class="hint">인스턴스 조작은 확인 창을 거쳐 실행돼요. 실제 백엔드 연결은 개발자 모드의 커스텀 엔드포인트에서 설정할 수 있어요.</p>
   </section>
@@ -348,7 +348,7 @@ input:disabled,select:disabled{opacity:.55}
   </section>
 
   <footer style="text-align:center;color:#5f718c;font-size:.74rem;padding:18px 0 0">
-    NeoOS Cloud · AI 샌드박스 &amp; VPS · <a href="/" style="color:#7fb6e6;text-decoration:none">NeoOS 홈</a> · <a href="/editor" style="color:#7fb6e6;text-decoration:none">캡컷 스튜디오</a> · <a href="/game" style="color:#7fb6e6;text-decoration:none">콩밥 감옥</a>
+    NeoOS Cloud · AI 샌드박스 &amp; Podroid · <a href="/" style="color:#7fb6e6;text-decoration:none">NeoOS 홈</a> · <a href="/editor" style="color:#7fb6e6;text-decoration:none">캡컷 스튜디오</a> · <a href="/game" style="color:#7fb6e6;text-decoration:none">콩밥 감옥</a>
   </footer>
 </main>
 
@@ -395,7 +395,7 @@ input:disabled,select:disabled{opacity:.55}
     <ol style="font-size:.82rem;color:#c9d9ef;padding-left:20px;line-height:1.7">
       <li>카드의 ℹ️ 연결 정보에서 SSH 명령 확인</li>
       <li>💻 터미널에서 명령 실행 또는 ask-cli 한 줄 설치</li>
-      <li>실제 서버라면 공급자 청구 화면에서 사용량과 비용 확인</li>
+      <li>Podroid 게스트는 30분 뒤 자동 정리됨</li>
     </ol>
     <div class="modal-actions">
       <button type="button" class="btn" id="doneAskcli">ask-cli 명령 복사</button>
@@ -535,7 +535,7 @@ function renderEngine(){
     ? '실제 NeoOS 백엔드에 연결됐어. 모든 조작이 서버로 전달돼.'
     : '백엔드가 연결되지 않아 기기 안의 로컬 엔진으로 동작 중이야. 배포·시작·중지·재부팅·삭제·웹 터미널이 모두 작동하고 상태는 이 기기에 저장돼.';
   $('credits-value').textContent=api?'연동됨':'무료 (로컬)';
-  $('credits-sub').textContent=api?'공급자 청구 화면에서 실제 비용 확인':'기기에서 시뮬레이션 · 실제 청구 없음';
+  $('credits-sub').textContent=api?'Podroid 노드 · 별도 클라우드 요금 없음':'기기에서 시뮬레이션 · 실제 요금 없음';
 }
 
 /* ---------------- instances / TTL ---------------- */
@@ -593,11 +593,11 @@ function renderInstances(){
     nameRow.append(name,state);
     const sub=document.createElement('div');
     sub.className='inst-sub';
-    sub.textContent=(inst.id||'')+' · '+(inst.spec||'t3.micro')+' · IP: '+(inst.ip||'할당 중...');
+    sub.textContent=(inst.id||'')+' · '+(inst.spec||'podroid-guest')+' · IP: '+(inst.ip||'할당 중...');
     const sub2=document.createElement('div');
     sub2.className='inst-sub';
     sub2.style.color='#5d7699';
-    sub2.textContent=(inst.os||'Linux')+' · '+(inst.region||'ap-southeast-2')+' · '+(inst.storage||'8GB gp3');
+    sub2.textContent=(inst.os||'Linux')+' · '+(inst.region||'Podroid')+' · '+(inst.storage||'8GB 컨테이너 레이어');
     const perf=document.createElement('div');
     perf.className='specrow';
     perf.style.margin='8px 0 0';
@@ -744,8 +744,8 @@ function newLocalInstance(payload){
     name:payload.name||'NeoOS-Cloud-Worker',
     state:'running',managed:'guest',local:true,
     os:osData.name,icon:osData.icon,kernel:osData.kernel,
-    spec:'t3.micro',storage:(payload.volume_gb||8)+'GB gp3',
-    region:'ap-southeast-2',
+    spec:'podroid-guest',storage:(payload.volume_gb||8)+'GB 컨테이너 레이어',
+    region:'Podroid',
     ip:'10.42.'+Math.floor(Math.random()*255)+'.'+(Math.floor(Math.random()*254)+1),
     cpu:'2 vCPU',mem:'1 GB',ports:'22->22',
     created_at:new Date().toISOString()

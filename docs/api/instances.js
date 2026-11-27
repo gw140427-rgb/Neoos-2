@@ -52,8 +52,8 @@ function validCreateBody(text) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
   if (typeof body.name !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9_.-]{1,63}$/.test(body.name)) return null;
   if (!['ubuntu', 'debian', 'alpine'].includes(body.os)) return null;
-  if (body.instance_type !== undefined && body.instance_type !== 't3.micro') return null;
-  if (body.volume_gb !== undefined && body.volume_gb !== 8) return null;
+  if (body.instance_type !== undefined && (typeof body.instance_type !== 'string' || body.instance_type.length > 32)) return null;
+  if (body.volume_gb !== undefined && (!Number.isInteger(body.volume_gb) || body.volume_gb < 1 || body.volume_gb > 64)) return null;
   return body;
 }
 
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
       if (!validCreateBody(bodyText)) {
         return res.status(400).json({
           error: 'invalid_payload',
-          message: 'name(2~64자), os(ubuntu|debian|alpine), t3.micro, 8GB만 허용됩니다.'
+          message: 'name(2~64자), os(ubuntu|debian|alpine), volume_gb(1~64)만 허용됩니다.'
         });
       }
     }

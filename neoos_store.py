@@ -1,7 +1,7 @@
 """SQLite-backed persistent storage for NeoOS tasks and journal entries.
 
-The database defaults to data/neoos.sqlite3. On an EC2 VPS, set
-NEOOS_DB_PATH=/var/lib/neoos/neoos.sqlite3 on a persistent EBS volume.
+The database defaults to data/neoos.sqlite3. On a Podroid node, set
+NEOOS_DB_PATH to a path on persistent local storage.
 Legacy tasks.json and journal.jsonl files are imported once and never deleted.
 """
 from __future__ import annotations
