@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#05060c">
-<meta name="description" content="Neo-2 / Neo-2 Plus / Neo-2 Mini — 직접 학습시킨 AI 모델과 실제로 대화하는 페이지. 양양의 VPS에서 실시간으로 답합니다.">
+<meta name="description" content="Neo-1 Plus / Neo-1 — 직접 학습시킨 AI 모델과 실제로 대화하는 페이지. 양양의 VPS에서 실시간으로 답합니다.">
 <title>Neo AI 채팅 · NeoOS</title>
 <style>
 :root{color-scheme:dark;--bg:#05060c;--panel:#0c1020;--line:#232a44;--text:#f2f5ff;--muted:#9aa6c6;--violet:#8b5cf6;--cyan:#22d3ee;--green:#4ade80;--amber:#fbbf24;--red:#f87171}
@@ -54,12 +54,9 @@ button.send:disabled{opacity:.45;cursor:wait}
   </header>
 
   <h1>🤖 Neo 모델에게 물어보기</h1>
-  <p class="sub">Neo-2, Neo-2 Plus, Neo-2 Mini와 Neo-1 시리즈 중 골라 대화할 수 있어요. 모델 서버가 연결되면 실시간으로 답하고, 연결되지 않으면 기기 안의 오프라인 응답으로 바로 대화할 수 있어요.</p>
+  <p class="sub">Neo-1 Plus와 Neo-1 중 골라 대화할 수 있어요. 모델 서버가 연결되면 실시간으로 답하고, 연결되지 않으면 기기 안의 오프라인 응답으로 바로 대화할 수 있어요.</p>
   <div class="bar">
     <span class="status" id="status"><i></i><span id="statusText">서버 확인 중…</span></span>
-    <button type="button" class="clear mpick" data-model="neo-2">Neo-2</button>
-    <button type="button" class="clear mpick" data-model="neo-2-plus">Neo-2 Plus</button>
-    <button type="button" class="clear mpick" data-model="neo-2-mini">Neo-2 Mini</button>
     <button type="button" class="clear mpick" data-model="neo-1-plus">Neo-1 Plus</button>
     <button type="button" class="clear mpick" data-model="neo-1">Neo-1</button>
     <button type="button" class="clear" id="clearBtn">대화 지우기</button>
@@ -74,7 +71,7 @@ button.send:disabled{opacity:.45;cursor:wait}
     <button type="submit" class="send" id="send">보내기</button>
   </form>
 
-  <p class="note">Neo-2 시리즈는 4o 시절(2024년 중반)까지의 지식을 기준으로 동작해서 성능이 모델마다 다를 수 있어요. 작은 모델이라 틀린 답이나 반복이 있을 수 있어요. 날씨·뉴스 같은 최신 정보는 검색해서 답합니다. 대화 내용은 이 기기에만 저장돼요. 서버(VPS)가 꺼져 있으면 답할 수 없어요.</p>
+  <p class="note">Neo-1 시리즈는 학습 데이터 기준 시점까지의 지식으로 동작해서 성능이 모델마다 다를 수 있어요. 작은 모델이라 틀린 답이나 반복이 있을 수 있어요. 날씨·뉴스 같은 최신 정보는 검색해서 답합니다. 대화 내용은 이 기기에만 저장돼요. 서버(VPS)가 꺼져 있으면 답할 수 없어요.</p>
 </div>
 
 <script>
@@ -94,13 +91,10 @@ var statusEl = document.getElementById('status');
 var statusText = document.getElementById('statusText');
 var chatHistory = [];
 var MODELS = {
-  'neo-2': 'Neo-2',
-  'neo-2-plus': 'Neo-2 Plus',
-  'neo-2-mini': 'Neo-2 Mini',
   'neo-1-plus': 'Neo-1 Plus',
   'neo-1': 'Neo-1'
 };
-var DEFAULT_MODEL = 'neo-2-plus';
+var DEFAULT_MODEL = 'neo-1-plus';
 var selectedModel = DEFAULT_MODEL;
 try { selectedModel = localStorage.getItem('neo-chat-model') || DEFAULT_MODEL; } catch (e) {}
 if (!MODELS[selectedModel]) selectedModel = DEFAULT_MODEL;
