@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "name": "NeoOS AI development system baseline checks",
+  "max_runtime_seconds": 1800,
+  "steps": [
+    {"id": "compile", "action": "compile", "retries": 1, "timeout_seconds": 120},
+    {"id": "unit-tests", "action": "test", "retries": 2, "timeout_seconds": 300},
+    {"id": "git-status", "action": "git_status", "retries": 0, "timeout_seconds": 30}
+  ]
+}

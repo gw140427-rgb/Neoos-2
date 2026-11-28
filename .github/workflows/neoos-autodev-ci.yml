@@ -1,0 +1,39 @@
+name: NeoOS AI AutoDev CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "neoos_autodev.py"
+      - "neoos_local_ai.py"
+      - "plans/**"
+      - "tests/**"
+      - "docs/ai-autodev.md"
+      - ".github/workflows/neoos-autodev-ci.yml"
+  push:
+    branches: [feature/neoos-ai-autodev-20261107]
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install project dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      - name: Compile project and tests
+        run: python -m compileall -q neoos_mcp.py worker.py neoos_autodev.py neoos_local_ai.py tests
+      - name: Run unit tests
+        run: python -m unittest discover -s tests -v
+      - name: Validate baseline execution plan
+        run: python neoos_autodev.py validate plans/neoos-ai-autodev.json
