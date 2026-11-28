@@ -11,13 +11,10 @@ from urllib.parse import urlparse
 from urllib.request import Request, urlopen
 
 MODELS = {
-    "neo-2": "neo-2:latest",
-    "neo-2-plus": "neo-2-plus:latest",
-    "neo-2-mini": "neo-2-mini:latest",
     "neo-1-plus": "neo-1-plus:latest",
     "neo-1": "neo-1:latest",
 }
-DEFAULT_MODEL = "neo-2-plus"
+DEFAULT_MODEL = "neo-1-plus"
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434/api/chat")
 TIMEOUT = int(os.environ.get("NEO_TIMEOUT", "50"))
 MAX_MESSAGES = 12
@@ -70,7 +67,10 @@ def generate(model, messages):
     request = Request(OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"})
     with urlopen(request, timeout=TIMEOUT) as response:
         body = json.loads(response.read().decode("utf-8"))
-    return (body.get("message") or {}).get("content", "").strip()
+    text = (body.get("message") or {}).get("content", "").strip()
+    if "</think>" in text:
+        text = text.split("</think>", 1)[1].strip()
+    return text
 
 
 class Handler(BaseHTTPRequestHandler):
